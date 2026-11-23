@@ -78,6 +78,8 @@ object PetGrowth {
         val requested = when (action) {
             Action.FEED -> 3
             Action.WATER -> 2
+            Action.CHARGE -> 2
+            Action.EXPLORE -> 0
             Action.SLEEP -> 4
             Action.WAKE -> 1
             Action.HIBERNATE -> 0
