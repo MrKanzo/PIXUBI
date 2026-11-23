@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -60,6 +61,10 @@ class MainActivity : ComponentActivity() {
             var showSettings by remember { mutableStateOf(false) }
             var auditionRegion by remember { mutableStateOf<Region?>(null) }
             var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.advance(it, System.currentTimeMillis()) }) }
+            val collectionStore = remember { PlayerCollectionStore(applicationContext) }
+            var collection by remember { mutableStateOf(collectionStore.load()) }
+            var showProfile by remember { mutableStateOf(false) }
+            var showCollection by remember { mutableStateOf(false) }
             val progressStore = remember { QuizProgressStore(applicationContext) }
             var quizProgress by remember { mutableStateOf(progressStore.load()) }
             var gamePage by remember { mutableStateOf<GamePage?>(null) }
@@ -115,7 +120,21 @@ class MainActivity : ComponentActivity() {
                     temporaryEmotion = null
                 }
             }
-            fun store(next: Pet) { pet = next; storage.save(next) }
+            fun saveCollection(next: PlayerCollection) {
+                collection = next
+                collectionStore.save(next)
+            }
+            fun store(next: Pet) {
+                pet = next
+                storage.save(next)
+                collection = collectionStore.observe(next)
+            }
+            LaunchedEffect(pet?.bornAt) {
+                pet?.let { collection = collectionStore.observe(it) }
+            }
+            BackHandler(enabled = showCollection || showProfile) {
+                if (showCollection) showCollection = false else showProfile = false
+            }
             val latestPet by rememberUpdatedState(pet)
             fun refresh() {
                 val current = latestPet ?: return
@@ -156,6 +175,20 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize(), color = night) {
                     val current = pet
                     when {
+                        showCollection -> PixuCollectionScreen(
+                            library = collection,
+                            current = current,
+                            onBack = { showCollection = false }
+                        )
+                        showProfile -> PlayerProfileScreen(
+                            collection = collection,
+                            progress = quizProgress,
+                            current = current,
+                            onName = { saveCollection(collection.copy(nickname = it)) },
+                            onAvatar = { saveCollection(collection.copy(avatar = it)) },
+                            onCollection = { showCollection = true },
+                            onBack = { showProfile = false }
+                        )
                         showSettings -> PixubiSettingsScreen(
                             settings = soundSettings,
                             currentRegion = current?.region ?: Region.FOREST,
@@ -177,9 +210,10 @@ class MainActivity : ComponentActivity() {
                                 store(it)
                                 audio.effect(PixubiSound.HAPPY)
                             },
-                            onSettings = { goSettings() }
+                            onSettings = { goSettings() },
+                            onProfile = { showProfile = true }
                         )
-                        !current.alive -> FarewellScreen(current) {
+                        !current.alive -> FarewellScreen(current, onProfile = { showProfile = true }) {
                             storage.erase()
                             pet = null
                             gamePage = null
@@ -236,6 +270,7 @@ class MainActivity : ComponentActivity() {
                         )
                         else -> HomeScreen(
                             pet = current,
+                            collection = collection,
                             reaction = temporaryEmotion,
                             onAction = { action ->
                                 store(GameEngine.act(current, action, System.currentTimeMillis()))
@@ -265,7 +300,8 @@ class MainActivity : ComponentActivity() {
                                 gamePage = GamePage.HUB
                                 audio.effect(PixubiSound.TAP)
                             },
-                            onSettings = { goSettings() }
+                            onSettings = { goSettings() },
+                            onProfile = { showProfile = true }
                         )
                     }
                 }
@@ -330,7 +366,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
+private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
+                        onProfile: () -> Unit) {
     var species by remember { mutableStateOf(Species.LISYK) }
     var sex by remember { mutableStateOf(Sex.GIRL) }
     var region by remember { mutableStateOf(Region.FOREST) }
@@ -342,6 +379,8 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("PIXUBI 🐣", style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = onProfile) { Text("👤") }
+            Spacer(Modifier.width(5.dp))
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
         Text("Знайди свого першого цифрового друга", color = Color(0xFFC5D2E9))
@@ -354,7 +393,11 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PetSprite(choice, 0, Modifier.size(63.dp), sex = sex)
+                    GrowthSprite(
+                        pet = Pet(choice, sex, choice.native, choice.title, 0, 0, 0L, 0L),
+                        previewStage = GrowthStage.BABY,
+                        modifier = Modifier.size(63.dp)
+                    )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(choice.title, fontWeight = FontWeight.Bold)
@@ -403,11 +446,13 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
 @Composable
 private fun HomeScreen(
     pet: Pet,
+    collection: PlayerCollection,
     reaction: PetEmotion?,
     onAction: (Action) -> Unit,
     onPetTap: () -> Unit,
     onPlay: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onProfile: () -> Unit
 ) {
     val emotion = EmotionResolver.resolve(pet, reaction)
     var showGrowthGallery by remember { mutableStateOf(false) }
@@ -422,6 +467,8 @@ private fun HomeScreen(
             }
             Text(if (pet.mode == Mode.HIBERNATION) "❄️" else "💜", fontSize = 27.sp)
             Spacer(Modifier.width(6.dp))
+            OutlinedButton(onClick = onProfile) { Text("👤") }
+            Spacer(Modifier.width(5.dp))
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
         WorldScene(pet, reaction, onPetTap)
@@ -471,7 +518,7 @@ private fun HomeScreen(
         Spacer(Modifier.height(24.dp))
     }
     if (showGrowthGallery) {
-        GrowthGalleryDialog(pet, onClose = { showGrowthGallery = false })
+        GrowthGalleryDialog(pet, collection, onClose = { showGrowthGallery = false })
     }
 }
 
@@ -694,7 +741,7 @@ private fun CatchStarsScreen(
 }
 
 @Composable
-private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
+private fun FarewellScreen(pet: Pet, onProfile: () -> Unit, onNewPet: () -> Unit) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -710,8 +757,11 @@ private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         Text("Ваші пригоди залишаться теплим спогадом 💜", textAlign = TextAlign.Center)
         Spacer(Modifier.height(26.dp))
+        Button(onClick = onProfile, modifier = Modifier.fillMaxWidth()) {
+            Text("📖 Подивитися колекцію Піксу")
+        }
         Button(onClick = onNewPet, modifier = Modifier.fillMaxWidth()) { Text("🥚 Виростити нового Піксубі") }
-        Text("У версії 0.7 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
+        Text("У версії 0.8 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
             style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Color.LightGray)
     }
 }
