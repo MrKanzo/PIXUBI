@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
             var soundSettings by remember { mutableStateOf(audioStore.load()) }
             var showSettings by remember { mutableStateOf(false) }
             var auditionRegion by remember { mutableStateOf<Region?>(null) }
-            var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.advance(it, System.currentTimeMillis()) }) }
+            var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.restoreAfterAbsence(it, System.currentTimeMillis()) }) }
             val collectionStore = remember { PlayerCollectionStore(applicationContext) }
             var collection by remember { mutableStateOf(collectionStore.load()) }
             var showProfile by remember { mutableStateOf(false) }
@@ -136,9 +136,11 @@ class MainActivity : ComponentActivity() {
                 if (showCollection) showCollection = false else showProfile = false
             }
             val latestPet by rememberUpdatedState(pet)
-            fun refresh() {
+            fun refresh(offline: Boolean = false) {
                 val current = latestPet ?: return
-                val next = GameEngine.advance(current, System.currentTimeMillis())
+                val now = System.currentTimeMillis()
+                val next = if (offline) GameEngine.restoreAfterAbsence(current, now)
+                    else GameEngine.advance(current, now)
                 if (next != current) store(next)
             }
             val lifecycle = LocalLifecycleOwner.current
@@ -148,10 +150,12 @@ class MainActivity : ComponentActivity() {
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
                             audio.setForeground(true)
-                            refresh()
+                            refresh(offline = true)
                         }
-                        Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP ->
+                        Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                            refresh()
                             audio.setForeground(false)
+                        }
                         else -> Unit
                     }
                 }
@@ -277,6 +281,8 @@ class MainActivity : ComponentActivity() {
                                 audio.effect(when (action) {
                                     Action.FEED -> PixubiSound.FEED
                                     Action.WATER -> PixubiSound.WATER
+                                    Action.CHARGE -> PixubiSound.HAPPY
+                                    Action.EXPLORE -> PixubiSound.STAR
                                     Action.SLEEP -> PixubiSound.SLEEP
                                     Action.WAKE -> PixubiSound.WAKE
                                     Action.HIBERNATE -> PixubiSound.FREEZE
@@ -285,10 +291,16 @@ class MainActivity : ComponentActivity() {
                                 react(when (action) {
                                     Action.FEED -> PetEmotion.EATING
                                     Action.WATER -> PetEmotion.DRINKING
+                                    Action.CHARGE -> PetEmotion.HAPPY
+                                    Action.EXPLORE -> null
                                     Action.WAKE -> PetEmotion.HAPPY
                                     Action.PLAY_WIN -> PetEmotion.HAPPY
                                     Action.SLEEP, Action.HIBERNATE -> null
                                 })
+                            },
+                            onBuy = { item ->
+                                store(GameEngine.buy(current, item, System.currentTimeMillis()))
+                                audio.effect(PixubiSound.TAP)
                             },
                             onPetTap = {
                                 if (current.mode == Mode.AWAKE) {
@@ -449,6 +461,7 @@ private fun HomeScreen(
     collection: PlayerCollection,
     reaction: PetEmotion?,
     onAction: (Action) -> Unit,
+    onBuy: (ShopItem) -> Unit,
     onPetTap: () -> Unit,
     onPlay: () -> Unit,
     onSettings: () -> Unit,
@@ -456,6 +469,7 @@ private fun HomeScreen(
 ) {
     val emotion = EmotionResolver.resolve(pet, reaction)
     var showGrowthGallery by remember { mutableStateOf(false) }
+    var showShop by remember { mutableStateOf(false) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -470,6 +484,21 @@ private fun HomeScreen(
             OutlinedButton(onClick = onProfile) { Text("👤") }
             Spacer(Modifier.width(5.dp))
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("🪙 ${pet.coins}  •  🎒 Запаси",
+                modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold,
+                color = Color(0xFFFFD58A))
+            OutlinedButton(onClick = { showShop = true }) { Text("🛍️ Крамничка") }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = navy)) {
+            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                Text("🍓 Їжа: ${pet.foodStock}     💧 Вода: ${pet.waterStock}     🔋 Заряд: ${pet.chargeStock}",
+                    style = MaterialTheme.typography.bodyMedium)
+                Text("🏡 ${if (pet.hasHome) "Є" else "Немає"}  •  🍽️ ${if (pet.hasBowl) "Є" else "Немає"}  •  🥤 ${if (pet.hasCup) "Є" else "Немає"}  •  ⚡ ${if (pet.hasCharger) "Є" else "Немає"}",
+                    style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+            }
         }
         WorldScene(pet, reaction, onPetTap)
         GrowthProgressCard(pet, onGallery = { showGrowthGallery = true })
@@ -500,14 +529,29 @@ private fun HomeScreen(
             }
             Mode.AWAKE -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { onAction(Action.FEED) }, modifier = Modifier.weight(1f)) { Text(if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON)) "⚡ Живлення" else "🍓 Годувати") }
-                    Button(onClick = { onAction(Action.WATER) }, modifier = Modifier.weight(1f)) { Text(if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON)) "💧 Зволожити" else "💧 Напоїти") }
+                    Button(onClick = { onAction(Action.FEED) }, enabled = pet.foodStock > 0, modifier = Modifier.weight(1f)) { Text("🍓 Їжа (${pet.foodStock})") }
+                    Button(onClick = { onAction(Action.WATER) }, enabled = pet.waterStock > 0, modifier = Modifier.weight(1f)) { Text("💧 Вода (${pet.waterStock})") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { onAction(Action.SLEEP) }, modifier = Modifier.weight(1f)) { Text("🌙 Сон") }
                     OutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) { Text("🎮 Ігри") }
                 }
-                OutlinedButton(onClick = { onAction(Action.HIBERNATE) }, modifier = Modifier.fillMaxWidth()) { Text("❄️ Сплячка: я йду у справах") }
+                OutlinedButton(onClick = { onAction(Action.CHARGE) },
+                    enabled = pet.chargeStock > 0, modifier = Modifier.fillMaxWidth()) {
+                    Text("⚡ Зарядити Пікса (${pet.chargeStock})")
+                }
+                val today = PetGrowth.careDay(System.currentTimeMillis())
+                val used = if (pet.expeditionDay == today) pet.expeditionToday else 0
+                Button(onClick = { onAction(Action.EXPLORE) },
+                    enabled = pet.expeditionStartedAt == 0L && used < GameEngine.EXPEDITIONS_PER_DAY && pet.energy >= 15,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(if (pet.expeditionStartedAt > 0L) "🧭 Пікс шукає скарби (20 хв)"
+                    else "🧭 Пошук монет і ресурсів (${used}/4)")
+                }
+                Text("🪙 Ігри: до 30 монет/день. Прогулянки: 4 за день, знахідка через 20 хвилин.",
+                    style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+                OutlinedButton(onClick = { onAction(Action.HIBERNATE) },
+                    modifier = Modifier.fillMaxWidth()) { Text("❄️ Сплячка: я йду у справах") }
             }
         }
         HorizontalDivider(color = Color(0xFF35455D))
@@ -515,10 +559,15 @@ private fun HomeScreen(
         Text("🏡 Рідний край: ${pet.species.native.title}  •  🎲 Колір №${pet.colorIndex + 1}", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
         Text("🧬 Приховані гени кольору збережені для майбутньої системи розмноження.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
         Text("🏆 Мініігор виграно: ${pet.miniGameWins}", style = MaterialTheme.typography.bodySmall)
+        Text("⏳ Поки гра закрита, Пікс росте й витрачає потреби до 12 годин. У сплячці час зупинено.",
+            style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
         Spacer(Modifier.height(24.dp))
     }
     if (showGrowthGallery) {
         GrowthGalleryDialog(pet, collection, onClose = { showGrowthGallery = false })
+    }
+    if (showShop) {
+        PixubiShopDialog(pet, onBuy = onBuy, onClose = { showShop = false })
     }
 }
 
