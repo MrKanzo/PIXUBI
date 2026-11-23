@@ -1,171 +1,168 @@
 package com.pixubi.game
 
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sqrt
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
-/** Eye regions are confined to existing original-art iris/eyelid pixels. */
+/** Native pixel coordinates, with a separate eyelid shape for each eye. */
 internal data class EyeRegion(
-    val centerX: Float, val centerY: Float, val radiusX: Float, val radiusY: Float
+    val centerX: Float, val centerY: Float, val radiusX: Float, val radiusY: Float,
+    val lidCurve: Float = .20f, val lidTilt: Float = 0f
 )
 
 /**
- * In-place texture editing, NOT a new pair of vector eyes.
- *
- * For each eye, interpolate non-eye fur pixels from just above and below the
- * ORIGINAL painted eye. The upper eyelid advances down the eye to cover its
- * already-painted iris/pupil. The last frame draws a small closed-eyelid crease
- * inside that replaced eye region. All pixels outside the masks remain identical.
+ * Build an eyeless face from the local texture around each actual eye, then
+ * extract the original iris as a separate, compressible eye layer.
+ * No flat fur-colored ovals or second eyes on top of the painted eyes.
  */
 internal object EyePixelAnimator {
-    fun frame(
-        original: IntArray, width: Int, height: Int,
-        eyes: List<EyeRegion>, step: Int
-    ): IntArray {
+    fun frame(original: IntArray, width: Int, height: Int,
+              eyes: List<EyeRegion>, step: Int): IntArray =
+        frames(original, width, height, eyes)[step.also { require(it in 0..4) }]
+
+    fun frames(original: IntArray, width: Int, height: Int,
+               eyes: List<EyeRegion>): List<IntArray> {
         require(width > 0 && height > 0 && original.size == width * height)
-        require(step in 0..4)
-        val output = original.copyOf()
-        if (step == 0) return output
-
+        val output = List(5) { original.copyOf() }
         for (eye in eyes) {
-            val x0 = max(0, floor(eye.centerX - eye.radiusX).toInt())
-            val x1 = min(width - 1, ceil(eye.centerX + eye.radiusX).toInt())
-            val y0 = max(0, floor(eye.centerY - eye.radiusY).toInt())
-            val y1 = min(height - 1, ceil(eye.centerY + eye.radiusY).toInt())
-            // Sample the native facial fur as a WHOLE PATCH. Copying each
-            // individual x-column from above/below the eyes made long vertical
-            // stripes across the nose (especially on juvenile/adult artwork).
-            val upperFur = neighboringFur(original, width, height, eye, above = true)
-            val lowerFur = neighboringFur(original, width, height, eye, above = false)
-            val progress = step / 4f
-
-            for (x in x0..x1) {
-                val dx = (x - eye.centerX) / eye.radiusX
-                if (dx * dx >= 1f) continue
-                val halfHeight = sqrt(1f - dx * dx) * eye.radiusY
-                val top = eye.centerY - halfHeight
-                val bottom = eye.centerY + halfHeight
-                val lid = top + (bottom - top) * progress
-
-                for (y in max(y0, floor(top).toInt())..min(y1, ceil(bottom).toInt())) {
-                    val dy = (y - eye.centerY) / eye.radiusY
-                    val distance = dx * dx + dy * dy
-                    if (distance >= 1f) continue
-                    val index = y * width + x
-                    val originalColor = original[index]
-                    // Do not fill transparency outside the pet silhouette.
-                    if (((originalColor ushr 24) and 255) < 180) continue
-
-                    val lidOpacity = ((lid - y + 1f) / 2f).coerceIn(0f, 1f)
-                    if (lidOpacity <= 0f) continue
-                    val feather = ((1f - distance) * 14f).coerceIn(0f, 1f)
-                    val opacity = lidOpacity * feather
-                    if (opacity <= 0f) continue
-
-                    val position = ((y - (eye.centerY - eye.radiusY)) /
-                        (2f * eye.radiusY)).coerceIn(0f, 1f)
-                    // Same tones as the original forehead/cheek: NO vertical
-                    // per-column color copied onto the eye. A slight vertical
-                    // fur gradient keeps the eyelid from looking like a sticker.
-                    val fur = blend(upperFur, lowerFur, position * .38f)
-                    output[index] = blend(originalColor, fur, opacity)
-                }
-            }
-
-            // Draw the eyelid crease INSIDE the overwritten eye region, only when
-            // fully shut. It replaces the open pupil rather than sitting above it.
-            if (step == 4) {
-                val ink = selectNativeOutline(original, width, height, eye)
-                val minX = ceil(eye.centerX - eye.radiusX * .72f).toInt().coerceIn(0, width - 1)
-                val maxX = floor(eye.centerX + eye.radiusX * .72f).toInt().coerceIn(0, width - 1)
-                for (x in minX..maxX) {
-                    val nx = (x - eye.centerX) / eye.radiusX
-                    val arch = (1f - nx * nx).coerceAtLeast(0f) * eye.radiusY * .11f
-                    val centerLine = (eye.centerY + arch).toInt().coerceIn(0, height - 1)
-                    for (y in centerLine..min(height - 1, centerLine + 1)) {
-                        val i = y * width + x
-                        if (((original[i] ushr 24) and 255) >= 180)
-                            output[i] = ink
-                    }
-                }
-            }
+            val patch = Patch(original, width, height, eye)
+            for (step in 1..4) patch.paint(output[step], step)
         }
         return output
     }
 
-    /** Most common light fur shade in a real patch OUTSIDE the painted iris. */
-    private fun neighboringFur(
-        source: IntArray, width: Int, height: Int,
-        eye: EyeRegion, above: Boolean
-    ): Int {
-        val cx = eye.centerX.toInt()
-        val minX = max(0, (cx - eye.radiusX * .8f).toInt())
-        val maxX = min(width - 1, (cx + eye.radiusX * .8f).toInt())
-        val yA = if (above) eye.centerY - eye.radiusY - 12f
-                 else eye.centerY + eye.radiusY + 4f
-        val yB = if (above) eye.centerY - eye.radiusY - 4f
-                 else eye.centerY + eye.radiusY + 12f
-        val minY = max(0, yA.toInt())
-        val maxY = min(height - 1, yB.toInt())
-        val buckets = mutableMapOf<Int, Int>()
-        val colors = mutableMapOf<Int, LongArray>()
-        for (y in minY..maxY) for (x in minX..maxX) {
-            val c = source[y * width + x]
-            if (((c ushr 24) and 255) < 220) continue
-            val r = (c ushr 16) and 255
-            val g = (c ushr 8) and 255
-            val b = c and 255
-            // Exclude the dark eye outline, iris and black helmet details.
-            if (r * 3 + g * 5 + b * 2 < 950) continue
-            val key = ((r / 32) shl 16) or ((g / 32) shl 8) or (b / 32)
-            buckets[key] = (buckets[key] ?: 0) + 1
-            val acc = colors.getOrPut(key) { LongArray(4) }
-            acc[0] += r.toLong(); acc[1] += g.toLong()
-            acc[2] += b.toLong(); acc[3]++
+    private class Patch(val original: IntArray, val width: Int, val height: Int,
+                        val eye: EyeRegion) {
+        val left = max(0, floor(eye.centerX - eye.radiusX - 2).toInt())
+        val right = min(width - 1, ceil(eye.centerX + eye.radiusX + 2).toInt())
+        val top = max(0, floor(eye.centerY - eye.radiusY - 2).toInt())
+        val bottom = min(height - 1, ceil(eye.centerY + eye.radiusY + 2).toInt())
+        val w = right - left + 1
+        val h = bottom - top + 1
+        val mask = BooleanArray(w * h)
+        val native = IntArray(w * h)
+        val clean = IntArray(w * h)
+        val red = FloatArray(w * h)
+        val green = FloatArray(w * h)
+        val blue = FloatArray(w * h)
+        val ink: Int
+
+        init {
+            for (j in 0 until h) for (i in 0 until w) {
+                val k = j * w + i
+                val c = original[(top + j) * width + left + i]
+                native[k] = c
+                red[k] = channel(c, 16).toFloat()
+                green[k] = channel(c, 8).toFloat()
+                blue[k] = channel(c, 0).toFloat()
+                // Rounded rectangular mask encompasses the eyelashes as well
+                // as the iris; its shape is never drawn onto the face.
+                val nx = abs((left + i - eye.centerX) / eye.radiusX)
+                val ny = abs((top + j - eye.centerY) / eye.radiusY)
+                mask[k] = i in 1 until w - 1 && j in 1 until h - 1 &&
+                    nx.pow(2.8f) + ny.pow(2.8f) < 1f && channel(c, 24) >= 180
+            }
+
+            // Seed from the real border of this exact eye (not a common palette
+            // or a single forehead color). Then solve a smooth RGB field with
+            // the surrounding pixels as fixed boundary conditions. This keeps
+            // native cheek markings and shading flowing through the eye patch.
+            var sr = 0f; var sg = 0f; var sb = 0f; var count = 0
+            for (j in 1 until h - 1) for (i in 1 until w - 1) {
+                val k = j * w + i
+                if (!mask[k] && channel(native[k], 24) >= 180 &&
+                    (mask[k-1] || mask[k+1] || mask[k-w] || mask[k+w])) {
+                    sr += red[k]; sg += green[k]; sb += blue[k]; count++
+                }
+            }
+            if (count > 0) for (k in mask.indices) if (mask[k]) {
+                red[k] = sr / count; green[k] = sg / count; blue[k] = sb / count
+            }
+            repeat(180) {
+                for (j in 1 until h - 1) for (i in 1 until w - 1) {
+                    val k = j * w + i
+                    if (!mask[k]) continue
+                    // Preserve transparency: a transparent neighbor cannot
+                    // contribute black to an otherwise opaque fur patch.
+                    var r = 0f; var g = 0f; var b = 0f; var n = 0
+                    fun add(a: Int) {
+                        if (channel(native[a], 24) >= 180) {
+                            r += red[a]; g += green[a]; b += blue[a]; n++
+                        }
+                    }
+                    add(k-1); add(k+1); add(k-w); add(k+w)
+                    if (n > 0) {
+                        red[k] = r / n; green[k] = g / n; blue[k] = b / n
+                    }
+                }
+            }
+            var darkest = Int.MAX_VALUE
+            var outline = 0xFF30283C.toInt()
+            for (k in native.indices) {
+                clean[k] = if (mask[k]) pack(channel(native[k],24), red[k],green[k],blue[k])
+                    else native[k]
+                if (mask[k]) {
+                    val c = native[k]
+                    val lum = 3*channel(c,16)+5*channel(c,8)+2*channel(c,0)
+                    if (lum < darkest) { darkest = lum; outline = c }
+                }
+            }
+            ink = outline
         }
-        val best = buckets.maxByOrNull { it.value }?.key
-        if (best != null) {
-            val sums = colors.getValue(best)
-            val n = sums[3]
-            return 0xFF000000.toInt() or
-                ((sums[0] / n).toInt() shl 16) or
-                ((sums[1] / n).toInt() shl 8) or
-                (sums[2] / n).toInt()
+
+        fun paint(output: IntArray, step: Int) {
+            val anchor = eye.centerY + eye.radiusY * .24f
+            val scale = 1f - step / 4f
+            val halfWidth = eye.radiusX * .78f
+            for (j in 1 until h - 1) for (i in 1 until w - 1) {
+                val k = j*w+i
+                if (!mask[k]) continue
+                val x = left+i
+                val y = top+j
+                var c = clean[k]
+                if (step < 4) {
+                    // Transfer the eye's color difference relative to its clean
+                    // face, rather than pasting a compressed block of fur.
+                    val sy = anchor + (y - anchor) / scale - top
+                    val lo = floor(sy).toInt()
+                    val t = sy - lo
+                    fun delta(row: Int, shift: Int): Float {
+                        if (row !in 0 until h) return 0f
+                        val q = row*w+i
+                        if (!mask[q]) return 0f
+                        return (channel(native[q],shift)-channel(clean[q],shift)).toFloat()
+                    }
+                    fun color(shift: Int): Float = channel(c,shift) +
+                        delta(lo,shift)*(1f-t)+delta(lo+1,shift)*t
+                    c = pack(channel(c,24),color(16),color(8),color(0))
+                } else {
+                    // Delicate curved sleeping eyelid; no filled oval, no iris
+                    // outline, no visible boundary around the restored texture.
+                    val nx = (x-eye.centerX)/halfWidth
+                    if (abs(nx) <= 1.05f) {
+                        val curveY = anchor + eye.radiusY * (
+                            eye.lidCurve * (1f-nx*nx) + eye.lidTilt*nx)
+                        val thickness = (eye.radiusY*.10f).coerceIn(.75f,1.65f)
+                        val edge = ((1.05f-abs(nx))*5f).coerceIn(0f,1f)
+                        val a = ((thickness+.55f-abs(y-curveY))/.9f)
+                            .coerceIn(0f,1f)*edge*.93f
+                        if (a>0f) c = pack(channel(c,24),
+                            channel(c,16)*(1-a)+channel(ink,16)*a,
+                            channel(c,8)*(1-a)+channel(ink,8)*a,
+                            channel(c,0)*(1-a)+channel(ink,0)*a)
+                    }
+                }
+                output[y*width+x] = c
+            }
         }
-        // Fallback when a species has very dark fur at this specific position.
-        val y = (if (above) eye.centerY - eye.radiusY - 5f
-                 else eye.centerY + eye.radiusY + 5f).toInt().coerceIn(0, height - 1)
-        val c = source[y * width + cx.coerceIn(0, width - 1)]
-        return if (((c ushr 24) and 255) >= 180) c else 0xFFAAB3C4.toInt()
     }
 
-    private fun selectNativeOutline(
-        input: IntArray, width: Int, height: Int, eye: EyeRegion
-    ): Int {
-        val centerX = eye.centerX.toInt().coerceIn(0, width - 1)
-        val y0 = (eye.centerY - eye.radiusY * .5f).toInt().coerceIn(0, height - 1)
-        val y1 = (eye.centerY + eye.radiusY * .5f).toInt().coerceIn(0, height - 1)
-        var best = 0xFF273047.toInt()
-        var dark = Int.MAX_VALUE
-        for (y in y0..y1) for (x in
-            max(0, centerX - eye.radiusX.toInt())..min(width - 1, centerX + eye.radiusX.toInt())) {
-            val c = input[y * width + x]
-            if (((c ushr 24) and 255) < 240) continue
-            val lum = ((c ushr 16) and 255) * 3 + ((c ushr 8) and 255) * 5 + (c and 255) * 2
-            if (lum < dark) { dark = lum; best = c }
-        }
-        return best
-    }
-
-    private fun blend(a: Int, b: Int, t: Float): Int {
-        val f = t.coerceIn(0f, 1f)
-        val g = 1f - f
-        val alpha = ((((a ushr 24) and 255) * g) + (((b ushr 24) and 255) * f)).toInt()
-        val red = ((((a ushr 16) and 255) * g) + (((b ushr 16) and 255) * f)).toInt()
-        val green = ((((a ushr 8) and 255) * g) + (((b ushr 8) and 255) * f)).toInt()
-        val blue = (((a and 255) * g) + ((b and 255) * f)).toInt()
-        return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
-    }
+    private fun channel(c: Int, shift: Int) = (c ushr shift) and 255
+    private fun pack(a: Int, r: Float, g: Float, b: Float): Int =
+        (a shl 24) or (r.roundToInt().coerceIn(0,255) shl 16) or
+        (g.roundToInt().coerceIn(0,255) shl 8) or b.roundToInt().coerceIn(0,255)
 }

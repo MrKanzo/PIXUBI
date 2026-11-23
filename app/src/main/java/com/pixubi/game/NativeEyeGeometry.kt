@@ -1,41 +1,33 @@
 package com.pixubi.game
 
-/**
- * Pixel-accurate positions in the source artwork, NOT in scaled screen DP.
- * Adult/child portraits look forward, but teenage sprites turn their heads,
- * and one aquatic eye is partly outside the visible side of the face.
- */
+/** Each eye has independent coordinates and a species/stage-specific lid. */
 internal object NativeEyeGeometry {
     fun regions(species: Species, stage: GrowthStage): List<EyeRegion> {
-        val positions = when (stage) {
+        fun e(x: Int, y: Int, rx: Int, ry: Int, curve: Float = .22f, tilt: Float = 0f) =
+            EyeRegion(x.toFloat(),y.toFloat(),rx.toFloat(),ry.toFloat(),curve,tilt)
+        return when (stage) {
             GrowthStage.BABY -> when (species) {
-                Species.LISYK -> floatArrayOf(73f, 125f, 102f, 19f, 19f)
-                Species.ISKRYK -> floatArrayOf(66f, 127f, 103f, 19f, 19f)
-                Species.KRAPLYK -> floatArrayOf(70f, 122f, 107f, 19f, 18f)
-                Species.PISHCHANYK -> floatArrayOf(67f, 126f, 107f, 18f, 19f)
-                Species.KHMARYK -> floatArrayOf(71f, 127f, 101f, 19f, 19f)
+                Species.LISYK -> listOf(e(76,102,19,17,.22f,.06f),e(132,102,19,17,.22f,-.06f))
+                Species.ISKRYK -> listOf(e(60,106,17,17,.18f,.07f),e(111,106,19,17,.18f,-.07f))
+                Species.KRAPLYK -> listOf(e(71,95,17,16,.25f),e(121,95,17,16,.25f))
+                Species.PISHCHANYK -> listOf(e(69,110,16,16,.18f,.05f),e(118,109,17,16,.18f,-.05f))
+                Species.KHMARYK -> listOf(e(55,96,18,18,.25f,.06f),e(107,95,19,18,.25f,-.06f))
             }
             GrowthStage.YOUNG -> when (species) {
-                // These are based on a coordinate-grid inspection of the actual
-                // 192px sideways/three-quarter portraits.
-                Species.LISYK -> floatArrayOf(61f, 90f, 75f, 11f, 10f)
-                Species.ISKRYK -> floatArrayOf(61f, 89f, 69f, 12f, 11f)
-                Species.KRAPLYK -> floatArrayOf(39f, 78f, 72f, 11f, 10f)
-                Species.PISHCHANYK -> floatArrayOf(65f, 103f, 73f, 12f, 11f)
-                Species.KHMARYK -> floatArrayOf(59f, 89f, 64f, 12f, 10f)
+                Species.LISYK -> listOf(e(61,74,12,9,.14f,.20f),e(90,74,12,9,.14f,-.20f))
+                Species.ISKRYK -> listOf(e(60,69,12,10,.12f,.18f),e(88,69,12,10,.12f,-.18f))
+                Species.KRAPLYK -> listOf(e(39,71,10,9,.15f,.10f),e(77,70,12,10,.15f,-.18f))
+                Species.PISHCHANYK -> listOf(e(65,73,12,10,.15f,.16f),e(103,73,12,10,.15f,-.16f))
+                Species.KHMARYK -> listOf(e(59,64,12,10,.15f,.18f),e(89,64,12,10,.15f,-.18f))
             }
             GrowthStage.ADULT -> when (species) {
-                Species.LISYK -> floatArrayOf(73f, 111f, 72f, 14f, 15f)
-                Species.ISKRYK -> floatArrayOf(71f, 112f, 72f, 14f, 15f)
-                Species.KRAPLYK -> floatArrayOf(72f, 111f, 71f, 15f, 15f)
-                Species.PISHCHANYK -> floatArrayOf(72f, 112f, 72f, 14f, 16f)
-                Species.KHMARYK -> floatArrayOf(70f, 111f, 72f, 15f, 16f)
+                Species.LISYK -> listOf(e(74,72,12,12,.22f,.05f),e(111,72,12,12,.22f,-.05f))
+                Species.ISKRYK -> listOf(e(76,76,13,13,.18f,.07f),e(112,76,13,13,.18f,-.07f))
+                Species.KRAPLYK -> listOf(e(62,68,13,12,.24f),e(104,68,13,12,.24f))
+                Species.PISHCHANYK -> listOf(e(61,74,12,12,.18f,.06f),e(94,74,12,12,.18f,-.06f))
+                Species.KHMARYK -> listOf(e(55,65,15,14,.20f,.08f),e(98,65,15,14,.20f,-.08f))
             }
-            else -> return emptyList()
+            else -> emptyList()
         }
-        return listOf(
-            EyeRegion(positions[0], positions[2], positions[3], positions[4]),
-            EyeRegion(positions[1], positions[2], positions[3], positions[4])
-        )
     }
 }

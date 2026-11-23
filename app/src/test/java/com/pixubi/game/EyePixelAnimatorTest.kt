@@ -42,4 +42,29 @@ class EyePixelAnimatorTest {
             listOf(EyeRegion(20f, 20f, 9f, 9f)), 4)
         assertEquals(0, result[20 * 41 + 20])
     }
+
+    @Test fun closedEyeRestoresContinuousShadingRatherThanFlatPatch() {
+        val w = 61
+        val eye = EyeRegion(30f,30f,12f,11f)
+        val original = IntArray(w*w) { i ->
+            val x = i%w
+            val y = i/w
+            0xFF000000.toInt() or ((90+x*2) shl 16) or ((70+y*2) shl 8) or 50
+        }
+        val clean = original.copyOf()
+        for (y in 22..38) for (x in 21..39) {
+            if ((x-30)*(x-30)+(y-30)*(y-30)<88) original[y*w+x]=darkEye
+        }
+        val frames = EyePixelAnimator.frames(original,w,w,listOf(eye))
+        assertArrayEquals(original,frames[0])
+        val closed = frames[4]
+        for (y in 24..29) for (x in 24..36) {
+            val a = closed[y*w+x]
+            val b = clean[y*w+x]
+            assertTrue(kotlin.math.abs(((a ushr 16) and 255)-((b ushr 16) and 255)) < 5)
+            assertTrue(kotlin.math.abs(((a ushr 8) and 255)-((b ushr 8) and 255)) < 5)
+        }
+        assertNotEquals(closed[27*w+26],closed[27*w+34])
+        assertEquals(clean[15*w+15],closed[15*w+15])
+    }
 }
