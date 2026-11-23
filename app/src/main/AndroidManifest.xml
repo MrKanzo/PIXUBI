@@ -3,6 +3,7 @@
     <!-- Internet only for optional GitHub Releases update checks; all gameplay is offline. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
