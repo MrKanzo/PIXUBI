@@ -99,7 +99,7 @@ class PixubiUpdater(private val activity: Activity) {
                     var release: PixubiRelease? = null
                     for (i in 0 until assets.length()) {
                         val asset = assets.getJSONObject(i)
-                        if (asset.optString("name") != assetName) continue
+                        if (asset.optString("name") !in setOf(assetName, "app-release.apk")) continue
                         val uri = Uri.parse(asset.getString("browser_download_url"))
                         if (uri.scheme != "https" || uri.host != "github.com" ||
                             !uri.path.orEmpty().startsWith("/$repo/releases/download/")) {
