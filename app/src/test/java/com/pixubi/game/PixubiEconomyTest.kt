@@ -13,6 +13,8 @@ class PixubiEconomyTest {
         Species.KRAPLYK, Sex.GIRL, Region.LAKES, "Крапка", start, Random(7)
     )
 
+    private fun walkingPet() = pet().copy(activeMinutes = 15L, xp = 15)
+
     @Test fun starterSuppliesAreFiniteAndEmptyActionsCannotGrantXp() {
         var p = pet()
         assertEquals(30, p.coins)
@@ -46,7 +48,7 @@ class PixubiEconomyTest {
     }
 
     @Test fun explorationPaysWhenTimePassesEvenWithoutForegroundTick() {
-        val started = GameEngine.act(pet(), Action.EXPLORE, start + 1_000L)
+        val started = GameEngine.act(walkingPet(), Action.EXPLORE, start + 1_000L)
         assertTrue(started.expeditionStartedAt > 0L)
         assertEquals(30, started.coins) // starting an expedition costs energy, not coins
         val returned = GameEngine.advance(started,
@@ -60,7 +62,7 @@ class PixubiEconomyTest {
     }
 
     @Test fun explorationIsLimitedPerDayAndHibernationCancelsActiveSearch() {
-        var p = pet()
+        var p = walkingPet()
         repeat(4) { i ->
             val t = start + (i * 40L + 1L) * 60_000L
             p = GameEngine.act(p, Action.EXPLORE, t)
