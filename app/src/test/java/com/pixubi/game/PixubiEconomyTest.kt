@@ -90,6 +90,7 @@ class PixubiEconomyTest {
         val muchLater = start + 30 * 60 * 60_000L
         val progressed = GameEngine.restoreAfterAbsence(pet(), muchLater)
         assertEquals(720L, progressed.activeMinutes)
+        assertTrue(progressed.xp >= 12) // passive XP continues while the game is closed
         assertEquals(muchLater, progressed.lastUpdatedAt)
         assertTrue(progressed.alive)
         val frozen = GameEngine.act(pet(), Action.HIBERNATE, start + 1000)
