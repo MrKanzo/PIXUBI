@@ -9,8 +9,8 @@ android {
         applicationId = "com.pixubi.game.stable"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "0.8.0"
     }
     // Release uses a permanent package ID. Debug is installed alongside it.
     signingConfigs {
@@ -22,7 +22,7 @@ android {
         }
     }
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".growth" }
+        getByName("debug") { applicationIdSuffix = ".mystery" }
         getByName("release") {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("production")
