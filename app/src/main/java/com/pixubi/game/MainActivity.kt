@@ -543,7 +543,7 @@ private fun HomeScreen(
                 val today = PetGrowth.careDay(System.currentTimeMillis())
                 val used = if (pet.expeditionDay == today) pet.expeditionToday else 0
                 Button(onClick = { onAction(Action.EXPLORE) },
-                    enabled = pet.expeditionStartedAt == 0L && used < GameEngine.EXPEDITIONS_PER_DAY && pet.energy >= 15,
+                    enabled = pet.expeditionStartedAt == 0L && used < GameEngine.EXPEDITIONS_PER_DAY && pet.energy >= 15 && PetGrowth.stage(pet) !in listOf(GrowthStage.EGG, GrowthStage.COCOON),
                     modifier = Modifier.fillMaxWidth()) {
                     Text(if (pet.expeditionStartedAt > 0L) "🧭 Пікс шукає скарби (20 хв)"
                     else "🧭 Пошук монет і ресурсів (${used}/4)")
