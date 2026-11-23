@@ -9,7 +9,7 @@ class PetStorage(context: Context) {
 
     fun save(p: Pet) {
         val json = JSONObject().apply {
-            put("version", 2)
+            put("version", 3)
             put("species", p.species.name)
             put("sex", p.sex.name)
             put("region", p.region.name)
@@ -36,6 +36,20 @@ class PetStorage(context: Context) {
             put("legacyAdult", p.legacyAdult)
             put("deathReason", p.deathReason)
             put("message", p.message)
+            put("coins", p.coins)
+            put("foodStock", p.foodStock)
+            put("waterStock", p.waterStock)
+            put("chargeStock", p.chargeStock)
+            put("hasHome", p.hasHome)
+            put("hasBowl", p.hasBowl)
+            put("hasCup", p.hasCup)
+            put("hasCharger", p.hasCharger)
+            put("expeditionStartedAt", p.expeditionStartedAt)
+            put("expeditionsDone", p.expeditionsDone)
+            put("expeditionDay", p.expeditionDay)
+            put("expeditionToday", p.expeditionToday)
+            put("rewardDay", p.rewardDay)
+            put("rewardCoinsToday", p.rewardCoinsToday)
         }
         prefs.edit().putString("pet", json.toString()).apply()
     }
@@ -70,7 +84,21 @@ class PetStorage(context: Context) {
                 actionXpToday = o.optInt("actionXpToday", 0).coerceIn(0, PetGrowth.DAILY_CARE_XP_LIMIT),
                 legacyAdult = o.optBoolean("legacyAdult", !o.has("xp")),
                 deathReason = o.optString("deathReason", ""),
-                message = o.optString("message", "")
+                message = o.optString("message", ""),
+                coins = o.optInt("coins", 30).coerceIn(0, 9999),
+                foodStock = o.optInt("foodStock", 4).coerceIn(0, 30),
+                waterStock = o.optInt("waterStock", 4).coerceIn(0, 30),
+                chargeStock = o.optInt("chargeStock", 2).coerceIn(0, 30),
+                hasHome = o.optBoolean("hasHome", false),
+                hasBowl = o.optBoolean("hasBowl", false),
+                hasCup = o.optBoolean("hasCup", false),
+                hasCharger = o.optBoolean("hasCharger", false),
+                expeditionStartedAt = o.optLong("expeditionStartedAt", 0L).coerceAtLeast(0L),
+                expeditionsDone = o.optInt("expeditionsDone", 0).coerceAtLeast(0),
+                expeditionDay = o.optLong("expeditionDay", -1L),
+                expeditionToday = o.optInt("expeditionToday", 0).coerceIn(0, GameEngine.EXPEDITIONS_PER_DAY),
+                rewardDay = o.optLong("rewardDay", -1L),
+                rewardCoinsToday = o.optInt("rewardCoinsToday", 0).coerceIn(0, GameEngine.GAME_COINS_PER_DAY)
             )
         }.getOrNull()
     }
