@@ -17,11 +17,11 @@ class EyeAtlasPreviewTest {
         val adults = ImageIO.read(File("src/main/assets/pixubi_avatars.png"))
         val cases = listOf(
             Triple(evolution.getSubimage(0, 0, 192, 192), 192,
-                listOf(EyeRegion(73f, 102f, 19f, 19f), EyeRegion(125f, 102f, 19f, 19f))),
+                NativeEyeGeometry.regions(Species.LISYK, GrowthStage.BABY)),
             Triple(evolution.getSubimage(0, 192, 192, 192), 192,
-                listOf(EyeRegion(61f, 75f, 11f, 10f), EyeRegion(90f, 75f, 11f, 10f))),
+                NativeEyeGeometry.regions(Species.LISYK, GrowthStage.YOUNG)),
             Triple(adults.getSubimage(0, 160 * 6, 160, 160), 160,
-                listOf(EyeRegion(73f, 72f, 14f, 15f), EyeRegion(111f, 72f, 14f, 15f)))
+                NativeEyeGeometry.regions(Species.LISYK, GrowthStage.ADULT))
         )
         val preview = BufferedImage(192 * 5, 192 + 192 + 160, BufferedImage.TYPE_INT_ARGB)
         val graphic = preview.createGraphics()
@@ -143,6 +143,32 @@ class EyeAtlasPreviewTest {
             path.parentFile.mkdirs()
             assertTrue(ImageIO.write(zoom, "png", path))
         }
+    }
+
+    @Test fun previewAllFiveYoungSpeciesActualEyes() {
+        val atlas = ImageIO.read(File("src/main/assets/pixubi_evolution_10.png"))
+        val preview = BufferedImage(192 * 5, 192 * 5, BufferedImage.TYPE_INT_ARGB)
+        val graphic = preview.createGraphics()
+        for (species in Species.entries) {
+            val cell = 192
+            val source = atlas.getSubimage(species.ordinal * cell, cell, cell, cell)
+            val original = IntArray(cell * cell)
+            source.getRGB(0, 0, cell, cell, original, 0, cell)
+            for (frameIndex in 0..4) {
+                val pixels = EyePixelAnimator.frame(original, cell, cell,
+                    NativeEyeGeometry.regions(species, GrowthStage.YOUNG), frameIndex)
+                val frame = BufferedImage(cell, cell, BufferedImage.TYPE_INT_ARGB)
+                frame.setRGB(0, 0, cell, cell, pixels, 0, cell)
+                graphic.drawImage(frame, frameIndex * cell, species.ordinal * cell, null)
+                if (frameIndex > 0)
+                    assertTrue("Species " + species.name + " has no blink frames",
+                        !pixels.contentEquals(original))
+            }
+        }
+        graphic.dispose()
+        val output = File("build/eye-preview/all-young-eye-frames.png")
+        output.parentFile.mkdirs()
+        assertTrue(ImageIO.write(preview, "png", output))
     }
 
 }
