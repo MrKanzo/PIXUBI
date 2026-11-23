@@ -63,7 +63,8 @@ fun GrowthSprite(
             PetFaceOverlay(
                 species = pet.species, sex = pet.sex, coatIndex = pet.colorIndex,
                 emotion = emotion, blink = blink, chewOpen = chewOpen,
-                phase = motionPhase, modifier = Modifier.fillMaxSize()
+                phase = motionPhase, modifier = Modifier.fillMaxSize(),
+                stage = stage
             )
         }
         // Physical sex differences are facial details and markings, not a bow pasted on.

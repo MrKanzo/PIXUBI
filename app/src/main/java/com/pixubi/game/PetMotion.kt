@@ -43,7 +43,8 @@ object MotionResolver {
         val t = ((cycle % 1f) + 1f) % 1f
         val wave = sin(2.0 * PI * t).toFloat()
         val double = sin(4.0 * PI * t).toFloat()
-        val jump = abs(wave)
+        // One deliberate hop per cycle; the previous abs(sin(2πt)) bounced twice.
+        val jump = sin(PI * t).toFloat().coerceAtLeast(0f)
         return when (motion) {
             PetMotion.WALK -> BodyPose(
                 xDp = 2.5f * wave, yDp = -3.5f * abs(double),
@@ -52,12 +53,12 @@ object MotionResolver {
                 step = wave
             )
             PetMotion.HOP -> BodyPose(
-                yDp = -18f * jump, rotationDegrees = 7f * wave,
+                yDp = -23f * jump, rotationDegrees = 4f * wave,
                 scaleX = 1f - .05f * jump, scaleY = 1f + .075f * jump,
                 step = wave
             )
             PetMotion.BOUNCE -> BodyPose(
-                yDp = -13f * jump, rotationDegrees = 3f * wave,
+                yDp = -16f * jump, rotationDegrees = 2f * wave,
                 scaleX = 1f - .048f * jump, scaleY = 1f + .058f * jump,
                 step = wave
             )

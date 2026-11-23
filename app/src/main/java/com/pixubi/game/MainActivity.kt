@@ -714,7 +714,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     )
     val movementCycle by loop.animateFloat(
         initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1320, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing)),
         label = "pixubi-body-motion"
     )
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
@@ -727,7 +727,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     val bodyMotion = MotionResolver.pose(motion, movementCycle)
     val eyeBlink = !sleeping && blinkCycle > 0.93f && blinkCycle < 0.985f
     val travelY = when (emotion) {
-        PetEmotion.HAPPY -> -12f * bob
+        PetEmotion.HAPPY -> 0f  // BodyMotion already handles happy hops; no double bouncing.
         PetEmotion.EATING, PetEmotion.DRINKING -> 3f * bob
         PetEmotion.SLEEPING, PetEmotion.HIBERNATING -> 4f * bob
         PetEmotion.SAD, PetEmotion.TIRED -> 3f
