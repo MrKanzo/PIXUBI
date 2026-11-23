@@ -32,7 +32,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.8-mystery-APK
+          name: PIXUBI-v0.10-test-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
       - name: Detect release signing secrets
         id: signing
@@ -74,10 +74,11 @@ jobs:
           VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           TAG="v$VERSION"
           APK="app/build/outputs/apk/release/app-release.apk"
+          cp "$APK" "$RUNNER_TEMP/PIXUBI-release.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists; will not overwrite signed APK."
           else
-            gh release create "$TAG" "$APK#PIXUBI-release.apk" --title "PIXUBI $TAG" --notes "Stable signed Android PIXUBI release. In-app updates require the same signing certificate." --target "$GITHUB_SHA"
+            gh release create "$TAG" "$RUNNER_TEMP/PIXUBI-release.apk" --title "PIXUBI $TAG" --notes "Stable signed Android PIXUBI release. In-app updates require the same signing certificate." --target "$GITHUB_SHA"
           fi
       - name: Explain unsigned test build
         if: steps.signing.outputs.ready != 'true'
