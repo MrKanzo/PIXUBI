@@ -100,6 +100,7 @@ object GameEngine {
     }
 
     private fun finishExpedition(pet: Pet, now: Long): Pet {
+        if (!pet.alive) return pet
         if (pet.expeditionStartedAt <= 0L ||
             now - pet.expeditionStartedAt < EXPEDITION_MINUTES * 60_000L) return pet
         val completed = pet.expeditionsDone
@@ -211,19 +212,54 @@ object GameEngine {
         if (pet.mode == Mode.HIBERNATION && action != Action.WAKE) return pet
         if (pet.mode == Mode.SLEEP && action !in listOf(Action.WAKE, Action.HIBERNATE)) return pet
         fun gain(value: Double, points: Double) = (value + points).coerceIn(0.0, 100.0)
+        if (action == Action.FEED && pet.foodStock <= 0)
+            return pet.copy(lastUpdatedAt = now, message = "🍓 Їжа закінчилася! Купи або знайди ще.")
+        if (action == Action.WATER && pet.waterStock <= 0)
+            return pet.copy(lastUpdatedAt = now, message = "💧 Вода закінчилася! Поповни запаси.")
+        if (action == Action.CHARGE && pet.chargeStock <= 0)
+            return pet.copy(lastUpdatedAt = now, message = "🔋 Закінчилися елементи заряду.")
+        if (action == Action.EXPLORE) {
+            val today = PetGrowth.careDay(now)
+            val used = if (today == pet.expeditionDay) pet.expeditionToday else 0
+            if (pet.expeditionStartedAt > 0L)
+                return pet.copy(lastUpdatedAt = now, message = "🧭 Я ще досліджую світ!")
+            if (used >= EXPEDITIONS_PER_DAY)
+                return pet.copy(lastUpdatedAt = now, message = "🧭 Сьогодні я вже добре погуляв. Завтра знову!")
+            if (pet.energy < 15.0)
+                return pet.copy(lastUpdatedAt = now, message = "💤 Спочатку відпочину перед прогулянкою.")
+        }
         val updated = when (action) {
-            Action.FEED -> pet.copy(hunger = gain(pet.hunger, 24.0),
+            Action.FEED -> pet.copy(foodStock = pet.foodStock - 1, hunger = gain(pet.hunger, if (pet.hasBowl) 32.0 else 24.0),
                 message = if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
                     "Моя цифрова оболонка отримала живлення! ⚡" else "Ням-ням! Смачно! 🍓")
-            Action.WATER -> pet.copy(thirst = gain(pet.thirst, 30.0),
+            Action.WATER -> pet.copy(waterStock = pet.waterStock - 1, thirst = gain(pet.thirst, if (pet.hasCup) 40.0 else 30.0),
                 message = if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
                     "Цифрова оболонка зволожена! 💧" else "Водичка — це життя! 💧")
+            Action.CHARGE -> pet.copy(chargeStock = pet.chargeStock - 1,
+                energy = gain(pet.energy, if (pet.hasCharger) 55.0 else 32.0),
+                message = "⚡ Енергію відновлено!")
+            Action.EXPLORE -> {
+                val today = PetGrowth.careDay(now)
+                pet.copy(expeditionStartedAt = now,
+                    expeditionDay = today,
+                    expeditionToday = (if (today == pet.expeditionDay) pet.expeditionToday else 0) + 1,
+                    energy = gain(pet.energy, -8.0),
+                    message = "🧭 Вирушаю на 20 хвилин шукати монетки та ресурси!")
+            }
             Action.SLEEP -> pet.copy(mode = Mode.SLEEP, message = "На добраніч! 🌙")
             Action.WAKE -> pet.copy(mode = Mode.AWAKE, message = "Я прокинувся! Привіт! ☀️")
-            Action.HIBERNATE -> pet.copy(mode = Mode.HIBERNATION, message = "Я чекатиму на тебе у сплячці. ❄️")
+            Action.HIBERNATE -> pet.copy(mode = Mode.HIBERNATION, expeditionStartedAt = 0L,
+                message = "Я чекатиму на тебе у сплячці. ❄️")
             Action.PLAY_WIN -> pet.copy(
                 happiness = gain(pet.happiness, 18.0), energy = gain(pet.energy, -6.0),
-                miniGameWins = pet.miniGameWins + 1, message = "Ого, ми виграли! ✨"
+                miniGameWins = pet.miniGameWins + 1,
+                coins = (pet.coins + min(6, (GAME_COINS_PER_DAY -
+                    (if (PetGrowth.careDay(now) == pet.rewardDay) pet.rewardCoinsToday else 0)).coerceAtLeast(0))).coerceAtMost(9999),
+                rewardDay = PetGrowth.careDay(now),
+                rewardCoinsToday = ((if (PetGrowth.careDay(now) == pet.rewardDay)
+                    pet.rewardCoinsToday else 0) + 6).coerceAtMost(GAME_COINS_PER_DAY),
+                message = "Виграли! ✨ +монетки (до 30 за ігри на день)."
+
             )
         }
         val withCare = PetGrowth.recordCare(updated, action, now, pet.mode == Mode.HIBERNATION)
