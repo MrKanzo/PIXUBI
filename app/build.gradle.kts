@@ -9,12 +9,12 @@ android {
         applicationId = "com.pixubi.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
     // Preview package installs beside v0.1 so its existing pet/save stays safe.
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".preview" }
+        getByName("debug") { applicationIdSuffix = ".sound" }
     }
     buildFeatures { compose = true }
     compileOptions {
