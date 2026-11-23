@@ -79,7 +79,8 @@ fun PixelPetSprite(
     blink: Boolean = false,
     chewOpen: Boolean = false,
     motionPhase: Float = 0f,
-    eyeClosure: Float = 0f
+    eyeClosure: Float = 0f,
+    motion: PetMotion = PetMotion.IDLE
 ) {
     val appContext = LocalContext.current.applicationContext
     // The image itself has eyes. Build a few blink frames FROM its own pixels,
@@ -88,17 +89,15 @@ fun PixelPetSprite(
         NativeSpriteEyes.frames(
             PixubiSpriteCache.get(appContext, species, sex, coatIndex),
             species, GrowthStage.ADULT, emotion
-        ).map { it.asImageBitmap() }
+        )
     }
     val closure = NativeEyeMotion.closure(emotion, eyeClosure, blink)
     val frame = nativeFrames[FaceExpression.frameIndex(emotion,closure,chewOpen)]
     Box(modifier, contentAlignment = Alignment.Center) {
-        Image(
-            bitmap = frame,
-            contentDescription = species.title + " — " + sex.title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit,
-            filterQuality = FilterQuality.None
+        ArticulatedPixuImage(
+            bitmap = frame, species = species, stage = GrowthStage.ADULT,
+            motion = motion, phase = motionPhase, description = species.title + " — " + sex.title,
+            modifier = Modifier.fillMaxSize()
         )
 
         when (emotion) {

@@ -723,7 +723,14 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
-    val motion = MotionResolver.resolve(pet, emotion, searching)
+    // Occasionally walk a short loop at home, not only during expeditions.
+    val wanderPhase = scoutCycle % 1f
+    val wandering = !searching && pet.alive && pet.mode == Mode.AWAKE &&
+        emotion == PetEmotion.IDLE && wanderPhase in 0.15f..0.48f
+    val walkT = ((wanderPhase - .15f) / .33f).coerceIn(0f,1f)
+    val wanderX = if (wandering) (kotlin.math.sin(kotlin.math.PI * walkT).toFloat() *
+        (if ((scoutCycle.toInt() + pet.geneA) % 2 == 0) 19f else -19f)) else 0f
+    val motion = if(wandering) PetMotion.WALK else MotionResolver.resolve(pet, emotion, searching)
     val bodyMotion = MotionResolver.pose(motion, movementCycle)
     val eyeClosure = if (sleeping) 1f else NativeEyeMotion.blinkAt(blinkCycle)
     val travelY = when (emotion) {
@@ -885,7 +892,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
                 .offset(
-                    x = (searchPose.xDp + bodyMotion.xDp).dp,
+                    x = (searchPose.xDp + bodyMotion.xDp + wanderX).dp,
                     y = (17f + travelY + searchPose.yDp + bodyMotion.yDp).dp
                 )
                 .size(194.dp)
