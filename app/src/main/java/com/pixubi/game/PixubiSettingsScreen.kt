@@ -31,6 +31,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun PixubiSettingsScreen(
     settings: SoundSettings,
+    notificationSettings: PixubiNotificationSettings,
+    onNotificationSettingsChange: (PixubiNotificationSettings) -> Unit,
+    onTestNotification: () -> Unit,
     currentRegion: Region,
     previewRegion: Region?,
     onSettingsChange: (SoundSettings) -> Unit,
@@ -52,6 +55,46 @@ fun PixubiSettingsScreen(
                 Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
+            shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🔔 Піксубі на зв'язку", style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold)
+                SettingsSwitch(
+                    title = "🐣 Сповіщення від вихованця",
+                    description = "Пікс нагадає, коли хоче їсти, пити, гратися або спати",
+                    checked = notificationSettings.enabled,
+                    onChecked = { onNotificationSettingsChange(notificationSettings.copy(enabled = it)) }
+                )
+                if (notificationSettings.enabled) {
+                    HorizontalDivider(color = Color(0xFF41556D))
+                    SettingsSwitch(
+                        title = "🌙 Тихі години 22:00–08:00",
+                        description = "У цей час не турбуватиму тебе",
+                        checked = notificationSettings.quietHours,
+                        onChecked = { onNotificationSettingsChange(notificationSettings.copy(quietHours = it)) }
+                    )
+                    SettingsSwitch("🍓 Про їжу", "Коли Пікс зголодніє",
+                        notificationSettings.food,
+                        { onNotificationSettingsChange(notificationSettings.copy(food = it)) })
+                    SettingsSwitch("💧 Про воду", "Коли Пікс захоче пити",
+                        notificationSettings.water,
+                        { onNotificationSettingsChange(notificationSettings.copy(water = it)) })
+                    SettingsSwitch("💤 Про сон", "Коли закінчується енергія",
+                        notificationSettings.sleep,
+                        { onNotificationSettingsChange(notificationSettings.copy(sleep = it)) })
+                    SettingsSwitch("🎮 Про ігри", "Коли Піксу стане сумно",
+                        notificationSettings.play,
+                        { onNotificationSettingsChange(notificationSettings.copy(play = it)) })
+                    OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) {
+                        Text("🔔 Надіслати тестове сповіщення")
+                    }
+                    Text("Перевірка приблизно кожні 30 хвилин, залежно від Android. " +
+                        "Не частіше одного нагадування за 4 години. Сплячка зупиняє нагадування.",
+                        color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
@@ -123,7 +166,7 @@ fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Поточна версія: 0.8.0" +
+                Text("Поточна версія: 0.10.0" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = onCheckUpdates,
