@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- No INTERNET permission: the game is completely offline. -->
-    <application android:allowBackup="false" android:label="PIXUBI 0.2" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:supportsRtl="true">
+    <application android:allowBackup="false" android:label="PIXUBI 0.3" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
