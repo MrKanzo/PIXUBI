@@ -19,7 +19,7 @@ class EyeAtlasPreviewTest {
             Triple(evolution.getSubimage(0, 0, 192, 192), 192,
                 listOf(EyeRegion(73f, 102f, 19f, 19f), EyeRegion(125f, 102f, 19f, 19f))),
             Triple(evolution.getSubimage(0, 192, 192, 192), 192,
-                listOf(EyeRegion(70f, 94f, 16f, 17f), EyeRegion(118f, 94f, 16f, 17f))),
+                listOf(EyeRegion(76f, 108f, 15f, 11f), EyeRegion(119f, 108f, 15f, 11f))),
             Triple(adults.getSubimage(0, 160 * 6, 160, 160), 160,
                 listOf(EyeRegion(73f, 72f, 14f, 15f), EyeRegion(111f, 72f, 14f, 15f)))
         )
