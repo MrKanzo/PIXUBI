@@ -29,7 +29,8 @@ object EmotionResolver {
     }
 
     fun bubble(pet: Pet, emotion: PetEmotion): String? = when (emotion) {
-        PetEmotion.EATING -> "🍓 Ням-ням!"
+        PetEmotion.EATING -> if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
+            "⚡ Живлення…" else "🍓 Ням-ням!"
         PetEmotion.DRINKING -> "💧 Буль-буль!"
         PetEmotion.SLEEPING -> "💤 Zzz…"
         PetEmotion.HIBERNATING -> "❄️ Пауза"
@@ -47,7 +48,8 @@ object EmotionResolver {
     fun caption(pet: Pet, emotion: PetEmotion): String = when (emotion) {
         PetEmotion.HIBERNATING -> "Я сплю у сплячці. Час і старіння на паузі."
         PetEmotion.SLEEPING -> "Ш-ш-ш… Відновлюю сили."
-        PetEmotion.EATING -> "Ням-ням! Смачненько! 🍓"
+        PetEmotion.EATING -> if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
+            "Цифрова оболонка отримує енергію! ⚡" else "Ням-ням! Смачненько! 🍓"
         PetEmotion.DRINKING -> "Ох, як освіжає! 💧"
         PetEmotion.HAPPY -> "Я такий щасливий, що аж підстрибую! ✨"
         PetEmotion.SAD -> "Мені трохи сумно. Подбай про мене, будь ласка."
