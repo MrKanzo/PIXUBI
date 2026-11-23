@@ -127,6 +127,13 @@ object GameEngine {
             else -> false
         }
         if (owned) return pet.copy(message = "Цей предмет у мене вже є! 💜")
+        val full = when (item) {
+            ShopItem.FOOD -> pet.foodStock > 27
+            ShopItem.WATER -> pet.waterStock > 27
+            ShopItem.CELLS -> pet.chargeStock > 28
+            else -> false
+        }
+        if (full) return pet.copy(message = "Звільни місце в запасах перед покупкою.")
         if (pet.coins < item.price) return pet.copy(message = "Не вистачає монеток на ${item.title}. 🪙")
         val paid = pet.copy(coins = pet.coins - item.price, lastUpdatedAt = now)
         return when (item) {
