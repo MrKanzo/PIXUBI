@@ -22,7 +22,7 @@ internal object NativeSpriteEyes {
                 Species.KHMARYK -> floatArrayOf(71f, 127f, 101f, 19f, 19f)
             }
             GrowthStage.YOUNG -> when (species) {
-                Species.LISYK -> floatArrayOf(76f, 119f, 108f, 15f, 11f)
+                Species.LISYK -> floatArrayOf(79f, 126f, 90f, 13f, 11f)
                 Species.ISKRYK -> floatArrayOf(70f, 124f, 100f, 17f, 18f)
                 Species.KRAPLYK -> floatArrayOf(80f, 119f, 102f, 16f, 17f)
                 Species.PISHCHANYK -> floatArrayOf(72f, 122f, 102f, 16f, 18f)
