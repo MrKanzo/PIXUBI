@@ -453,8 +453,8 @@ private fun HomeScreen(
             }
             Mode.AWAKE -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { onAction(Action.FEED) }, modifier = Modifier.weight(1f)) { Text("🍓 Годувати") }
-                    Button(onClick = { onAction(Action.WATER) }, modifier = Modifier.weight(1f)) { Text("💧 Напоїти") }
+                    Button(onClick = { onAction(Action.FEED) }, modifier = Modifier.weight(1f)) { Text(if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON)) "⚡ Живлення" else "🍓 Годувати") }
+                    Button(onClick = { onAction(Action.WATER) }, modifier = Modifier.weight(1f)) { Text(if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON)) "💧 Зволожити" else "💧 Напоїти") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { onAction(Action.SLEEP) }, modifier = Modifier.weight(1f)) { Text("🌙 Сон") }
