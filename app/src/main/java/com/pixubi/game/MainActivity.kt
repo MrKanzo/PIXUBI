@@ -226,7 +226,7 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PetSprite(choice, 0, Modifier.size(63.dp))
+                    PetSprite(choice, 0, Modifier.size(63.dp), sex = sex)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(choice.title, fontWeight = FontWeight.Bold)
@@ -479,13 +479,13 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             pet.species, pet.colorIndex,
             modifier = Modifier.align(Alignment.Center)
                 .offset(y = (17f + travelY).dp)
-                .size(175.dp)
+                .size(194.dp)
                 .graphicsLayer {
                     rotationZ = if (emotion == PetEmotion.HAPPY) sway * 2.5f else sway
                     scaleY = if (sleeping) 0.93f + bob * .035f else 1f - bob * .025f
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE) { onPetTap() },
-            emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f
+            emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f, sex = pet.sex
         )
         if (speech != null) {
             Surface(
@@ -508,7 +508,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     }
 }
 
-/** Pixel patterns are original lightweight placeholders; every species has a distinct silhouette. */
+/** PIXUBI v0.4 draws the ten original cyber pets from a bundled sprite atlas. */
 @Composable
 private fun PetSprite(
     species: Species,
@@ -516,135 +516,13 @@ private fun PetSprite(
     modifier: Modifier = Modifier,
     emotion: PetEmotion = PetEmotion.IDLE,
     blink: Boolean = false,
-    chewOpen: Boolean = false
+    chewOpen: Boolean = false,
+    sex: Sex = Sex.BOY
 ) {
-    val pattern = when (species) {
-        Species.LISYK -> listOf(
-            "..DD.......DD..", "..DAA.....AAD..", "..DAAA...AAAD..", "...DAAAAAAAD...",
-            "...DAAAAAAAD...", "..DAAAAAAAAAD..", "..DAEAAAAEAAD..", "..DAAAAAAAAAD..",
-            "..DAAAANAAAAD..", "...DAAAAAAAD...", "....DAAAAAD....", "....DAAAAAD....",
-            "...DDAAADDAAD..", "...DDDDDDDDDD..."
-        )
-        Species.ISKRYK -> listOf(
-            ".......DD......", "......DAAD.....", ".....DAAAD.....", "..DDDAAAADD....",
-            "..DAAAAAAAD....", "...DAAAAAAAD...", "...DAEAAEAAD...", "..DAAAAAAAAD...",
-            "..DAAAANAAAD...", "...DAAAAAAD....", "....DAAAAD.....", "...DDAAAADD....",
-            "...DD.DD.DD....", "....D....D....."
-        )
-        Species.KRAPLYK -> listOf(
-            "...............", "..DD.......DD..", ".DAAD.....DAAD.", ".DAAADDDDAAAAD.",
-            "..DAAAAAAAAAD..", "..DAAAAAAAAAD..", "..DAEAAAAEAAD..", "..DAAAAAAAAAD..",
-            "..DAAAANAAAAD..", "...DAAAAAAAD...", "....DAAAAAD....", "...DDAAAADD....",
-            "..DD.DDDDD.DD..", "..............."
-        )
-        Species.PISHCHANYK -> listOf(
-            ".DDD.......DDD.", ".DAAD.....DAAD.", ".DAAAD...DAAAD.", "..DAAAD.DAAAD..",
-            "...DAAAAAAAD...", "..DAAAAAAAAAD..", "..DAEAAAAEAAD..", "..DAAAAAAAAAD..",
-            "..DAAAANAAAAD..", "...DAAAAAAAD...", "....DAAAAAD....", "...DDAAAADD....",
-            "...DD.DD.DD....", "..............."
-        )
-        Species.KHMARYK -> listOf(
-            "...............", "....DD...DD....", "...DAAD.DAAD...", "..DAAAAAAAAAD..",
-            ".DAAAAAAAAAAAD.", ".DAAAAAAAAAAAD.", ".DAAEAAAAEAAD..", ".DAAAAAAAAAAAD.",
-            "..DAAAANAAAAD..", "..DAAAAAAAAAD..", "...DAAAAAAAD...", "....DAAAAD.....",
-            "...DDAAAADD....", "...DD....DD...."
-        )
-    }
-
-    val body = palette[coatIndex.coerceIn(0, 5)]
-    val shadow = Color(0xFF25324A)
-    val blush = Color(0xFFFF7EA8)
-    Canvas(modifier) {
-        val w = pattern.maxOf { it.length }
-        val unit = min(size.width / w, size.height / pattern.size)
-        val originX = (size.width - unit * w) / 2f
-        val originY = (size.height - unit * pattern.size) / 2f
-        val eyes = mutableListOf<Pair<Int, Int>>()
-        var mouth = 7 to 8
-        fun cell(x: Float, y: Float, width: Float, height: Float, color: Color) {
-            drawRect(color, Offset(originX + x * unit, originY + y * unit),
-                Size(width * unit, height * unit))
-        }
-        fun stroke(x1: Float, y1: Float, x2: Float, y2: Float, color: Color = shadow) {
-            drawLine(color, Offset(originX + x1 * unit, originY + y1 * unit),
-                Offset(originX + x2 * unit, originY + y2 * unit),
-                strokeWidth = unit * .24f)
-        }
-        pattern.forEachIndexed { y, row ->
-            row.forEachIndexed { x, ch ->
-                val color = when (ch) {
-                    'A', 'E', 'N' -> body
-                    'D' -> shadow
-                    else -> null
-                }
-                if (color != null) cell(x.toFloat(), y.toFloat(), 1.02f, 1.02f, color)
-                if (ch == 'E') eyes.add(x to y)
-                if (ch == 'N') mouth = x to y
-            }
-        }
-        val closed = blink || emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
-        eyes.forEach { (x, y) ->
-            val fx = x.toFloat()
-            val fy = y.toFloat()
-            when {
-                closed -> stroke(fx + .04f, fy + .53f, fx + .94f, fy + .48f)
-                emotion == PetEmotion.HAPPY -> {
-                    stroke(fx + .05f, fy + .72f, fx + .50f, fy + .20f)
-                    stroke(fx + .50f, fy + .20f, fx + .97f, fy + .72f)
-                }
-                emotion == PetEmotion.SAD || emotion == PetEmotion.TIRED -> {
-                    cell(fx + .07f, fy + .23f, .83f, .68f, Color.White)
-                    cell(fx + .37f, fy + .48f, .35f, .38f, shadow)
-                    stroke(fx, fy + .09f, fx + .85f, fy + .28f)
-                }
-                else -> {
-                    cell(fx + .05f, fy + .02f, .88f, .94f, Color.White)
-                    cell(fx + .35f, fy + .35f, .40f, .60f, shadow)
-                    cell(fx + .38f, fy + .40f, .13f, .15f, Color.White)
-                }
-            }
-        }
-        val (mx, my) = mouth
-        val x = mx.toFloat()
-        val y = my.toFloat()
-        when (emotion) {
-            PetEmotion.SAD, PetEmotion.TIRED -> {
-                stroke(x - .48f, y + .70f, x, y + .32f)
-                stroke(x, y + .32f, x + .48f, y + .70f)
-                if (emotion == PetEmotion.SAD && eyes.isNotEmpty()) {
-                    val (ex, ey) = eyes.last()
-                    cell(ex + .86f, ey + 1.12f, .27f, .55f, Color(0xFF77DAFF))
-                }
-            }
-            PetEmotion.SLEEPING, PetEmotion.HIBERNATING -> {
-                stroke(x - .35f, y + .44f, x + .34f, y + .44f)
-            }
-            PetEmotion.EATING, PetEmotion.DRINKING -> {
-                if (chewOpen) {
-                    drawCircle(shadow, unit * .45f,
-                        Offset(originX + (x + .2f) * unit, originY + (y + .45f) * unit))
-                    cell(x - .04f, y + .53f, .42f, .21f, blush)
-                } else stroke(x - .3f, y + .38f, x + .42f, y + .40f)
-            }
-            PetEmotion.SURPRISED -> {
-                drawCircle(shadow, unit * .52f,
-                    Offset(originX + (x + .15f) * unit, originY + (y + .5f) * unit))
-                drawCircle(blush, unit * .20f,
-                    Offset(originX + (x + .13f) * unit, originY + (y + .61f) * unit))
-            }
-            PetEmotion.HAPPY -> {
-                stroke(x - .53f, y + .15f, x, y + .66f)
-                stroke(x, y + .66f, x + .58f, y + .15f)
-                cell(x - 1.8f, y - 1.45f, .56f, .35f, blush.copy(alpha = .85f))
-                cell(x + 1.25f, y - 1.45f, .56f, .35f, blush.copy(alpha = .85f))
-            }
-            PetEmotion.IDLE -> {
-                stroke(x - .34f, y + .40f, x, y + .65f)
-                stroke(x, y + .65f, x + .38f, y + .40f)
-            }
-        }
-    }
-
+    PixelPetSprite(
+        species = species, sex = sex, coatIndex = coatIndex,
+        modifier = modifier, emotion = emotion, blink = blink, chewOpen = chewOpen
+    )
 }
 
 @Composable
@@ -699,7 +577,7 @@ private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
         Text("Ваші пригоди залишаться теплим спогадом 💜", textAlign = TextAlign.Center)
         Spacer(Modifier.height(26.dp))
         Button(onClick = onNewPet, modifier = Modifier.fillMaxWidth()) { Text("🥚 Виростити нового Піксубі") }
-        Text("У версії 0.3 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
+        Text("У версії 0.4 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
             style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Color.LightGray)
     }
 }
