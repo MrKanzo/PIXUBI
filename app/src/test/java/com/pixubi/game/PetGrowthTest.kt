@@ -66,7 +66,7 @@ class PetGrowthTest {
         assertEquals(0, PetGrowth.survivalBonus(1438, 1439))
         assertEquals(8, PetGrowth.survivalBonus(1439, 1440))
         assertEquals(0, PetGrowth.survivalBonus(1440, 1450))
-        assertEquals(16, PetGrowth.survivalBonus(1430, 4320))
+        assertEquals(24, PetGrowth.survivalBonus(1430, 4320))
     }
 
     @Test fun hibernationFreezesAgeAndXpAcrossLongAbsence() {
