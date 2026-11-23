@@ -34,8 +34,11 @@ internal object EyePixelAnimator {
             val x1 = min(width - 1, ceil(eye.centerX + eye.radiusX).toInt())
             val y0 = max(0, floor(eye.centerY - eye.radiusY).toInt())
             val y1 = min(height - 1, ceil(eye.centerY + eye.radiusY).toInt())
-            val topSampleY = (eye.centerY - eye.radiusY - 5f).toInt().coerceIn(0, height - 1)
-            val bottomSampleY = (eye.centerY + eye.radiusY + 5f).toInt().coerceIn(0, height - 1)
+            // Sample the native facial fur as a WHOLE PATCH. Copying each
+            // individual x-column from above/below the eyes made long vertical
+            // stripes across the nose (especially on juvenile/adult artwork).
+            val upperFur = neighboringFur(original, width, height, eye, above = true)
+            val lowerFur = neighboringFur(original, width, height, eye, above = false)
             val progress = step / 4f
 
             for (x in x0..x1) {
@@ -61,19 +64,13 @@ internal object EyePixelAnimator {
                     val opacity = lidOpacity * feather
                     if (opacity <= 0f) continue
 
-                    val topColor = original[topSampleY * width + x]
-                    val bottomColor = original[bottomSampleY * width + x]
-                    val color = when {
-                        ((topColor ushr 24) and 255) < 180 -> bottomColor
-                        ((bottomColor ushr 24) and 255) < 180 -> topColor
-                        else -> {
-                            val position = ((y - (eye.centerY - eye.radiusY)) /
-                                (2f * eye.radiusY)).coerceIn(0f, 1f)
-                            blend(topColor, bottomColor, position)
-                        }
-                    }
-                    if (((color ushr 24) and 255) >= 180)
-                        output[index] = blend(originalColor, color, opacity)
+                    val position = ((y - (eye.centerY - eye.radiusY)) /
+                        (2f * eye.radiusY)).coerceIn(0f, 1f)
+                    // Same tones as the original forehead/cheek: NO vertical
+                    // per-column color copied onto the eye. A slight vertical
+                    // fur gradient keeps the eyelid from looking like a sticker.
+                    val fur = blend(upperFur, lowerFur, position * .38f)
+                    output[index] = blend(originalColor, fur, opacity)
                 }
             }
 
@@ -96,6 +93,52 @@ internal object EyePixelAnimator {
             }
         }
         return output
+    }
+
+    /** Most common light fur shade in a real patch OUTSIDE the painted iris. */
+    private fun neighboringFur(
+        source: IntArray, width: Int, height: Int,
+        eye: EyeRegion, above: Boolean
+    ): Int {
+        val cx = eye.centerX.toInt()
+        val minX = max(0, (cx - eye.radiusX * .8f).toInt())
+        val maxX = min(width - 1, (cx + eye.radiusX * .8f).toInt())
+        val yA = if (above) eye.centerY - eye.radiusY - 12f
+                 else eye.centerY + eye.radiusY + 4f
+        val yB = if (above) eye.centerY - eye.radiusY - 4f
+                 else eye.centerY + eye.radiusY + 12f
+        val minY = max(0, yA.toInt())
+        val maxY = min(height - 1, yB.toInt())
+        val buckets = mutableMapOf<Int, Int>()
+        val colors = mutableMapOf<Int, LongArray>()
+        for (y in minY..maxY) for (x in minX..maxX) {
+            val c = source[y * width + x]
+            if (((c ushr 24) and 255) < 220) continue
+            val r = (c ushr 16) and 255
+            val g = (c ushr 8) and 255
+            val b = c and 255
+            // Exclude the dark eye outline, iris and black helmet details.
+            if (r * 3 + g * 5 + b * 2 < 950) continue
+            val key = ((r / 32) shl 16) or ((g / 32) shl 8) or (b / 32)
+            buckets[key] = (buckets[key] ?: 0) + 1
+            val acc = colors.getOrPut(key) { LongArray(4) }
+            acc[0] += r.toLong(); acc[1] += g.toLong()
+            acc[2] += b.toLong(); acc[3]++
+        }
+        val best = buckets.maxByOrNull { it.value }?.key
+        if (best != null) {
+            val sums = colors.getValue(best)
+            val n = sums[3]
+            return 0xFF000000.toInt() or
+                ((sums[0] / n).toInt() shl 16) or
+                ((sums[1] / n).toInt() shl 8) or
+                (sums[2] / n).toInt()
+        }
+        // Fallback when a species has very dark fur at this specific position.
+        val y = (if (above) eye.centerY - eye.radiusY - 5f
+                 else eye.centerY + eye.radiusY + 5f).toInt().coerceIn(0, height - 1)
+        val c = source[y * width + cx.coerceIn(0, width - 1)]
+        return if (((c ushr 24) and 255) >= 180) c else 0xFFAAB3C4.toInt()
     }
 
     private fun selectNativeOutline(
