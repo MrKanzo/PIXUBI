@@ -36,9 +36,10 @@ jobs:
           test -f app/build/eye-preview/lisyk-eye-frames.png
           mkdir -p docs/eye-previews
           cp app/build/eye-preview/lisyk-eye-frames.png docs/eye-previews/lisyk-eye-frames.png
+          cp app/build/eye-preview/lisyk-young-grid.png docs/eye-previews/lisyk-young-grid.png
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/eye-previews/lisyk-eye-frames.png
+          git add docs/eye-previews
           if ! git diff --cached --quiet; then
             git commit -m "docs: real original-sprite eye blink frames [skip ci]"
             git push

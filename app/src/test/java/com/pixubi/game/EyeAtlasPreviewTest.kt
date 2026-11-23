@@ -47,4 +47,56 @@ class EyeAtlasPreviewTest {
         assertTrue(ImageIO.write(preview, "png", target))
         assertTrue(target.length() > 0L)
     }
+    @Test fun mapYoungLisykRealEyeCoordinates() {
+        val atlas = ImageIO.read(File("src/main/assets/pixubi_evolution_10.png"))
+        val zoom = BufferedImage(760, 550, BufferedImage.TYPE_INT_RGB)
+        val g = zoom.createGraphics()
+        val scale = 6
+        val baseX = 45
+        val baseY = 50
+        val regionWidth = 114
+        val regionHeight = 79
+        val margin = 45
+        g.color = java.awt.Color(15, 24, 43)
+        g.fillRect(0, 0, zoom.width, zoom.height)
+        g.setRenderingHint(
+            java.awt.RenderingHints.KEY_INTERPOLATION,
+            java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+        )
+        g.drawImage(
+            atlas, margin, margin,
+            margin + regionWidth * scale, margin + regionHeight * scale,
+            baseX, 192 + baseY, baseX + regionWidth, 192 + baseY + regionHeight,
+            null
+        )
+        g.font = java.awt.Font("Monospaced", java.awt.Font.BOLD, 12)
+        for (x in 50..150 step 10) {
+            val xx = margin + (x - baseX) * scale
+            g.color = java.awt.Color(255, 255, 255, 85)
+            g.drawLine(xx, margin, xx, margin + regionHeight * scale)
+            g.color = java.awt.Color.WHITE
+            g.drawString(x.toString(), xx - 9, 30)
+        }
+        for (y in 50..125 step 10) {
+            val yy = margin + (y - baseY) * scale
+            g.color = java.awt.Color(255, 255, 255, 85)
+            g.drawLine(margin, yy, margin + regionWidth * scale, yy)
+            g.color = java.awt.Color.WHITE
+            g.drawString(y.toString(), 7, yy + 4)
+        }
+        g.color = java.awt.Color.RED
+        g.stroke = java.awt.BasicStroke(2f)
+        for ((x, y) in listOf(79 to 90, 126 to 90)) {
+            val cx = margin + (x - baseX) * scale
+            val cy = margin + (y - baseY) * scale
+            g.drawOval(cx - 7, cy - 7, 14, 14)
+            g.drawLine(cx - 12, cy, cx + 12, cy)
+            g.drawLine(cx, cy - 12, cx, cy + 12)
+        }
+        g.dispose()
+        val dest = File("build/eye-preview/lisyk-young-grid.png")
+        dest.parentFile.mkdirs()
+        assertTrue(ImageIO.write(zoom, "png", dest))
+    }
+
 }
