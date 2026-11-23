@@ -66,12 +66,23 @@ class MainActivity : ComponentActivity() {
             var quizTopic by remember { mutableStateOf(QuizTopic.LOGIC) }
             var quizAttempt by remember { mutableIntStateOf(0) }
             var quizScore by remember { mutableIntStateOf(0) }
+            val updater = remember { PixubiUpdater(this@MainActivity) }
+            var updateDialog by remember { mutableStateOf<PixubiUpdateResult?>(null) }
+            var checkingUpdates by remember { mutableStateOf(false) }
+            fun showUpdateToast(message: String) {
+                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+            }
             fun openUpdates() {
-                val url = "https://github.com/MrKanzo/PIXUBI/actions"
-                runCatching {
-                    this@MainActivity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }.onFailure {
-                    Toast.makeText(applicationContext, "Не вдалося відкрити браузер", Toast.LENGTH_LONG).show()
+                if (checkingUpdates) return
+                checkingUpdates = true
+                updater.check { result ->
+                    checkingUpdates = false
+                    updateDialog = result
+                }
+            }
+            LaunchedEffect(Unit) {
+                updater.checkDaily { release ->
+                    updateDialog = PixubiUpdateResult.NewRelease(release)
                 }
             }
             LaunchedEffect(soundSettings, pet?.region, auditionRegion) {
@@ -157,6 +168,8 @@ class MainActivity : ComponentActivity() {
                             },
                             onTestSound = { audio.effect(PixubiSound.HAPPY) },
                             onCheckUpdates = { openUpdates() },
+                            isStableInstall = updater.isStableInstall,
+                            checkingForUpdates = checkingUpdates,
                             onBack = { closeSettings() }
                         )
                         current == null -> HatchScreen(
@@ -255,6 +268,61 @@ class MainActivity : ComponentActivity() {
                             onSettings = { goSettings() }
                         )
                     }
+                }
+                val notice = updateDialog
+                if (notice != null) {
+                    val stable = updater.isStableInstall
+                    AlertDialog(
+                        onDismissRequest = { updateDialog = null },
+                        title = {
+                            Text(when (notice) {
+                                is PixubiUpdateResult.NewRelease -> "🐣 Новий PIXUBI ${notice.release.version}"
+                                is PixubiUpdateResult.UpToDate -> "✅ PIXUBI актуальний"
+                                is PixubiUpdateResult.Unavailable -> "ℹ️ Оновлення"
+                            })
+                        },
+                        text = {
+                            Text(when (notice) {
+                                is PixubiUpdateResult.NewRelease -> if (stable)
+                                    "Є новіша підписана версія PIXUBI. Завантажити перевірений APK та оновити гру поверх зі збереженням вихованця? Підтвердження встановлення покаже Android."
+                                else
+                                    "Це тестова збірка PIXUBI. Стабільна версія встановлюється окремо. Оновлення поверх запрацюють після встановлення першого підписаного релізу."
+                                is PixubiUpdateResult.UpToDate ->
+                                    "Встановлено PIXUBI ${notice.version}. Нових підписаних випусків наразі немає."
+                                is PixubiUpdateResult.Unavailable -> notice.message
+                            })
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                updateDialog = null
+                                if (notice is PixubiUpdateResult.NewRelease) {
+                                    if (stable) {
+                                        updater.downloadAndInstall(notice.release) { msg ->
+                                            showUpdateToast(msg)
+                                        }
+                                    } else {
+                                        runCatching {
+                                            startActivity(
+                                                Intent(Intent.ACTION_VIEW,
+                                                    Uri.parse("https://github.com/MrKanzo/PIXUBI/releases"))
+                                            )
+                                        }.onFailure { showUpdateToast("Браузер недоступний") }
+                                    }
+                                }
+                            }) {
+                                Text(when {
+                                    notice is PixubiUpdateResult.NewRelease && stable -> "Завантажити й оновити"
+                                    notice is PixubiUpdateResult.NewRelease -> "Відкрити релізи"
+                                    else -> "Гаразд"
+                                })
+                            }
+                        },
+                        dismissButton = {
+                            if (notice is PixubiUpdateResult.NewRelease) {
+                                TextButton(onClick = { updateDialog = null }) { Text("Пізніше") }
+                            }
+                        }
+                    )
                 }
             }
         }

@@ -37,6 +37,8 @@ fun PixubiSettingsScreen(
     onPreviewRegion: (Region) -> Unit,
     onTestSound: () -> Unit,
     onCheckUpdates: () -> Unit,
+    isStableInstall: Boolean,
+    checkingForUpdates: Boolean,
     onBack: () -> Unit
 ) {
     Column(
@@ -121,14 +123,17 @@ fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Поточна версія: 0.5 (тестова). Переглянь найновіші APK-збірки на GitHub.",
+                Text("Поточна версія: 0.6.0" +
+                    (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = onCheckUpdates, modifier = Modifier.fillMaxWidth()) {
-                    Text("🔄 Перевірити оновлення ↗")
+                OutlinedButton(onClick = onCheckUpdates,
+                    enabled = !checkingForUpdates, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (checkingForUpdates) "⏳ Перевіряю GitHub…" else "🔄 Перевірити оновлення")
                 }
-                Text("Відкриється браузер. APK потрібно завантажити та встановити вручну. " +
-                    "Поки тестові збірки встановлюються окремо, їхні збереження не переносяться; " +
-                    "стабільне оновлення без втрати прогресу потребує постійного ключа підпису.",
+                Text(if (isStableInstall)
+                    "Перевіряємо підписані GitHub Releases. При новій версії PIXUBI сама запропонує завантаження й відкриє Android-інсталятор. Дані лишаються, якщо підпис збігається."
+                else
+                    "Це тестова збірка. Оновлення поверх зі збереженням вихованця працюватиме тільки зі стабільним APK, підписаним постійним ключем.",
                     color = Color(0xFFFFDA97), style = MaterialTheme.typography.bodySmall)
             }
         }
