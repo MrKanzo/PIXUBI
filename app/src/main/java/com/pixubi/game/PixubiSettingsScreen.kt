@@ -36,6 +36,7 @@ fun PixubiSettingsScreen(
     onSettingsChange: (SoundSettings) -> Unit,
     onPreviewRegion: (Region) -> Unit,
     onTestSound: () -> Unit,
+    onCheckUpdates: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -113,6 +114,22 @@ fun PixubiSettingsScreen(
                     Text("Увімкни фонову мелодію, щоб почути вибраний регіон.",
                         color = Color(0xFFFFD58A), style = MaterialTheme.typography.bodySmall)
                 }
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
+            shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold)
+                Text("Поточна версія: 0.5 (тестова). Переглянь найновіші APK-збірки на GitHub.",
+                    color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = onCheckUpdates, modifier = Modifier.fillMaxWidth()) {
+                    Text("🔄 Перевірити оновлення ↗")
+                }
+                Text("Відкриється браузер. APK потрібно завантажити та встановити вручну. " +
+                    "Поки тестові збірки встановлюються окремо, їхні збереження не переносяться; " +
+                    "стабільне оновлення без втрати прогресу потребує постійного ключа підпису.",
+                    color = Color(0xFFFFDA97), style = MaterialTheme.typography.bodySmall)
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17243B))) {

@@ -1,6 +1,9 @@
 package com.pixubi.game
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
@@ -44,6 +47,7 @@ private val palette = listOf(
 )
 private val night = Color(0xFF101A2E)
 private val navy = Color(0xFF19253C)
+private enum class GamePage { HUB, STARS, QUIZ, RESULTS }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +60,20 @@ class MainActivity : ComponentActivity() {
             var showSettings by remember { mutableStateOf(false) }
             var auditionRegion by remember { mutableStateOf<Region?>(null) }
             var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.advance(it, System.currentTimeMillis()) }) }
-            var showGame by remember { mutableStateOf(false) }
+            val progressStore = remember { QuizProgressStore(applicationContext) }
+            var quizProgress by remember { mutableStateOf(progressStore.load()) }
+            var gamePage by remember { mutableStateOf<GamePage?>(null) }
+            var quizTopic by remember { mutableStateOf(QuizTopic.LOGIC) }
+            var quizAttempt by remember { mutableIntStateOf(0) }
+            var quizScore by remember { mutableIntStateOf(0) }
+            fun openUpdates() {
+                val url = "https://github.com/MrKanzo/PIXUBI/actions"
+                runCatching {
+                    this@MainActivity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }.onFailure {
+                    Toast.makeText(applicationContext, "Не вдалося відкрити браузер", Toast.LENGTH_LONG).show()
+                }
+            }
             LaunchedEffect(soundSettings, pet?.region, auditionRegion) {
                 audio.configure(soundSettings, auditionRegion ?: pet?.region ?: Region.FOREST)
             }
@@ -139,6 +156,7 @@ class MainActivity : ComponentActivity() {
                                 audio.effect(PixubiSound.STAR)
                             },
                             onTestSound = { audio.effect(PixubiSound.HAPPY) },
+                            onCheckUpdates = { openUpdates() },
                             onBack = { closeSettings() }
                         )
                         current == null -> HatchScreen(
@@ -149,17 +167,59 @@ class MainActivity : ComponentActivity() {
                             onSettings = { goSettings() }
                         )
                         !current.alive -> FarewellScreen(current) {
-                            storage.erase(); pet = null; showGame = false
+                            storage.erase()
+                            pet = null
+                            gamePage = null
                         }
-                        showGame -> CatchStarsScreen(
+                        gamePage == GamePage.HUB -> GamesHubScreen(
+                            petName = current.name,
+                            progress = quizProgress,
+                            onStars = { gamePage = GamePage.STARS },
+                            onQuiz = { topic ->
+                                quizTopic = topic
+                                quizAttempt++
+                                gamePage = GamePage.QUIZ
+                                audio.effect(PixubiSound.TAP)
+                            },
+                            onBack = { gamePage = null }
+                        )
+                        gamePage == GamePage.STARS -> CatchStarsScreen(
                             onFinish = {
                                 store(GameEngine.act(current, Action.PLAY_WIN, System.currentTimeMillis()))
-                                showGame = false
+                                gamePage = GamePage.HUB
                                 react(PetEmotion.HAPPY)
                                 audio.effect(PixubiSound.HAPPY)
                             },
-                            onBack = { showGame = false },
+                            onBack = { gamePage = GamePage.HUB },
                             onStar = { audio.effect(PixubiSound.STAR) }
+                        )
+                        gamePage == GamePage.QUIZ -> QuizGameScreen(
+                            topic = quizTopic,
+                            attempt = quizAttempt,
+                            onAnswer = { correct ->
+                                audio.effect(if (correct) PixubiSound.QUIZ_CORRECT else PixubiSound.QUIZ_WRONG)
+                            },
+                            onComplete = { score, total ->
+                                quizScore = score
+                                quizProgress = progressStore.record(quizTopic, score, total)
+                                if (score >= 3 && total == 5) {
+                                    store(GameEngine.act(current, Action.PLAY_WIN, System.currentTimeMillis()))
+                                    react(PetEmotion.HAPPY)
+                                    audio.effect(PixubiSound.HAPPY)
+                                }
+                                gamePage = GamePage.RESULTS
+                            },
+                            onExit = { gamePage = GamePage.HUB }
+                        )
+                        gamePage == GamePage.RESULTS -> QuizResultsScreen(
+                            topic = quizTopic,
+                            score = quizScore,
+                            total = 5,
+                            onAgain = {
+                                quizAttempt++
+                                gamePage = GamePage.QUIZ
+                            },
+                            onHub = { gamePage = GamePage.HUB }
                         )
                         else -> HomeScreen(
                             pet = current,
@@ -189,7 +249,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onPlay = {
-                                showGame = true
+                                gamePage = GamePage.HUB
                                 audio.effect(PixubiSound.TAP)
                             },
                             onSettings = { goSettings() }
@@ -327,7 +387,7 @@ private fun HomeScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { onAction(Action.SLEEP) }, modifier = Modifier.weight(1f)) { Text("🌙 Сон") }
-                    OutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) { Text("✨ Мінігра") }
+                    OutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) { Text("🎮 Ігри") }
                 }
                 OutlinedButton(onClick = { onAction(Action.HIBERNATE) }, modifier = Modifier.fillMaxWidth()) { Text("❄️ Сплячка: я йду у справах") }
             }
@@ -577,7 +637,7 @@ private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
         Text("Ваші пригоди залишаться теплим спогадом 💜", textAlign = TextAlign.Center)
         Spacer(Modifier.height(26.dp))
         Button(onClick = onNewPet, modifier = Modifier.fillMaxWidth()) { Text("🥚 Виростити нового Піксубі") }
-        Text("У версії 0.4 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
+        Text("У версії 0.5 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
             style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Color.LightGray)
     }
 }

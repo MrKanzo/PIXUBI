@@ -9,12 +9,12 @@ android {
         applicationId = "com.pixubi.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
     }
     // Preview package installs beside v0.1 so its existing pet/save stays safe.
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".visual" }
+        getByName("debug") { applicationIdSuffix = ".quiz" }
     }
     buildFeatures { compose = true }
     compileOptions {
