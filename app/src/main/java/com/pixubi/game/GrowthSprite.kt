@@ -55,6 +55,49 @@ fun GrowthSprite(
                     modifier = Modifier.fillMaxSize()
                 )
         }
+        // Physical sex differences are facial details and markings, not a bow pasted on.
+        // Both variants work for the baby, teen and adult sheets without altering genes.
+        if (stage != GrowthStage.EGG && stage != GrowthStage.COCOON) {
+            Canvas(Modifier.fillMaxSize()) {
+                val eyeY = size.height * when (pet.species) {
+                    Species.PISHCHANYK -> .475f
+                    Species.KHMARYK -> .46f
+                    Species.KRAPLYK -> .45f
+                    else -> .445f
+                }
+                val left = size.width * .43f
+                val right = size.width * .62f
+                val ink = Color(0xFF26344B)
+                val unit = size.minDimension
+                if (pet.sex == Sex.GIRL) {
+                    // Longer outward lashes and soft cheek spots distinguish girls.
+                    if (!blink && emotion != PetEmotion.SLEEPING && emotion != PetEmotion.HIBERNATING) {
+                        drawLine(ink, Offset(left - unit * .043f, eyeY - unit * .008f),
+                            Offset(left - unit * .078f, eyeY - unit * .047f), strokeWidth = unit * .012f)
+                        drawLine(ink, Offset(right + unit * .043f, eyeY - unit * .008f),
+                            Offset(right + unit * .078f, eyeY - unit * .047f), strokeWidth = unit * .012f)
+                    }
+                    val blush = Color(0xFFFF7EAF).copy(alpha = .82f)
+                    drawCircle(blush, unit * .024f, Offset(left - unit * .10f, eyeY + unit * .09f))
+                    drawCircle(blush, unit * .024f, Offset(right + unit * .10f, eyeY + unit * .09f))
+                    // A small diamond-shaped chest pixel is a subtle style marker.
+                    drawRect(Color(0xFFF8BFDD).copy(alpha = .9f),
+                        Offset(size.width * .49f, size.height * .695f),
+                        Size(unit * .035f, unit * .035f))
+                } else {
+                    // Boys have squared brows and angular turquoise cheek markings.
+                    drawLine(ink, Offset(left - unit * .048f, eyeY - unit * .06f),
+                        Offset(left + unit * .042f, eyeY - unit * .07f), strokeWidth = unit * .016f)
+                    drawLine(ink, Offset(right - unit * .042f, eyeY - unit * .07f),
+                        Offset(right + unit * .048f, eyeY - unit * .06f), strokeWidth = unit * .016f)
+                    val stripe = Color(0xFF70DDE0).copy(alpha = .8f)
+                    drawLine(stripe, Offset(left - unit * .105f, eyeY + unit * .088f),
+                        Offset(left - unit * .07f, eyeY + unit * .115f), strokeWidth = unit * .014f)
+                    drawLine(stripe, Offset(right + unit * .07f, eyeY + unit * .115f),
+                        Offset(right + unit * .105f, eyeY + unit * .088f), strokeWidth = unit * .014f)
+                }
+            }
+        }
         if (stage == GrowthStage.EGG && emotion == PetEmotion.HAPPY) {
             Text("✧", modifier = Modifier.align(Alignment.TopEnd), fontSize = 24.sp,
                 color = Color(0xFFFFE8A9))
