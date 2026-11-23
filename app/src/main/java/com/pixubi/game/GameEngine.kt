@@ -134,8 +134,12 @@ object GameEngine {
         if (pet.mode == Mode.SLEEP && action !in listOf(Action.WAKE, Action.HIBERNATE)) return pet
         fun gain(value: Double, points: Double) = (value + points).coerceIn(0.0, 100.0)
         val updated = when (action) {
-            Action.FEED -> pet.copy(hunger = gain(pet.hunger, 24.0), message = "Ням-ням! Смачно! 🍓")
-            Action.WATER -> pet.copy(thirst = gain(pet.thirst, 30.0), message = "Водичка — це життя! 💧")
+            Action.FEED -> pet.copy(hunger = gain(pet.hunger, 24.0),
+                message = if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
+                    "Моя цифрова оболонка отримала живлення! ⚡" else "Ням-ням! Смачно! 🍓")
+            Action.WATER -> pet.copy(thirst = gain(pet.thirst, 30.0),
+                message = if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
+                    "Цифрова оболонка зволожена! 💧" else "Водичка — це життя! 💧")
             Action.SLEEP -> pet.copy(mode = Mode.SLEEP, message = "На добраніч! 🌙")
             Action.WAKE -> pet.copy(mode = Mode.AWAKE, message = "Я прокинувся! Привіт! ☀️")
             Action.HIBERNATE -> pet.copy(mode = Mode.HIBERNATION, message = "Я чекатиму на тебе у сплячці. ❄️")
