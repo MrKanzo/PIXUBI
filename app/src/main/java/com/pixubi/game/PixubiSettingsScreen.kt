@@ -123,7 +123,7 @@ fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Поточна версія: 0.6.0" +
+                Text("Поточна версія: 0.7.0" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = onCheckUpdates,
