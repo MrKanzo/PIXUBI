@@ -52,6 +52,14 @@ class PixubiNeedsRulesTest {
         assertTrue(boy.first().title.contains("зголоднів"))
     }
 
+    @Test fun socialReminderCanArriveAfterSixHoursApartEvenIfPetIsHappy() {
+        val happyPet = pet().copy(happiness = 95.0, energy = 90.0)
+        assertTrue(PixubiNeedRules.findNeeds(happyPet, enabled, 60L).isEmpty())
+        val missed = PixubiNeedRules.findNeeds(happyPet, enabled, 6 * 60L)
+        assertEquals(PixubiNeed.PLAY, missed.single().need)
+        assertTrue(missed.single().message.contains("скучив"))
+    }
+
     @Test fun gamesAreNotOfferedToEggsAndCocoons() {
         val egg = pet().copy(activeMinutes = 0, xp = 0, happiness = 10.0)
         val cocoon = pet().copy(activeMinutes = 4320, xp = 120, happiness = 10.0)
