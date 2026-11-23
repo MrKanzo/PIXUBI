@@ -82,23 +82,9 @@ fun PixelPetSprite(
     eyeClosure: Float = 0f,
     motion: PetMotion = PetMotion.IDLE
 ) {
-    val appContext = LocalContext.current.applicationContext
-    // The image itself has eyes. Build a few blink frames FROM its own pixels,
-    // instead of drawing a second pair of eyes on top.
-    val nativeFrames = remember(species, sex, coatIndex, emotion) {
-        NativeSpriteEyes.frames(
-            PixubiSpriteCache.get(appContext, species, sex, coatIndex),
-            species, GrowthStage.ADULT, emotion
-        )
-    }
-    val closure = NativeEyeMotion.closure(emotion, eyeClosure, blink)
-    val frame = nativeFrames[FaceExpression.frameIndex(emotion,closure,chewOpen)]
     Box(modifier, contentAlignment = Alignment.Center) {
-        ArticulatedPixuImage(
-            bitmap = frame, species = species, stage = GrowthStage.ADULT,
-            motion = motion, phase = motionPhase, description = species.title + " — " + sex.title,
-            modifier = Modifier.fillMaxSize()
-        )
+        FramePetSprite(species,GrowthStage.ADULT,sex,coatIndex,emotion,motion,
+            motionPhase,blink,eyeClosure,Modifier.fillMaxSize())
 
         when (emotion) {
             PetEmotion.EATING -> Text(

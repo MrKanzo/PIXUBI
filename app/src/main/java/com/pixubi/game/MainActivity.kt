@@ -893,15 +893,13 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             modifier = Modifier.align(Alignment.Center)
                 .offset(
                     x = (searchPose.xDp + bodyMotion.xDp + wanderX).dp,
-                    y = (17f + travelY + searchPose.yDp + bodyMotion.yDp).dp
+                    y = (17f + searchPose.yDp + (if (motion == PetMotion.WALK) 0f else bodyMotion.yDp)).dp
                 )
                 .size(194.dp)
                 .graphicsLayer {
-                    rotationZ = searchPose.rotation + bodyMotion.rotationDegrees +
-                        (if (emotion == PetEmotion.HAPPY) sway * 2.5f else sway)
-                    scaleX = searchPose.scale * bodyMotion.scaleX
-                    scaleY = searchPose.scale * bodyMotion.scaleY *
-                        (if (sleeping) .98f + bob * .02f else 1f - bob * .012f)
+                    rotationZ = searchPose.rotation
+                    scaleX = searchPose.scale
+                    scaleY = searchPose.scale
                     alpha = searchFrame?.alpha ?: 1f
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },

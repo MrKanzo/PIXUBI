@@ -66,36 +66,6 @@ fun GrowthSprite(
                     modifier = Modifier.fillMaxSize()
                 )
         }
-        // NO face overlay: both evolution sheets already contain painted eyes.
-        // Only subtle non-eye accessories differentiate juvenile sexes.
-        if (stage == GrowthStage.BABY || stage == GrowthStage.YOUNG) {
-            Canvas(Modifier.fillMaxSize()) {
-                val unit = size.minDimension
-                if (pet.sex == Sex.GIRL) {
-                    drawCircle(
-                        Color(0xFFF895B9).copy(alpha = .46f),
-                        radius = unit * .014f,
-                        center = Offset(size.width * .29f, size.height * .62f)
-                    )
-                    drawCircle(
-                        Color(0xFFF895B9).copy(alpha = .46f),
-                        radius = unit * .014f,
-                        center = Offset(size.width * .72f, size.height * .62f)
-                    )
-                    drawRect(
-                        Color(0xFFF8BFDD).copy(alpha = .75f),
-                        topLeft = Offset(size.width * .49f, size.height * .70f),
-                        size = Size(unit * .024f, unit * .024f)
-                    )
-                } else {
-                    drawRect(
-                        Color(0xFF6BDFDC).copy(alpha = .72f),
-                        topLeft = Offset(size.width * .49f, size.height * .70f),
-                        size = Size(unit * .024f, unit * .024f)
-                    )
-                }
-            }
-        }
         if (stage == GrowthStage.EGG && emotion == PetEmotion.HAPPY) {
             Text("✧", modifier = Modifier.align(Alignment.TopEnd), fontSize = 24.sp,
                 color = Color(0xFFFFE8A9))
