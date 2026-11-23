@@ -107,6 +107,7 @@ object PetGrowth {
             minutes < 60L -> "ще ${minutes} хв активного життя"
             else -> "ще ${(minutes + 1_439L) / 1_440L} дн. активного життя"
         }
-        return "До «${next.title}»: $dayText • ${xp} XP"
+        val label = if (next == GrowthStage.BABY) "До появи малюка" else "До таємної еволюції"
+        return "$label: $dayText • ${xp} XP"
     }
 }

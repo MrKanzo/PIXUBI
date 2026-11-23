@@ -1,5 +1,7 @@
 package com.pixubi.game
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -76,69 +78,78 @@ fun GrowthProgressCard(pet: Pet, onGallery: () -> Unit) {
     }
 }
 
+/** Never render undiscovered elder forms; babies are the public teaser. */
 @Composable
-fun GrowthGalleryDialog(pet: Pet, onClose: () -> Unit) {
-    var selected by remember(pet.name, pet.bornAt) {
-        mutableStateOf(PetGrowth.stage(pet))
-    }
+fun GrowthGalleryDialog(
+    pet: Pet,
+    collection: PlayerCollection,
+    onClose: () -> Unit
+) {
+    var selected by remember(pet.bornAt) { mutableStateOf(PetGrowth.stage(pet)) }
+    val revealed = CollectionRules.canPreviewCurrent(collection, pet, selected)
+    val opened = CollectionRules.hasForm(
+        collection, pet.species, pet.sex, pet.colorIndex, selected
+    )
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text("🧬 Життєвий цикл PIXUBI", fontWeight = FontWeight.Bold) },
+        title = { Text("🧬 Таємниці еволюції", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Дивись на всі майбутні форми. Це лише перегляд — твій Піксубі росте за часом і XP.",
+            Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Text("Малюка видно наперед, а старші форми сховані. Рости й відкривай нові образи!",
                     style = MaterialTheme.typography.bodySmall)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     GrowthStage.entries.forEach { stage ->
+                        val known = CollectionRules.canPreviewCurrent(collection, pet, stage)
                         FilterChip(
                             selected = stage == selected,
                             onClick = { selected = stage },
-                            label = { Text(stage.icon + " " + stage.title) }
+                            label = { Text(if (known) stage.icon + " " + stage.title else "🔒 ???") }
                         )
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    GrowthSprite(
-                        pet = pet,
-                        previewStage = selected,
-                        modifier = Modifier.size(165.dp)
-                    )
+                    if (revealed) {
+                        GrowthSprite(pet = pet, previewStage = selected,
+                            modifier = Modifier.size(175.dp))
+                    } else {
+                        Box(Modifier.size(175.dp)
+                            .background(Color(0xFF13213A), RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center) {
+                            Text("???", fontSize = 44.sp, color = Color(0xFF61738C))
+                        }
+                    }
                 }
-                Text(selected.icon + " " + selected.title,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
+                Text(if (revealed) selected.icon + " " + selected.title else "🔒 Таємна форма",
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    when(selected) {
-                        GrowthStage.EGG -> "Дивовижне цифрове яйце, у якому зароджується нове життя."
-                        GrowthStage.BABY -> "Маленький крихітний кіберзвір із великим майбутнім."
-                        GrowthStage.YOUNG -> "Допитливий підліток: більше руху й пригод."
-                        GrowthStage.COCOON -> "Світний кокон: готує дорослу форму Піксубі."
-                        GrowthStage.ADULT -> "Доросла унікальна істота з твоїми генами кольору."
+                    when {
+                        !revealed -> "Цей образ засекречений. Вирощуй Піксубі й відкривай нові стадії."
+                        opened -> "✅ Відкрито назавжди! Форма збереглася в твоїй колекції."
+                        selected == GrowthStage.BABY -> "🐣 Ось яким буде твій малюк!"
+                        else -> "Продовжуй турбуватися про Піксубі."
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall
                 )
-                val minutes = selected.minMinutes
-                Text(
-                    "Відкривається: ${if (minutes < 60) "$minutes хв" else "${minutes / 1_440L} активних дн."} + рівень ${selected.minLevel}",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFFA6D9E5),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text("🔒 Усі етапи росту зберігають стать і випадкове забарвлення.",
+                if (revealed) {
+                    val timeRequired = if (selected.minMinutes < 60L)
+                        "${selected.minMinutes} хв"
+                    else "${selected.minMinutes / 1_440L} активних дн."
+                    Text("Для відкриття: $timeRequired • рівень ${selected.minLevel}",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFA6D9E5))
+                }
+                Text("Відкриття не губляться при появі нового яйця.",
                     style = MaterialTheme.typography.labelSmall)
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(2.dp))
             }
         },
-        confirmButton = {
-            TextButton(onClick = onClose) { Text("Повернутися") }
-        }
+        confirmButton = { TextButton(onClick = onClose) { Text("Повернутися") } }
     )
 }

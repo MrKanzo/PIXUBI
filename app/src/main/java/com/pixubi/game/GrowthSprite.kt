@@ -10,14 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.pow
 
 /**
- * V0.7: original hand-coded coarse pixel eggs and glowing cyber-cocoons.
- * Baby/young/adult reuse the existing 60 original creature sprites with a size change.
+ * Separate illustrated babies, armored teenagers, existing adults, and cyber eggs/cocoons.
+ * Stage changes replace the actual design rather than merely scaling an image.
  */
 @Composable
 fun GrowthSprite(
@@ -36,12 +35,16 @@ fun GrowthSprite(
                     pet.species, pet.colorIndex, stage,
                     Modifier.fillMaxSize()
                 )
-            GrowthStage.BABY, GrowthStage.YOUNG, GrowthStage.ADULT -> {
-                val scale = when (stage) {
-                    GrowthStage.BABY -> .64f
-                    GrowthStage.YOUNG -> .82f
-                    else -> 1f
-                }
+            GrowthStage.BABY, GrowthStage.YOUNG ->
+                IllustratedYoungPixu(
+                    species = pet.species,
+                    sex = pet.sex,
+                    colorIndex = pet.colorIndex,
+                    stage = stage,
+                    emotion = emotion,
+                    modifier = Modifier.fillMaxSize()
+                )
+            GrowthStage.ADULT ->
                 PixelPetSprite(
                     species = pet.species,
                     sex = pet.sex,
@@ -49,12 +52,8 @@ fun GrowthSprite(
                     emotion = emotion,
                     blink = blink,
                     chewOpen = chewOpen,
-                    modifier = Modifier.fillMaxSize().graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                    }
+                    modifier = Modifier.fillMaxSize()
                 )
-            }
         }
         if (stage == GrowthStage.EGG && emotion == PetEmotion.HAPPY) {
             Text("✧", modifier = Modifier.align(Alignment.TopEnd), fontSize = 24.sp,
