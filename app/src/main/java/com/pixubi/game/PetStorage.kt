@@ -9,7 +9,7 @@ class PetStorage(context: Context) {
 
     fun save(p: Pet) {
         val json = JSONObject().apply {
-            put("version", 1)
+            put("version", 2)
             put("species", p.species.name)
             put("sex", p.sex.name)
             put("region", p.region.name)
@@ -27,6 +27,13 @@ class PetStorage(context: Context) {
             put("activeMinutes", p.activeMinutes)
             put("dangerMinutes", p.dangerMinutes)
             put("miniGameWins", p.miniGameWins)
+            put("xp", p.xp)
+            put("careDays", p.careDays)
+            put("careStreak", p.careStreak)
+            put("lastCareDay", p.lastCareDay)
+            put("actionXpDay", p.actionXpDay)
+            put("actionXpToday", p.actionXpToday)
+            put("legacyAdult", p.legacyAdult)
             put("deathReason", p.deathReason)
             put("message", p.message)
         }
@@ -55,6 +62,13 @@ class PetStorage(context: Context) {
                 activeMinutes = o.getLong("activeMinutes"),
                 dangerMinutes = o.getLong("dangerMinutes"),
                 miniGameWins = o.getInt("miniGameWins"),
+                xp = o.optInt("xp", 400).coerceAtLeast(0),
+                careDays = o.optInt("careDays", 0).coerceAtLeast(0),
+                careStreak = o.optInt("careStreak", 0).coerceAtLeast(0),
+                lastCareDay = o.optLong("lastCareDay", -1L),
+                actionXpDay = o.optLong("actionXpDay", -1L),
+                actionXpToday = o.optInt("actionXpToday", 0).coerceIn(0, PetGrowth.DAILY_CARE_XP_LIMIT),
+                legacyAdult = o.optBoolean("legacyAdult", !o.has("xp")),
                 deathReason = o.optString("deathReason", ""),
                 message = o.optString("message", "")
             )
