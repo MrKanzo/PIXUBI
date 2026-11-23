@@ -58,29 +58,31 @@ data class PixubiNeedAlert(val need: PixubiNeed, val title: String, val message:
 object PixubiNeedRules {
     fun isQuietHour(hour: Int): Boolean = hour >= 22 || hour < 8
 
-    fun findNeeds(pet: Pet, settings: PixubiNotificationSettings): List<PixubiNeedAlert> {
+    fun findNeeds(pet: Pet, settings: PixubiNotificationSettings, awayMinutes: Long = 0L): List<PixubiNeedAlert> {
         if (!settings.enabled || !pet.alive || pet.mode == Mode.HIBERNATION) return emptyList()
         val name = pet.name
         val female = pet.sex == Sex.GIRL
         val alerts = mutableListOf<PixubiNeedAlert>()
-        if (settings.water && pet.thirst <= 35.0) {
+        if (settings.water && pet.thirst <= 64.0) {
             alerts += PixubiNeedAlert(PixubiNeed.WATER, "💧 ${name} хоче водички",
                 if (pet.waterStock > 0) "Мені хочеться пити! Напоїш мене? 💙"
                 else "У мене скінчилася водичка. Зазирни до крамнички! 💧")
         }
-        if (settings.food && pet.hunger <= 35.0) {
+        if (settings.food && pet.hunger <= 72.0) {
             alerts += PixubiNeedAlert(PixubiNeed.FOOD, "🍓 ${name} ${if (female) "зголодніла" else "зголоднів"}",
                 if (pet.foodStock > 0) "У животі бурчить! Можна щось смачненьке? 🍓"
                 else "Їжа закінчилася… Допоможеш мені поповнити запаси? 🥺")
         }
-        if (pet.mode == Mode.AWAKE && settings.sleep && pet.energy <= 28.0) {
+        if (pet.mode == Mode.AWAKE && settings.sleep && pet.energy <= 62.0) {
             alerts += PixubiNeedAlert(PixubiNeed.SLEEP, "💤 ${name} ${if (female) "втомилася" else "втомився"}",
                 "Мої батарейки сідають. Хочу трохи поспати! 🌙")
         }
-        if (pet.mode == Mode.AWAKE && settings.play && pet.happiness <= 43.0 &&
+        if (pet.mode == Mode.AWAKE && settings.play && (pet.happiness <= 53.0 || awayMinutes >= 6 * 60) &&
             PetGrowth.stage(pet) !in listOf(GrowthStage.EGG, GrowthStage.COCOON)) {
             alerts += PixubiNeedAlert(PixubiNeed.PLAY, "🎮 ${name} скучає",
-                "Мені нудно самому. Пограємося разом? 🥺💜")
+                if (awayMinutes >= 6 * 60)
+                    "Привіт! Я за тобою скучив. Зайди, пограємося? 🥺💜"
+                else "Мені нудно самому. Пограємося разом? 🥺💜")
         }
         return alerts
     }
@@ -180,7 +182,9 @@ object PixubiNeedsNotifier {
             history.edit().clear().putLong("bornAt", saved.bornAt).apply()
         }
         val simulated = GameEngine.restoreAfterAbsence(saved, now)
-        val candidate = PixubiNeedRules.findNeeds(simulated, settings).firstOrNull {
+        val awayMinutes = ((now - history.getLong("lastVisit", saved.lastUpdatedAt))
+            .coerceAtLeast(0L) / MINUTE)
+        val candidate = PixubiNeedRules.findNeeds(simulated, settings, awayMinutes).firstOrNull {
             now - history.getLong("last_${it.need.name}", 0L) >= KIND_COOLDOWN
         } ?: return
         post(context, candidate)
