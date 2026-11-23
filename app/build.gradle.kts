@@ -6,15 +6,27 @@ android {
     namespace = "com.pixubi.game"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.pixubi.game"
+        applicationId = "com.pixubi.game.stable"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
     }
-    // Preview package installs beside v0.1 so its existing pet/save stays safe.
+    // Release uses a permanent package ID. Debug is installed alongside it.
+    signingConfigs {
+        create("production") {
+            storeFile = file(System.getenv("PIXUBI_KEYSTORE_PATH") ?: "pixubi-release.jks")
+            storePassword = System.getenv("PIXUBI_STORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("PIXUBI_KEY_ALIAS") ?: "pixubi"
+            keyPassword = System.getenv("PIXUBI_KEY_PASSWORD") ?: ""
+        }
+    }
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".quiz" }
+        getByName("debug") { applicationIdSuffix = ".preview" }
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("production")
+        }
     }
     buildFeatures { compose = true }
     compileOptions {
@@ -25,6 +37,7 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.12.00"))
     implementation("androidx.activity:activity-compose:1.12.0")
+    implementation("androidx.core:core:1.16.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")

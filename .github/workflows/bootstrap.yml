@@ -4,7 +4,10 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: pixubi-build-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,10 +27,60 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile debug APK
+      - name: Compile and test debug APK
         run: gradle --no-daemon testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-debug-APK
+          name: PIXUBI-v0.6-preview-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Detect release signing secrets
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PIXUBI_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PIXUBI_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PIXUBI_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PIXUBI_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::PIXUBI release needs PIXUBI_KEYSTORE_BASE64, PIXUBI_STORE_PASSWORD, PIXUBI_KEY_ALIAS and PIXUBI_KEY_PASSWORD secrets.'
+          fi
+      - name: Restore private signing keystore
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PIXUBI_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pixubi-release.jks"
+          chmod 600 "$RUNNER_TEMP/pixubi-release.jks"
+      - name: Build signed release APK
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          PIXUBI_KEYSTORE_PATH: ${{ runner.temp }}/pixubi-release.jks
+          PIXUBI_STORE_PASSWORD: ${{ secrets.PIXUBI_STORE_PASSWORD }}
+          PIXUBI_KEY_ALIAS: ${{ secrets.PIXUBI_KEY_ALIAS }}
+          PIXUBI_KEY_PASSWORD: ${{ secrets.PIXUBI_KEY_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+      - name: Publish signed stable release
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          TAG="v$VERSION"
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists; will not overwrite signed APK."
+          else
+            gh release create "$TAG" "$APK#PIXUBI-release.apk" --title "PIXUBI $TAG" --notes "Stable signed Android PIXUBI release. In-app updates require the same signing certificate." --target "$GITHUB_SHA"
+          fi
+      - name: Explain unsigned test build
+        if: steps.signing.outputs.ready != 'true'
+        run: |
+          echo '::warning::Signed stable APK not published. GitHub Actions signing secrets are required.' 
+          echo '::warning::The test debug artifact cannot update a previously installed app from another GitHub runner.' 
