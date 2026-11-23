@@ -22,7 +22,18 @@ enum class Species(val title: String, val icon: String, val native: Region, val 
 
 enum class Sex(val title: String) { BOY("Хлопчик"), GIRL("Дівчинка") }
 enum class Mode { AWAKE, SLEEP, HIBERNATION }
-enum class Action { FEED, WATER, SLEEP, WAKE, HIBERNATE, PLAY_WIN }
+enum class Action { FEED, WATER, CHARGE, EXPLORE, SLEEP, WAKE, HIBERNATE, PLAY_WIN }
+
+enum class ShopItem(val title: String, val icon: String, val price: Int, val description: String) {
+    FOOD("Їжа ×3", "🍓", 12, "Три порції для тарілочки"),
+    WATER("Вода ×3", "💧", 10, "Три наповнення стаканчика"),
+    CELLS("Заряд ×2", "🔋", 14, "Два елементи заряду"),
+    HOME("Будиночок", "🏡", 55, "Затишний сон відновлює більше сил"),
+    BOWL("Тарілочка", "🍽️", 18, "Більше ситості від кожної порції"),
+    CUP("Стаканчик", "🥤", 18, "Більше користі від води"),
+    CHARGER("Зарядна станція", "⚡", 65, "Підсилює кожен заряд")
+}
+
 
 data class Pet(
     val species: Species,
@@ -50,7 +61,21 @@ data class Pet(
     val actionXpToday: Int = 0,
     val legacyAdult: Boolean = false,
     val deathReason: String = "",
-    val message: String = "Ура! Я з'явився на світ! 💜"
+    val message: String = "Ура! Я з'явився на світ! 💜",
+    val coins: Int = 30,
+    val foodStock: Int = 4,
+    val waterStock: Int = 4,
+    val chargeStock: Int = 2,
+    val hasHome: Boolean = false,
+    val hasBowl: Boolean = false,
+    val hasCup: Boolean = false,
+    val hasCharger: Boolean = false,
+    val expeditionStartedAt: Long = 0L,
+    val expeditionsDone: Int = 0,
+    val expeditionDay: Long = -1L,
+    val expeditionToday: Int = 0,
+    val rewardDay: Long = -1L,
+    val rewardCoinsToday: Int = 0
 ) {
     val colorIndex: Int get() = geneA % 6
     val daysOld: Long get() = activeMinutes / (24 * 60)
@@ -61,6 +86,58 @@ object GameEngine {
     const val NATURAL_LIFE_DAYS = 365L
     const val CRITICAL_LIMIT_MINUTES = 24L * 60
     private const val HOUR_MINUTES = 60.0
+    const val OFFLINE_LIMIT_MINUTES = 720L
+    const val EXPEDITION_MINUTES = 20L
+    const val EXPEDITIONS_PER_DAY = 4
+    const val GAME_COINS_PER_DAY = 30
+
+    /** Time is reconciled when the app reopens. No background service or battery drain. */
+    fun restoreAfterAbsence(source: Pet, now: Long): Pet {
+        if (now <= source.lastUpdatedAt) return source
+        val maxTime = source.lastUpdatedAt + OFFLINE_LIMIT_MINUTES * 60_000L
+        val progressed = advance(source, min(now, maxTime))
+        return progressed.copy(lastUpdatedAt = now)
+    }
+
+    private fun finishExpedition(pet: Pet, now: Long): Pet {
+        if (pet.expeditionStartedAt <= 0L ||
+            now - pet.expeditionStartedAt < EXPEDITION_MINUTES * 60_000L) return pet
+        val completed = pet.expeditionsDone
+        return pet.copy(
+            expeditionStartedAt = 0L,
+            expeditionsDone = completed + 1,
+            coins = (pet.coins + 8).coerceAtMost(9999),
+            foodStock = (pet.foodStock + if (completed % 3 == 0) 1 else 0).coerceAtMost(30),
+            waterStock = (pet.waterStock + if (completed % 3 == 1) 1 else 0).coerceAtMost(30),
+            chargeStock = (pet.chargeStock + if (completed % 3 == 2) 1 else 0).coerceAtMost(30),
+            xp = (pet.xp.toLong() + 4L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+            message = "🧭 Повернувся з прогулянки! +8 🪙 і корисна знахідка."
+        )
+    }
+
+    fun buy(source: Pet, item: ShopItem, now: Long): Pet {
+        val pet = advance(source, now)
+        if (!pet.alive) return pet
+        val owned = when (item) {
+            ShopItem.HOME -> pet.hasHome
+            ShopItem.BOWL -> pet.hasBowl
+            ShopItem.CUP -> pet.hasCup
+            ShopItem.CHARGER -> pet.hasCharger
+            else -> false
+        }
+        if (owned) return pet.copy(message = "Цей предмет у мене вже є! 💜")
+        if (pet.coins < item.price) return pet.copy(message = "Не вистачає монеток на ${item.title}. 🪙")
+        val paid = pet.copy(coins = pet.coins - item.price, lastUpdatedAt = now)
+        return when (item) {
+            ShopItem.FOOD -> paid.copy(foodStock = (pet.foodStock + 3).coerceAtMost(30), message = "🍓 Їжа куплена!")
+            ShopItem.WATER -> paid.copy(waterStock = (pet.waterStock + 3).coerceAtMost(30), message = "💧 Вода куплена!")
+            ShopItem.CELLS -> paid.copy(chargeStock = (pet.chargeStock + 2).coerceAtMost(30), message = "🔋 Заряд поповнено!")
+            ShopItem.HOME -> paid.copy(hasHome = true, message = "🏡 Мій новий будиночок!")
+            ShopItem.BOWL -> paid.copy(hasBowl = true, message = "🍽️ Моя нова тарілочка!")
+            ShopItem.CUP -> paid.copy(hasCup = true, message = "🥤 Мій новий стаканчик!")
+            ShopItem.CHARGER -> paid.copy(hasCharger = true, message = "⚡ Зарядна станція встановлена!")
+        }
+    }
 
     fun hatch(species: Species, sex: Sex, region: Region, name: String, now: Long,
               random: Random = Random.Default): Pet {
@@ -93,7 +170,7 @@ object GameEngine {
             val sleeping = pet.mode == Mode.SLEEP
             val hungry = (pet.hunger - (if (sleeping) 0.65 else 1.4) * h).coerceIn(0.0, 100.0)
             val thirsty = (pet.thirst - (if (sleeping) 1.2 else 2.2) * h).coerceIn(0.0, 100.0)
-            val tired = (pet.energy + (if (sleeping) 11.0 else -1.35) * h).coerceIn(0.0, 100.0)
+            val tired = (pet.energy + (if (sleeping) (if (pet.hasHome) 15.0 else 11.0) else -1.35) * h).coerceIn(0.0, 100.0)
             val mood = (pet.happiness - (if (sleeping) 0.10 else 0.38) * h).coerceIn(0.0, 100.0)
             val danger = if (hungry <= 0.0 || thirsty <= 0.0) pet.dangerMinutes + step else 0
             val age = pet.activeMinutes + step
@@ -123,7 +200,8 @@ object GameEngine {
         }
         // Residual seconds are kept so they are not lost on repeated reads.
         val accountedMinutes = minutes - remaining
-        return pet.copy(lastUpdatedAt = source.lastUpdatedAt + accountedMinutes * 60_000L)
+        val calculatedTime = source.lastUpdatedAt + accountedMinutes * 60_000L
+        return finishExpedition(pet.copy(lastUpdatedAt = calculatedTime), calculatedTime)
     }
 
     fun act(source: Pet, action: Action, now: Long): Pet {
