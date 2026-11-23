@@ -32,4 +32,45 @@ class PixubiSearchTest {
         assertEquals(PixubiSearch.foundRareTreasure(p), PixubiSearch.foundRareTreasure(p))
         assertTrue(!PixubiSearch.foundRareTreasure(p))
     }
+    @Test fun allSpeciesActuallyHideAndReappear() {
+        for (species in Species.entries) {
+            for (seed in 0..5) {
+                val hidden = PixubiSearch.frame(species, .50f, seed)
+                assertEquals(SearchPhase.HIDDEN, hidden.phase)
+                assertEquals(0f, hidden.alpha, 0f)
+                assertEquals(1f, hidden.concealment, 0f)
+                val visible = PixubiSearch.frame(species, .98f, seed)
+                assertEquals(SearchPhase.WANDERING, visible.phase)
+                assertEquals(1f, visible.alpha, 0f)
+            }
+        }
+    }
+
+    @Test fun concealmentFadesSmoothlyWithoutSuddenTeleport() {
+        for (species in Species.entries) {
+            val seed = 3
+            val hiding = PixubiSearch.frame(species, .37f, seed)
+            assertEquals(SearchPhase.HIDING, hiding.phase)
+            assertTrue(hiding.alpha in 0f..1f)
+            val emerging = PixubiSearch.frame(species, .70f, seed)
+            assertEquals(SearchPhase.EMERGING, emerging.phase)
+            assertTrue(emerging.alpha in 0f..1f)
+            val start = PixubiSearch.frame(species, 0f, seed)
+            val end = PixubiSearch.frame(species, 3.9999f, seed)
+            assertTrue(kotlin.math.abs(start.pose.xDp - end.pose.xDp) < .01f)
+            assertEquals(1f, start.alpha, 0f)
+            assertEquals(1f, end.alpha, 0f)
+        }
+    }
+
+    @Test fun hideLocationsAlternateBetweenSearchScenes() {
+        for (species in Species.entries) {
+            val first = PixubiSearch.frame(species, .50f, 4)
+            val second = PixubiSearch.frame(species, 1.50f, 4)
+            assertEquals(-first.entryXDp, second.entryXDp, 0f)
+            assertEquals(-first.exitXDp, second.exitXDp, 0f)
+            assertTrue(first.coverXDp != second.coverXDp)
+        }
+    }
+
 }

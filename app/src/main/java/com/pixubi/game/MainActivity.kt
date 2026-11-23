@@ -708,13 +708,16 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "sway"
     )
     val scoutCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(7200, easing = LinearEasing)),
+        initialValue = 0f, targetValue = 4f,
+        animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing)),
         label = "species-search"
     )
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
     val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
-    val searchPose = if (searching) PixubiSearch.pose(pet.species, scoutCycle) else SearchPose()
+    val searchFrame = if (searching)
+        PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
+    else null
+    val searchPose = searchFrame?.pose ?: SearchPose()
     val eyeBlink = !sleeping && blinkCycle > 0.93f && blinkCycle < 0.985f
     val travelY = when (emotion) {
         PetEmotion.HAPPY -> -12f * bob
@@ -868,6 +871,9 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))
         )
+        if (searchFrame != null) {
+            SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = false)
+        }
         GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
@@ -879,73 +885,14 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                     scaleX = searchPose.scale
                     scaleY = searchPose.scale *
                         (if (sleeping) .93f + bob * .035f else 1f - bob * .025f)
-                    alpha = when {
-                        !searching -> 1f
-                        pet.species == Species.PISHCHANYK -> 1f - searchPose.submerged * .97f
-                        pet.species == Species.KRAPLYK -> 1f - searchPose.submerged * .72f
-                        else -> 1f
-                    }
+                    alpha = searchFrame?.alpha ?: 1f
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
             emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f
         )
-        if (searching) {
-            // Foreground effects: each pet visibly searches in a different way.
-            Canvas(Modifier.fillMaxSize()) {
-                val x = size.width * .5f + searchPose.xDp.dp.toPx()
-                val ground = size.height * .84f
-                when (pet.species) {
-                    Species.LISYK -> {
-                        for (i in 0..4) {
-                            val stepX = x - 96.dp.toPx() + i * 30.dp.toPx()
-                            drawCircle(Color(0xFFCEED9D).copy(alpha = .32f + i * .09f),
-                                4.dp.toPx(), Offset(stepX, ground + (i % 2) * 7.dp.toPx()))
-                        }
-                    }
-                    Species.ISKRYK -> {
-                        val bolt = Path().apply {
-                            moveTo(x + 41.dp.toPx(), ground - 85.dp.toPx())
-                            lineTo(x + 24.dp.toPx(), ground - 58.dp.toPx())
-                            lineTo(x + 39.dp.toPx(), ground - 58.dp.toPx())
-                            lineTo(x + 19.dp.toPx(), ground - 28.dp.toPx())
-                        }
-                        drawPath(bolt, Color(0xFFFFF3A3).copy(alpha = .5f + bob * .5f),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx()))
-                    }
-                    Species.KRAPLYK -> {
-                        val rippleSize = (27f + 12f * bob).dp.toPx()
-                        drawOval(Color(0xFFB6F6FF).copy(alpha = .74f),
-                            topLeft = Offset(x - rippleSize, ground - rippleSize * .23f),
-                            size = Size(rippleSize * 2f, rippleSize * .65f),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
-                        drawCircle(Color.White.copy(alpha = .65f), 5.dp.toPx(),
-                            Offset(x + 24.dp.toPx(), ground - 57.dp.toPx() - 9.dp.toPx() * bob))
-                    }
-                    Species.PISHCHANYK -> {
-                        val buried = searchPose.submerged
-                        if (buried > .05f) {
-                            val moundWidth = (37f + 29f * buried).dp.toPx()
-                            drawOval(Color(0xFFE7B678),
-                                Offset(x - moundWidth, ground - 14.dp.toPx()),
-                                Size(moundWidth * 2f, 34.dp.toPx()))
-                            drawCircle(Color(0xFFFFE0A5), 5.dp.toPx(),
-                                Offset(x - 21.dp.toPx(), ground - 23.dp.toPx()))
-                            drawCircle(Color(0xFFFFE0A5), 4.dp.toPx(),
-                                Offset(x + 31.dp.toPx(), ground - 18.dp.toPx()))
-                        }
-                    }
-                    Species.KHMARYK -> {
-                        for (i in 0..2) {
-                            val cloudX = x - 70.dp.toPx() + i * 68.dp.toPx()
-                            val cloudY = ground - 56.dp.toPx() + i * 8.dp.toPx()
-                            drawCircle(Color.White.copy(alpha = .52f), 15.dp.toPx(),
-                                Offset(cloudX, cloudY))
-                            drawCircle(Color.White.copy(alpha = .45f), 12.dp.toPx(),
-                                Offset(cloudX + 12.dp.toPx(), cloudY + 2.dp.toPx()))
-                        }
-                    }
-                }
-            }
+        if (searching && searchFrame != null) {
+            // Draw over the character: it goes behind foliage, rock, water, sand or cloud.
+            SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = true)
             Surface(
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp),
                 shape = RoundedCornerShape(18.dp),
