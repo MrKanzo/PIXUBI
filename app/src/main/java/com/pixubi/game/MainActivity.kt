@@ -50,8 +50,30 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val storage = remember { PetStorage(applicationContext) }
+            val audioStore = remember { SoundSettingsStore(applicationContext) }
+            val audio = remember { PixubiAudio(applicationContext) }
+            var soundSettings by remember { mutableStateOf(audioStore.load()) }
+            var showSettings by remember { mutableStateOf(false) }
+            var auditionRegion by remember { mutableStateOf<Region?>(null) }
             var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.advance(it, System.currentTimeMillis()) }) }
             var showGame by remember { mutableStateOf(false) }
+            LaunchedEffect(soundSettings, pet?.region, auditionRegion) {
+                audio.configure(soundSettings, auditionRegion ?: pet?.region ?: Region.FOREST)
+            }
+            fun saveSound(next: SoundSettings) {
+                soundSettings = next
+                audioStore.save(next)
+                audio.configure(next, auditionRegion ?: pet?.region ?: Region.FOREST)
+            }
+            fun goSettings() {
+                auditionRegion = null
+                showSettings = true
+                audio.effect(PixubiSound.TAP)
+            }
+            fun closeSettings() {
+                auditionRegion = null
+                showSettings = false
+            }
             var temporaryEmotion by remember { mutableStateOf<PetEmotion?>(null) }
             var reactionVersion by remember { mutableIntStateOf(0) }
             fun react(emotion: PetEmotion?) { temporaryEmotion = emotion; reactionVersion++ }
@@ -74,11 +96,23 @@ class MainActivity : ComponentActivity() {
             }
             val lifecycle = LocalLifecycleOwner.current
             DisposableEffect(lifecycle) {
+                audio.setForeground(lifecycle.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) refresh()
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> {
+                            audio.setForeground(true)
+                            refresh()
+                        }
+                        Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP ->
+                            audio.setForeground(false)
+                        else -> Unit
+                    }
                 }
                 lifecycle.lifecycle.addObserver(observer)
-                onDispose { lifecycle.lifecycle.removeObserver(observer) }
+                onDispose {
+                    lifecycle.lifecycle.removeObserver(observer)
+                    audio.close()
+                }
             }
             LaunchedEffect(pet?.mode, pet?.alive) {
                 while (true) {
@@ -94,7 +128,26 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize(), color = night) {
                     val current = pet
                     when {
-                        current == null -> HatchScreen { store(it) }
+                        showSettings -> PixubiSettingsScreen(
+                            settings = soundSettings,
+                            currentRegion = current?.region ?: Region.FOREST,
+                            previewRegion = auditionRegion,
+                            onSettingsChange = { saveSound(it) },
+                            onPreviewRegion = {
+                                auditionRegion = it
+                                audio.configure(soundSettings, it)
+                                audio.effect(PixubiSound.STAR)
+                            },
+                            onTestSound = { audio.effect(PixubiSound.HAPPY) },
+                            onBack = { closeSettings() }
+                        )
+                        current == null -> HatchScreen(
+                            onHatch = {
+                                store(it)
+                                audio.effect(PixubiSound.HAPPY)
+                            },
+                            onSettings = { goSettings() }
+                        )
                         !current.alive -> FarewellScreen(current) {
                             storage.erase(); pet = null; showGame = false
                         }
@@ -103,14 +156,24 @@ class MainActivity : ComponentActivity() {
                                 store(GameEngine.act(current, Action.PLAY_WIN, System.currentTimeMillis()))
                                 showGame = false
                                 react(PetEmotion.HAPPY)
+                                audio.effect(PixubiSound.HAPPY)
                             },
-                            onBack = { showGame = false }
+                            onBack = { showGame = false },
+                            onStar = { audio.effect(PixubiSound.STAR) }
                         )
                         else -> HomeScreen(
                             pet = current,
                             reaction = temporaryEmotion,
                             onAction = { action ->
                                 store(GameEngine.act(current, action, System.currentTimeMillis()))
+                                audio.effect(when (action) {
+                                    Action.FEED -> PixubiSound.FEED
+                                    Action.WATER -> PixubiSound.WATER
+                                    Action.SLEEP -> PixubiSound.SLEEP
+                                    Action.WAKE -> PixubiSound.WAKE
+                                    Action.HIBERNATE -> PixubiSound.FREEZE
+                                    Action.PLAY_WIN -> PixubiSound.HAPPY
+                                })
                                 react(when (action) {
                                     Action.FEED -> PetEmotion.EATING
                                     Action.WATER -> PetEmotion.DRINKING
@@ -119,8 +182,17 @@ class MainActivity : ComponentActivity() {
                                     Action.SLEEP, Action.HIBERNATE -> null
                                 })
                             },
-                            onPetTap = { if (current.mode == Mode.AWAKE) react(PetEmotion.SURPRISED) },
-                            onPlay = { showGame = true }
+                            onPetTap = {
+                                if (current.mode == Mode.AWAKE) {
+                                    react(PetEmotion.SURPRISED)
+                                    audio.effect(PixubiSound.TAP)
+                                }
+                            },
+                            onPlay = {
+                                showGame = true
+                                audio.effect(PixubiSound.TAP)
+                            },
+                            onSettings = { goSettings() }
                         )
                     }
                 }
@@ -130,7 +202,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun HatchScreen(onHatch: (Pet) -> Unit) {
+private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
     var species by remember { mutableStateOf(Species.LISYK) }
     var sex by remember { mutableStateOf(Sex.GIRL) }
     var region by remember { mutableStateOf(Region.FOREST) }
@@ -139,7 +211,11 @@ private fun HatchScreen(onHatch: (Pet) -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("PIXUBI 🐣", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("PIXUBI 🐣", style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = onSettings) { Text("⚙️") }
+        }
         Text("Знайди свого першого цифрового друга", color = Color(0xFFC5D2E9))
         Text("1. Обери різновид", style = MaterialTheme.typography.titleMedium)
         Species.entries.forEach { choice ->
@@ -201,7 +277,8 @@ private fun HomeScreen(
     reaction: PetEmotion?,
     onAction: (Action) -> Unit,
     onPetTap: () -> Unit,
-    onPlay: () -> Unit
+    onPlay: () -> Unit,
+    onSettings: () -> Unit
 ) {
     val emotion = EmotionResolver.resolve(pet, reaction)
     Column(
@@ -213,7 +290,9 @@ private fun HomeScreen(
                 Text(pet.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text("${pet.species.title} • ${pet.sex.title} • ${pet.daysOld}-й день життя", color = Color(0xFFBFD0E7))
             }
-            Text(if (pet.mode == Mode.HIBERNATION) "❄️" else "💜", fontSize = 30.sp)
+            Text(if (pet.mode == Mode.HIBERNATION) "❄️" else "💜", fontSize = 27.sp)
+            Spacer(Modifier.width(6.dp))
+            OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
         WorldScene(pet, reaction, onPetTap)
         Card(colors = CardDefaults.cardColors(containerColor = navy)) {
@@ -569,7 +648,11 @@ private fun PetSprite(
 }
 
 @Composable
-private fun CatchStarsScreen(onFinish: () -> Unit, onBack: () -> Unit) {
+private fun CatchStarsScreen(
+    onFinish: () -> Unit,
+    onBack: () -> Unit,
+    onStar: () -> Unit
+) {
     var caught by remember { mutableIntStateOf(0) }
     val places = listOf(10.dp to 15.dp, 164.dp to 83.dp, 68.dp to 155.dp, 204.dp to 27.dp, 119.dp to 134.dp)
     Column(
@@ -588,6 +671,7 @@ private fun CatchStarsScreen(onFinish: () -> Unit, onBack: () -> Unit) {
                 Modifier.align(Alignment.TopStart).offset(x = x, y = y).size(57.dp)
                     .clip(CircleShape).background(Color(0xFF5276A4))
                     .clickable {
+                        onStar()
                         if (caught >= 4) onFinish() else caught += 1
                     },
                 contentAlignment = Alignment.Center
@@ -615,7 +699,7 @@ private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
         Text("Ваші пригоди залишаться теплим спогадом 💜", textAlign = TextAlign.Center)
         Spacer(Modifier.height(26.dp))
         Button(onClick = onNewPet, modifier = Modifier.fillMaxWidth()) { Text("🥚 Виростити нового Піксубі") }
-        Text("У версії 0.2 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
+        Text("У версії 0.3 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
             style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Color.LightGray)
     }
 }
