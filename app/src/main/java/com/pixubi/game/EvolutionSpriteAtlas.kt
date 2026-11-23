@@ -36,7 +36,7 @@ object EvolutionSpriteIndex {
     }
 }
 
-private object EvolutionSprites {
+internal object EvolutionSprites {
     private var atlas: Bitmap? = null
     private val cells = mutableMapOf<Int, Bitmap>()
 

@@ -43,7 +43,7 @@ object PixubiSpriteIndex {
         row(sex, colorIndex) * COLUMNS + column(species)
 }
 
-private object PixubiSpriteCache {
+internal object PixubiSpriteCache {
     private var atlas: Bitmap? = null
     private val cells = mutableMapOf<Int, Bitmap>()
 
