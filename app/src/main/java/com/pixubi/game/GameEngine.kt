@@ -232,6 +232,8 @@ object GameEngine {
                 return pet.copy(lastUpdatedAt = now, message = "🧭 Я ще досліджую світ!")
             if (used >= EXPEDITIONS_PER_DAY)
                 return pet.copy(lastUpdatedAt = now, message = "🧭 Сьогодні я вже добре погуляв. Завтра знову!")
+            if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
+                return pet.copy(lastUpdatedAt = now, message = "🥚 Для прогулянки я маю вилупитися!")
             if (pet.energy < 15.0)
                 return pet.copy(lastUpdatedAt = now, message = "💤 Спочатку відпочину перед прогулянкою.")
         }
