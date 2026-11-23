@@ -42,6 +42,13 @@ data class Pet(
     val activeMinutes: Long = 0,
     val dangerMinutes: Long = 0,
     val miniGameWins: Int = 0,
+    val xp: Int = 0,
+    val careDays: Int = 0,
+    val careStreak: Int = 0,
+    val lastCareDay: Long = -1L,
+    val actionXpDay: Long = -1L,
+    val actionXpToday: Int = 0,
+    val legacyAdult: Boolean = false,
     val deathReason: String = "",
     val message: String = "Ура! Я з'явився на світ! 💜"
 ) {
@@ -67,7 +74,8 @@ object GameEngine {
             geneA = firstGene,
             geneB = secondGene,
             bornAt = now,
-            lastUpdatedAt = now
+            lastUpdatedAt = now,
+            message = "Моє цифрове яйце чекає на твою турботу! 🥚"
         )
     }
 
@@ -91,16 +99,25 @@ object GameEngine {
             val age = pet.activeMinutes + step
             val diedFromAge = age >= NATURAL_LIFE_DAYS * 24 * 60
             val diedFromNeglect = danger >= CRITICAL_LIMIT_MINUTES
+            val oldStage = PetGrowth.stage(pet)
+            val bonus = PetGrowth.survivalBonus(pet.activeMinutes, age)
+            val nextXp = (pet.xp.toLong() + bonus).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            val evolved = pet.copy(activeMinutes = age, xp = nextXp)
+            val nextStage = PetGrowth.stage(evolved)
             pet = pet.copy(
                 hunger = hungry, thirst = thirsty, energy = tired, happiness = mood,
-                dangerMinutes = danger, activeMinutes = age,
+                dangerMinutes = danger, activeMinutes = age, xp = nextXp,
                 alive = !(diedFromAge || diedFromNeglect),
                 deathReason = when {
                     diedFromAge -> "Прожив довге життя й помер від старості."
                     diedFromNeglect -> "Загинув через тривалу нестачу їжі або води."
                     else -> pet.deathReason
                 },
-                message = if (diedFromAge || diedFromNeglect) "Прощавай, маленький друже. 🕯️" else pet.message
+                message = when {
+                    diedFromAge || diedFromNeglect -> "Прощавай, маленький друже. 🕯️"
+                    oldStage != nextStage -> "✨ Нова стадія: ${nextStage.title}! Я росту!"
+                    else -> pet.message
+                }
             )
             remaining -= step
         }
@@ -127,6 +144,13 @@ object GameEngine {
                 miniGameWins = pet.miniGameWins + 1, message = "Ого, ми виграли! ✨"
             )
         }
-        return updated.copy(lastUpdatedAt = now, dangerMinutes = if (updated.hunger > 0 && updated.thirst > 0) 0 else updated.dangerMinutes)
+        val withCare = PetGrowth.recordCare(updated, action, now, pet.mode == Mode.HIBERNATION)
+        val stageBefore = PetGrowth.stage(pet)
+        val stageAfter = PetGrowth.stage(withCare)
+        return withCare.copy(
+            lastUpdatedAt = now,
+            dangerMinutes = if (withCare.hunger > 0 && withCare.thirst > 0) 0 else withCare.dangerMinutes,
+            message = if (stageAfter != stageBefore) "✨ ${stageAfter.title}! Я переходжу на новий етап життя!" else withCare.message
+        )
     }
 }
