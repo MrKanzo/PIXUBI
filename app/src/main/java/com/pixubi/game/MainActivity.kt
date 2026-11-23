@@ -387,12 +387,13 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit) {
             modifier = Modifier.fillMaxWidth(), label = { Text("Ім'я (необов'язково)") },
             singleLine = true
         )
+        Text("🥚 Спочатку з’явиться цифрове яйце. Потім малюк, підліток, кокон і дорослий Піксубі. Зростання потребує активних днів та XP.", color = Color(0xFFD4DBE8), style = MaterialTheme.typography.bodySmall)
         Text("🎲 Забарвлення при народженні визначиться випадково. Його не можна обрати вручну.", color = Color(0xFFD4DBE8), style = MaterialTheme.typography.bodySmall)
         Text("⚠️ Піксубі може померти без їжі та води. Коли йдеш надовго — обов’язково вмикай сплячку, вона зупиняє час.", color = Color(0xFFFFD58A), style = MaterialTheme.typography.bodySmall)
         Button(
             onClick = { onHatch(GameEngine.hatch(species, sex, region, petName, System.currentTimeMillis())) },
             modifier = Modifier.fillMaxWidth().height(52.dp)
-        ) { Text("🥚 Вилупити Піксубі") }
+        ) { Text("🥚 Створити яйце Піксубі") }
         Text("Без інтернету • Без реклами • Збереження на телефоні", modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
         Spacer(Modifier.height(16.dp))
@@ -409,6 +410,7 @@ private fun HomeScreen(
     onSettings: () -> Unit
 ) {
     val emotion = EmotionResolver.resolve(pet, reaction)
+    var showGrowthGallery by remember { mutableStateOf(false) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -423,6 +425,7 @@ private fun HomeScreen(
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
         WorldScene(pet, reaction, onPetTap)
+        GrowthProgressCard(pet, onGallery = { showGrowthGallery = true })
         Card(colors = CardDefaults.cardColors(containerColor = navy)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("💬 " + EmotionResolver.label(emotion), color = Color(0xFFFFD58A), fontWeight = FontWeight.Bold)
@@ -466,6 +469,9 @@ private fun HomeScreen(
         Text("🧬 Приховані гени кольору збережені для майбутньої системи розмноження.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
         Text("🏆 Мініігор виграно: ${pet.miniGameWins}", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(24.dp))
+    }
+    if (showGrowthGallery) {
+        GrowthGalleryDialog(pet, onClose = { showGrowthGallery = false })
     }
 }
 
@@ -603,8 +609,8 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))
         )
-        PetSprite(
-            pet.species, pet.colorIndex,
+        GrowthSprite(
+            pet = pet,
             modifier = Modifier.align(Alignment.Center)
                 .offset(y = (17f + travelY).dp)
                 .size(194.dp)
@@ -613,7 +619,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                     scaleY = if (sleeping) 0.93f + bob * .035f else 1f - bob * .025f
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE) { onPetTap() },
-            emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f, sex = pet.sex
+            emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f
         )
         if (speech != null) {
             Surface(
@@ -705,7 +711,7 @@ private fun FarewellScreen(pet: Pet, onNewPet: () -> Unit) {
         Text("Ваші пригоди залишаться теплим спогадом 💜", textAlign = TextAlign.Center)
         Spacer(Modifier.height(26.dp))
         Button(onClick = onNewPet, modifier = Modifier.fillMaxWidth()) { Text("🥚 Виростити нового Піксубі") }
-        Text("У версії 0.5 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
+        Text("У версії 0.7 можна доглядати лише одного вихованця; новий замінить попереднє збереження.",
             style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Color.LightGray)
     }
 }
