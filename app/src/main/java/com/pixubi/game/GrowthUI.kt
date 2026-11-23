@@ -1,0 +1,144 @@
+package com.pixubi.game
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun GrowthProgressCard(pet: Pet, onGallery: () -> Unit) {
+    val stage = PetGrowth.stage(pet)
+    val level = PetGrowth.level(pet.xp)
+    val next = PetGrowth.xpForLevel((level + 1).coerceAtMost(PetGrowth.MAX_LEVEL))
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF243550)),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${stage.icon} ${stage.title}  ·  рівень $level",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Досвід: ${pet.xp} XP" +
+                        if (level < PetGrowth.MAX_LEVEL) " • до нового рівня ще ${PetGrowth.xpToNextLevel(pet)}" else " • максимум",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFB7D2E8))
+                }
+                TextButton(onClick = onGallery) { Text("Етапи ›") }
+            }
+            LinearProgressIndicator(
+                progress = { PetGrowth.progressInLevel(pet) },
+                modifier = Modifier.fillMaxWidth().height(9.dp),
+                color = Color(0xFF94E9C8),
+                trackColor = Color(0xFF40516B)
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("🗓️ Вік: ${pet.daysOld} дн.", style = MaterialTheme.typography.bodySmall)
+                Text("💖 Днів догляду: ${pet.careDays}", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("🔥 Серія: ${pet.careStreak} дн.",
+                style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD38B))
+            Text(PetGrowth.stageHint(pet),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFBCECF6))
+            if (pet.mode == Mode.HIBERNATION) {
+                Text("❄️ Сплячка: ріст, дні й потреби на паузі.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFB5DDF2))
+            }
+        }
+    }
+}
+
+@Composable
+fun GrowthGalleryDialog(pet: Pet, onClose: () -> Unit) {
+    var selected by remember(pet.name, pet.bornAt) {
+        mutableStateOf(PetGrowth.stage(pet))
+    }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("🧬 Життєвий цикл PIXUBI", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Дивись на всі майбутні форми. Це лише перегляд — твій Піксубі росте за часом і XP.",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GrowthStage.entries.forEach { stage ->
+                        FilterChip(
+                            selected = stage == selected,
+                            onClick = { selected = stage },
+                            label = { Text(stage.icon + " " + stage.title) }
+                        )
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    GrowthSprite(
+                        pet = pet,
+                        previewStage = selected,
+                        modifier = Modifier.size(165.dp)
+                    )
+                }
+                Text(selected.icon + " " + selected.title,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold)
+                Text(
+                    when(selected) {
+                        GrowthStage.EGG -> "Дивовижне цифрове яйце, у якому зароджується нове життя."
+                        GrowthStage.BABY -> "Маленький крихітний кіберзвір із великим майбутнім."
+                        GrowthStage.YOUNG -> "Допитливий підліток: більше руху й пригод."
+                        GrowthStage.COCOON -> "Світний кокон: готує дорослу форму Піксубі."
+                        GrowthStage.ADULT -> "Доросла унікальна істота з твоїми генами кольору."
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                val minutes = selected.minMinutes
+                Text(
+                    "Відкривається: ${if (minutes < 60) "$minutes хв" else "${minutes / 1_440L} активних дн."} + рівень ${selected.minLevel}",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFFA6D9E5),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text("🔒 Усі етапи росту зберігають стать і випадкове забарвлення.",
+                    style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.height(3.dp))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onClose) { Text("Повернутися") }
+        }
+    )
+}
