@@ -725,7 +725,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     val searchPose = searchFrame?.pose ?: SearchPose()
     val motion = MotionResolver.resolve(pet, emotion, searching)
     val bodyMotion = MotionResolver.pose(motion, movementCycle)
-    val eyeBlink = !sleeping && blinkCycle > 0.93f && blinkCycle < 0.985f
+    val eyeClosure = if (sleeping) 1f else NativeEyeMotion.blinkAt(blinkCycle)
     val travelY = when (emotion) {
         PetEmotion.HAPPY -> 0f  // BodyMotion already handles happy hops; no double bouncing.
         PetEmotion.EATING, PetEmotion.DRINKING -> 3f * bob
@@ -899,7 +899,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
             emotion = emotion,
-            blink = eyeBlink,
+            eyeClosure = eyeClosure,
             chewOpen = movementCycle > .5f,
             motion = motion,
             motionPhase = movementCycle

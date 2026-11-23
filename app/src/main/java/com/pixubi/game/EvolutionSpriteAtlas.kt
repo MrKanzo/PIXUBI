@@ -68,12 +68,18 @@ fun IllustratedYoungPixu(
     colorIndex: Int,
     stage: GrowthStage,
     modifier: Modifier = Modifier,
-    emotion: PetEmotion = PetEmotion.IDLE
+    emotion: PetEmotion = PetEmotion.IDLE,
+    blink: Boolean = false,
+    eyeClosure: Float = 0f
 ) {
     val context = LocalContext.current.applicationContext
-    val bitmap = remember(species, stage) {
-        EvolutionSprites.get(context, species, stage).asImageBitmap()
+    val nativeFrames = remember(species, stage) {
+        NativeSpriteEyes.frames(
+            EvolutionSprites.get(context, species, stage), species, stage
+        ).map { it.asImageBitmap() }
     }
+    val closure = NativeEyeMotion.closure(emotion, eyeClosure, blink)
+    val bitmap = nativeFrames[NativeEyeMotion.frameIndex(closure)]
     val geneAccent = listOf(
         Color(0xFF75DDCB), Color(0xFFFFB37A), Color(0xFFC5A8FF),
         Color(0xFFFFA1CE), Color(0xFF92CCFF), Color(0xFFFAD17B)

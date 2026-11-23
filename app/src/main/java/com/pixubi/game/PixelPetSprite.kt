@@ -78,12 +78,20 @@ fun PixelPetSprite(
     emotion: PetEmotion = PetEmotion.IDLE,
     blink: Boolean = false,
     chewOpen: Boolean = false,
-    motionPhase: Float = 0f
+    motionPhase: Float = 0f,
+    eyeClosure: Float = 0f
 ) {
     val appContext = LocalContext.current.applicationContext
-    val frame = remember(species, sex, coatIndex) {
-        PixubiSpriteCache.get(appContext, species, sex, coatIndex).asImageBitmap()
+    // The image itself has eyes. Build a few blink frames FROM its own pixels,
+    // instead of drawing a second pair of eyes on top.
+    val nativeFrames = remember(species, sex, coatIndex) {
+        NativeSpriteEyes.frames(
+            PixubiSpriteCache.get(appContext, species, sex, coatIndex),
+            species, GrowthStage.ADULT
+        ).map { it.asImageBitmap() }
     }
+    val closure = NativeEyeMotion.closure(emotion, eyeClosure, blink)
+    val frame = nativeFrames[NativeEyeMotion.frameIndex(closure)]
     Box(modifier, contentAlignment = Alignment.Center) {
         Image(
             bitmap = frame,
@@ -91,13 +99,6 @@ fun PixelPetSprite(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit,
             filterQuality = FilterQuality.None
-        )
-
-        // The face is repainted in sync with emotions; the original body atlas stays intact.
-        PetFaceOverlay(
-            species = species, sex = sex, coatIndex = coatIndex,
-            emotion = emotion, blink = blink, chewOpen = chewOpen,
-            phase = motionPhase, modifier = Modifier.fillMaxSize()
         )
 
         when (emotion) {
