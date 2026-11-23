@@ -58,20 +58,10 @@ class PetMotionTest {
             MotionResolver.pose(PetMotion.FLOAT, .25f))
     }
 
-    @Test fun eachEmotionChangesEyesAndMouthAndBlinkKeepsMouth() {
-        assertEquals(PixuEyeShape.HAPPY, PixuFaces.expression(PetEmotion.HAPPY).eyes)
-        assertEquals(PixuMouthShape.GRIN, PixuFaces.expression(PetEmotion.HAPPY).mouth)
-        assertEquals(PixuEyeShape.SAD, PixuFaces.expression(PetEmotion.SAD).eyes)
-        assertEquals(PixuMouthShape.FROWN, PixuFaces.expression(PetEmotion.SAD).mouth)
-        assertEquals(PixuEyeShape.WIDE, PixuFaces.expression(PetEmotion.SURPRISED).eyes)
-        assertEquals(PixuMouthShape.O, PixuFaces.expression(PetEmotion.SURPRISED).mouth)
-        assertEquals(PixuMouthShape.CHEW, PixuFaces.expression(PetEmotion.EATING).mouth)
-        assertEquals(PixuMouthShape.SIP, PixuFaces.expression(PetEmotion.DRINKING).mouth)
-        assertEquals(PixuMouthShape.YAWN, PixuFaces.expression(PetEmotion.TIRED).mouth)
-        assertEquals(PixuEyeShape.CLOSED, PixuFaces.expression(PetEmotion.SLEEPING).eyes)
-        assertEquals(PixuEyeShape.CLOSED, PixuFaces.expression(PetEmotion.HIBERNATING).eyes)
-        val closed = PixuFaces.expression(PetEmotion.HAPPY, blink = true)
-        assertEquals(PixuEyeShape.CLOSED, closed.eyes)
-        assertEquals(PixuMouthShape.GRIN, closed.mouth)
+    @Test fun blinkIsAnImageFrameChangeNotASecondPairOfEyes() {
+        assertEquals(0, NativeEyeMotion.frameIndex(NativeEyeMotion.closure(PetEmotion.IDLE, 0f)))
+        assertEquals(4, NativeEyeMotion.frameIndex(NativeEyeMotion.closure(PetEmotion.SLEEPING, 0f)))
+        assertEquals(4, NativeEyeMotion.frameIndex(NativeEyeMotion.closure(PetEmotion.IDLE, 1f)))
+        assertTrue(NativeEyeMotion.frameIndex(NativeEyeMotion.closure(PetEmotion.TIRED, 0f)) > 0)
     }
 }

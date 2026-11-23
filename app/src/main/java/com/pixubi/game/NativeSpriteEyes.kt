@@ -1,112 +1,65 @@
 package com.pixubi.game
 
 import android.graphics.Bitmap
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
-import kotlin.math.min
 
 /**
- * Blink frames are built by gently resampling the eye pixels INSIDE the supplied
- * original sprite. No extra pair of pupils, lashes, eyelid lines, or face patches
- * are painted over the artwork. The untouched source is frame 0.
+ * Real frames made from the pixels of the original animal illustration.
+ * Closed eyelids REPLACE the open-eye pixels inside the bitmap. There is never
+ * a second Compose Canvas of eyes above the character.
  */
 internal object NativeSpriteEyes {
-    private data class Eye(val x: Float, val y: Float, val rx: Float, val ry: Float)
-    private data class Eyes(val left: Eye, val right: Eye)
+    private data class PairOfEyes(val first: EyeRegion, val second: EyeRegion)
 
-    // Coordinates are in the original, unscaled atlas CELL, not screen pixels.
-    // Each sprite has its own facial proportions; do not use one generic overlay.
-    private fun locations(species: Species, stage: GrowthStage): Eyes {
-        val (left, right, y, rx, ry) = when (stage) {
+    // Coordinates in the ORIGINAL 192x192 baby/teen and 160x160 adult atlas cells.
+    // The eye positions genuinely differ between species and evolution stages.
+    private fun eyes(species: Species, stage: GrowthStage): PairOfEyes {
+        val values = when (stage) {
             GrowthStage.BABY -> when (species) {
-                Species.LISYK -> listOf(74f, 126f, 101f, 18f, 18f)
-                Species.ISKRYK -> listOf(65f, 126f, 102f, 18f, 19f)
-                Species.KRAPLYK -> listOf(68f, 123f, 107f, 18f, 17f)
-                Species.PISHCHANYK -> listOf(68f, 126f, 109f, 17f, 18f)
-                Species.KHMARYK -> listOf(70f, 128f, 100f, 18f, 18f)
+                Species.LISYK -> floatArrayOf(73f, 125f, 102f, 19f, 19f)
+                Species.ISKRYK -> floatArrayOf(66f, 127f, 103f, 19f, 19f)
+                Species.KRAPLYK -> floatArrayOf(70f, 122f, 107f, 19f, 18f)
+                Species.PISHCHANYK -> floatArrayOf(67f, 126f, 107f, 18f, 19f)
+                Species.KHMARYK -> floatArrayOf(71f, 127f, 101f, 19f, 19f)
             }
             GrowthStage.YOUNG -> when (species) {
-                Species.LISYK -> listOf(69f, 117f, 94f, 15f, 16f)
-                Species.ISKRYK -> listOf(68f, 126f, 99f, 16f, 17f)
-                Species.KRAPLYK -> listOf(78f, 116f, 100f, 14f, 15f)
-                Species.PISHCHANYK -> listOf(70f, 122f, 103f, 15f, 17f)
-                Species.KHMARYK -> listOf(72f, 121f, 99f, 15f, 16f)
+                Species.LISYK -> floatArrayOf(70f, 118f, 94f, 16f, 17f)
+                Species.ISKRYK -> floatArrayOf(70f, 124f, 100f, 17f, 18f)
+                Species.KRAPLYK -> floatArrayOf(80f, 119f, 102f, 16f, 17f)
+                Species.PISHCHANYK -> floatArrayOf(72f, 122f, 102f, 16f, 18f)
+                Species.KHMARYK -> floatArrayOf(73f, 122f, 99f, 16f, 17f)
             }
             GrowthStage.ADULT -> when (species) {
-                Species.LISYK -> listOf(72f, 113f, 71f, 14f, 16f)
-                Species.ISKRYK -> listOf(71f, 111f, 71f, 14f, 16f)
-                Species.KRAPLYK -> listOf(69f, 109f, 71f, 15f, 15f)
-                Species.PISHCHANYK -> listOf(70f, 111f, 73f, 14f, 15f)
-                Species.KHMARYK -> listOf(69f, 111f, 71f, 14f, 16f)
+                Species.LISYK -> floatArrayOf(73f, 111f, 72f, 14f, 15f)
+                Species.ISKRYK -> floatArrayOf(71f, 112f, 72f, 14f, 15f)
+                Species.KRAPLYK -> floatArrayOf(72f, 111f, 71f, 15f, 15f)
+                Species.PISHCHANYK -> floatArrayOf(72f, 112f, 72f, 14f, 16f)
+                Species.KHMARYK -> floatArrayOf(70f, 111f, 72f, 15f, 16f)
             }
-            GrowthStage.EGG, GrowthStage.COCOON ->
-                error("Shells have no eyes to animate")
+            else -> error("Eggs and cocoons have no painted eyes")
         }
-        return Eyes(Eye(left, y, rx, ry), Eye(right, y, rx, ry))
+        val left = EyeRegion(values[0], values[2], values[3], values[4])
+        val right = EyeRegion(values[1], values[2], values[3], values[4])
+        return PairOfEyes(left, right)
     }
 
+    /** Precompute once per illustration; drawing a frame never runs a pixel loop. */
     fun frames(original: Bitmap, species: Species, stage: GrowthStage): List<Bitmap> {
         if (stage == GrowthStage.EGG || stage == GrowthStage.COCOON) return listOf(original)
-        val eyes = locations(species, stage)
         val width = original.width
         val height = original.height
-        val source = IntArray(width * height)
-        original.getPixels(source, 0, width, 0, 0, width, height)
-
-        // Four prepared intermediate eyelid positions. No bitmap allocation per frame.
-        return (0..4).map { step ->
-            if (step == 0) original
+        val input = IntArray(width * height)
+        original.getPixels(input, 0, width, 0, 0, width, height)
+        val e = eyes(species, stage)
+        return (0..4).map { frame ->
+            if (frame == 0) original // Open-eye image is 100% untouched.
             else {
-                val changed = source.copyOf()
-                val amount = step / 4f
-                warpEye(source, changed, width, height, eyes.left, amount)
-                warpEye(source, changed, width, height, eyes.right, amount)
+                val pixels = EyePixelAnimator.frame(
+                    input, width, height, listOf(e.first, e.second), frame
+                )
                 Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-                    setPixels(changed, 0, width, 0, 0, width, height)
+                    setPixels(pixels, 0, width, 0, 0, width, height)
                 }
             }
         }
-    }
-
-    private fun warpEye(
-        source: IntArray, target: IntArray,
-        width: Int, height: Int, eye: Eye, closure: Float
-    ) {
-        val x0 = max(0, floor(eye.x - eye.rx).toInt())
-        val x1 = min(width - 1, ceil(eye.x + eye.rx).toInt())
-        val y0 = max(0, floor(eye.y - eye.ry).toInt())
-        val y1 = min(height - 1, ceil(eye.y + eye.ry).toInt())
-        val openness = 1f - closure * .94f
-
-        for (y in y0..y1) {
-            val dy = (y - eye.y) / eye.ry
-            for (x in x0..x1) {
-                val dx = (x - eye.x) / eye.rx
-                val dist = dx * dx + dy * dy
-                if (dist >= 1f) continue
-
-                // Inverse vertical sampling compresses the EXISTING eye, while
-                // borrowing its surrounding fur at the top/bottom of the oval.
-                val sampleY = (eye.y + (y - eye.y) / openness)
-                    .toInt().coerceIn(y0, y1)
-                val oldColor = source[y * width + x]
-                val newColor = source[sampleY * width + x]
-                // Feather the region edge so no square/oval patch boundary appears.
-                val feather = ((1f - dist) / .23f).coerceIn(0f, 1f)
-                target[y * width + x] = mix(oldColor, newColor, feather)
-            }
-        }
-    }
-
-    private fun mix(a: Int, b: Int, amount: Float): Int {
-        if (amount <= 0f) return a
-        if (amount >= 1f) return b
-        val ai = 1f - amount
-        val alpha = (((a ushr 24) and 255) * ai + ((b ushr 24) and 255) * amount).toInt()
-        val red = (((a ushr 16) and 255) * ai + ((b ushr 16) and 255) * amount).toInt()
-        val green = (((a ushr 8) and 255) * ai + ((b ushr 8) and 255) * amount).toInt()
-        val blue = ((a and 255) * ai + (b and 255) * amount).toInt()
-        return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
 }

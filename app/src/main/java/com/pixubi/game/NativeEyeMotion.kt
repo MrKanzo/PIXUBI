@@ -22,8 +22,8 @@ object NativeEyeMotion {
         val expression = when (emotion) {
             PetEmotion.SLEEPING, PetEmotion.HIBERNATING -> 1f
             PetEmotion.TIRED -> .60f
-            PetEmotion.HAPPY -> .24f
-            PetEmotion.SAD -> .30f
+            // A happy or sad character still keeps its exact ORIGINAL
+            // illustrated open eyes between blinks; only the body animates.
             else -> 0f
         }
         return max(expression, max(blinkValue.coerceIn(0f, 1f), if (legacyBlink) 1f else 0f))
