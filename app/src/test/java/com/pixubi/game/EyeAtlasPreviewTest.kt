@@ -19,7 +19,7 @@ class EyeAtlasPreviewTest {
             Triple(evolution.getSubimage(0, 0, 192, 192), 192,
                 listOf(EyeRegion(73f, 102f, 19f, 19f), EyeRegion(125f, 102f, 19f, 19f))),
             Triple(evolution.getSubimage(0, 192, 192, 192), 192,
-                listOf(EyeRegion(79f, 90f, 13f, 11f), EyeRegion(126f, 90f, 13f, 11f))),
+                listOf(EyeRegion(61f, 75f, 11f, 10f), EyeRegion(90f, 75f, 11f, 10f))),
             Triple(adults.getSubimage(0, 160 * 6, 160, 160), 160,
                 listOf(EyeRegion(73f, 72f, 14f, 15f), EyeRegion(111f, 72f, 14f, 15f)))
         )
@@ -86,7 +86,7 @@ class EyeAtlasPreviewTest {
         }
         g.color = java.awt.Color.RED
         g.stroke = java.awt.BasicStroke(2f)
-        for ((x, y) in listOf(79 to 90, 126 to 90)) {
+        for ((x, y) in listOf(61 to 75, 90 to 75)) {
             val cx = margin + (x - baseX) * scale
             val cy = margin + (y - baseY) * scale
             g.drawOval(cx - 7, cy - 7, 14, 14)
@@ -97,6 +97,52 @@ class EyeAtlasPreviewTest {
         val dest = File("build/eye-preview/lisyk-young-grid.png")
         dest.parentFile.mkdirs()
         assertTrue(ImageIO.write(zoom, "png", dest))
+    }
+
+    @Test fun gridForEveryIllustratedYoungSpecies() {
+        val atlas = ImageIO.read(File("src/main/assets/pixubi_evolution_10.png"))
+        for (species in Species.entries) {
+            val zoom = BufferedImage(760, 550, BufferedImage.TYPE_INT_RGB)
+            val g = zoom.createGraphics()
+            val scale = 6
+            val baseX = 45
+            val baseY = 50
+            val regionWidth = 114
+            val regionHeight = 79
+            val margin = 45
+            g.color = java.awt.Color(15, 24, 43)
+            g.fillRect(0, 0, zoom.width, zoom.height)
+            g.setRenderingHint(
+                java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+            )
+            g.drawImage(
+                atlas, margin, margin,
+                margin + regionWidth * scale, margin + regionHeight * scale,
+                species.ordinal * 192 + baseX, 192 + baseY,
+                species.ordinal * 192 + baseX + regionWidth,
+                192 + baseY + regionHeight, null
+            )
+            g.font = java.awt.Font("Monospaced", java.awt.Font.BOLD, 12)
+            for (x in 50..150 step 10) {
+                val xx = margin + (x - baseX) * scale
+                g.color = java.awt.Color(255, 255, 255, 85)
+                g.drawLine(xx, margin, xx, margin + regionHeight * scale)
+                g.color = java.awt.Color.WHITE
+                g.drawString(x.toString(), xx - 9, 30)
+            }
+            for (y in 50..125 step 10) {
+                val yy = margin + (y - baseY) * scale
+                g.color = java.awt.Color(255, 255, 255, 85)
+                g.drawLine(margin, yy, margin + regionWidth * scale, yy)
+                g.color = java.awt.Color.WHITE
+                g.drawString(y.toString(), 7, yy + 4)
+            }
+            g.dispose()
+            val path = File("build/eye-preview/" + species.name.lowercase() + "-young-grid.png")
+            path.parentFile.mkdirs()
+            assertTrue(ImageIO.write(zoom, "png", path))
+        }
     }
 
 }
