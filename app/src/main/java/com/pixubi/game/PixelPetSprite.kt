@@ -77,7 +77,8 @@ fun PixelPetSprite(
     modifier: Modifier = Modifier,
     emotion: PetEmotion = PetEmotion.IDLE,
     blink: Boolean = false,
-    chewOpen: Boolean = false
+    chewOpen: Boolean = false,
+    motionPhase: Float = 0f
 ) {
     val appContext = LocalContext.current.applicationContext
     val frame = remember(species, sex, coatIndex) {
@@ -92,25 +93,12 @@ fun PixelPetSprite(
             filterQuality = FilterQuality.None
         )
 
-        // Original facial details remain visible; these additions animate a blink.
-        if (blink || emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING) {
-            Canvas(Modifier.fillMaxSize()) {
-                val y = size.height * when (species) {
-                    Species.ISKRYK -> .445f
-                    Species.PISHCHANYK -> .475f
-                    Species.KRAPLYK -> .45f
-                    Species.KHMARYK -> .46f
-                    Species.LISYK -> .445f
-                }
-                val leftX = size.width * .43f
-                val rightX = size.width * .62f
-                val thickness = size.width * .018f
-                drawLine(Color(0xFF1E2946), Offset(leftX - size.width*.055f, y),
-                    Offset(leftX + size.width*.05f, y), strokeWidth = thickness)
-                drawLine(Color(0xFF1E2946), Offset(rightX - size.width*.055f, y),
-                    Offset(rightX + size.width*.05f, y), strokeWidth = thickness)
-            }
-        }
+        // The face is repainted in sync with emotions; the original body atlas stays intact.
+        PetFaceOverlay(
+            species = species, sex = sex, coatIndex = coatIndex,
+            emotion = emotion, blink = blink, chewOpen = chewOpen,
+            phase = motionPhase, modifier = Modifier.fillMaxSize()
+        )
 
         when (emotion) {
             PetEmotion.EATING -> Text(

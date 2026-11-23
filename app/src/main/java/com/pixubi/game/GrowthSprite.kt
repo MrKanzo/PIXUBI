@@ -25,7 +25,9 @@ fun GrowthSprite(
     previewStage: GrowthStage? = null,
     emotion: PetEmotion = PetEmotion.IDLE,
     blink: Boolean = false,
-    chewOpen: Boolean = false
+    chewOpen: Boolean = false,
+    motion: PetMotion = PetMotion.IDLE,
+    motionPhase: Float = 0f
 ) {
     val stage = previewStage ?: PetGrowth.stage(pet)
     Box(modifier, contentAlignment = Alignment.Center) {
@@ -52,8 +54,17 @@ fun GrowthSprite(
                     emotion = emotion,
                     blink = blink,
                     chewOpen = chewOpen,
+                    motionPhase = motionPhase,
                     modifier = Modifier.fillMaxSize()
                 )
+        }
+        // Juvenile sprites have their own drawn bodies; give them the same expressive face.
+        if (stage == GrowthStage.BABY || stage == GrowthStage.YOUNG) {
+            PetFaceOverlay(
+                species = pet.species, sex = pet.sex, coatIndex = pet.colorIndex,
+                emotion = emotion, blink = blink, chewOpen = chewOpen,
+                phase = motionPhase, modifier = Modifier.fillMaxSize()
+            )
         }
         // Physical sex differences are facial details and markings, not a bow pasted on.
         // Both variants work for the baby, teen and adult sheets without altering genes.

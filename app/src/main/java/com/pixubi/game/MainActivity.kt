@@ -712,12 +712,19 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing)),
         label = "species-search"
     )
+    val movementCycle by loop.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1320, easing = LinearEasing)),
+        label = "pixubi-body-motion"
+    )
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
     val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
     val searchFrame = if (searching)
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
+    val motion = MotionResolver.resolve(pet, emotion, searching)
+    val bodyMotion = MotionResolver.pose(motion, movementCycle)
     val eyeBlink = !sleeping && blinkCycle > 0.93f && blinkCycle < 0.985f
     val travelY = when (emotion) {
         PetEmotion.HAPPY -> -12f * bob
@@ -877,18 +884,25 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
-                .offset(x = searchPose.xDp.dp, y = (17f + travelY + searchPose.yDp).dp)
+                .offset(
+                    x = (searchPose.xDp + bodyMotion.xDp).dp,
+                    y = (17f + travelY + searchPose.yDp + bodyMotion.yDp).dp
+                )
                 .size(194.dp)
                 .graphicsLayer {
-                    rotationZ = searchPose.rotation +
+                    rotationZ = searchPose.rotation + bodyMotion.rotationDegrees +
                         (if (emotion == PetEmotion.HAPPY) sway * 2.5f else sway)
-                    scaleX = searchPose.scale
-                    scaleY = searchPose.scale *
-                        (if (sleeping) .93f + bob * .035f else 1f - bob * .025f)
+                    scaleX = searchPose.scale * bodyMotion.scaleX
+                    scaleY = searchPose.scale * bodyMotion.scaleY *
+                        (if (sleeping) .98f + bob * .02f else 1f - bob * .012f)
                     alpha = searchFrame?.alpha ?: 1f
                 }
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
-            emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f
+            emotion = emotion,
+            blink = eyeBlink,
+            chewOpen = movementCycle > .5f,
+            motion = motion,
+            motionPhase = movementCycle
         )
         if (searching && searchFrame != null) {
             // Draw over the character: it goes behind foliage, rock, water, sand or cloud.
