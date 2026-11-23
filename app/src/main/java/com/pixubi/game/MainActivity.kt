@@ -684,6 +684,66 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                     }
                 }
             }
+            // Pixel-style objects purchased with coins; drawn into each regional world.
+            if (pet.hasHome) {
+                val x = size.width * .07f
+                val y = size.height * .61f
+                val w = size.width * .22f
+                val h = size.height * .19f
+                drawRect(Color(0xFF27364C), Offset(x - 4f, y - 4f), Size(w + 8f, h + 8f))
+                drawRect(Color(0xFFDCA777), Offset(x, y), Size(w, h))
+                val roof = Path().apply {
+                    moveTo(x - w * .13f, y)
+                    lineTo(x + w * .50f, y - h * .66f)
+                    lineTo(x + w * 1.13f, y)
+                    close()
+                }
+                drawPath(roof, Color(0xFF7D527D))
+                drawRect(Color(0xFF4A3C58), Offset(x + w * .35f, y + h * .36f),
+                    Size(w * .30f, h * .64f))
+                drawRect(Color(0xFFFFE8A0), Offset(x + w * .70f, y + h * .19f),
+                    Size(w * .15f, h * .20f))
+            }
+            if (pet.hasBowl) {
+                val x = size.width * .14f
+                val y = size.height * .85f
+                drawOval(Color(0xFF263855), Offset(x - 5f, y - 4f),
+                    Size(size.width * .135f + 10f, size.height * .073f + 7f))
+                drawOval(Color(0xFFFFBD77), Offset(x, y),
+                    Size(size.width * .135f, size.height * .064f))
+                drawOval(Color(0xFFAE6473), Offset(x + 8f, y + 3f),
+                    Size(size.width * .09f, size.height * .028f))
+            }
+            if (pet.hasCup) {
+                val x = size.width * .32f
+                val y = size.height * .84f
+                drawRect(Color(0xFFE0F7FF), Offset(x, y),
+                    Size(size.width * .045f, size.height * .081f))
+                drawRect(Color(0xFF63CBEA), Offset(x + 3f, y + size.height * .03f),
+                    Size(size.width * .045f - 6f, size.height * .045f))
+                drawRect(Color(0xFFDFEEFF), Offset(x - 3f, y - 3f),
+                    Size(size.width * .06f, 5f))
+            }
+            if (pet.hasCharger) {
+                val x = size.width * .81f
+                val y = size.height * .68f
+                val w = size.width * .12f
+                val h = size.height * .18f
+                drawRect(Color(0xFF172641), Offset(x - 4f, y - 4f), Size(w + 8f, h + 8f))
+                drawRect(Color(0xFF76BEC9), Offset(x, y), Size(w, h))
+                drawRect(Color(0xFF203C5A), Offset(x + w * .18f, y + h * .19f),
+                    Size(w * .64f, h * .45f))
+                val bolt = Path().apply {
+                    moveTo(x + w * .53f, y + h * .24f)
+                    lineTo(x + w * .35f, y + h * .46f)
+                    lineTo(x + w * .50f, y + h * .46f)
+                    lineTo(x + w * .44f, y + h * .60f)
+                    lineTo(x + w * .70f, y + h * .38f)
+                    lineTo(x + w * .54f, y + h * .38f)
+                    close()
+                }
+                drawPath(bolt, Color(0xFFFFE58B))
+            }
             if (sleeping) drawRect(Color(0xFF101A37).copy(alpha = .24f))
             for (i in 0..12) {
                 val x = size.width * ((i * 37 + 17) % 97) / 97f
