@@ -29,6 +29,20 @@ jobs:
           gradle-version: '9.6.0'
       - name: Compile and test debug APK
         run: gradle --no-daemon testDebugUnitTest assembleDebug
+      - name: Publish real-sprite blink preview
+        if: success()
+        shell: bash
+        run: |
+          test -f app/build/eye-preview/lisyk-eye-frames.png
+          mkdir -p docs/eye-previews
+          cp app/build/eye-preview/lisyk-eye-frames.png docs/eye-previews/lisyk-eye-frames.png
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/eye-previews/lisyk-eye-frames.png
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: real original-sprite eye blink frames [skip ci]"
+            git push
+          fi
       - uses: actions/upload-artifact@v4
         if: success()
         with:
