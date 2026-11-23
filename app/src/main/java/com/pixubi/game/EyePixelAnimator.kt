@@ -35,6 +35,28 @@ internal object EyePixelAnimator {
         return output
     }
 
+    /** Same reconstructed face for all eyes and mouth phases; no UI overlays. */
+    fun faceFrames(original: IntArray, width: Int, height: Int,
+                   eyes: List<EyeRegion>, mouth: EyeRegion, beak: Boolean,
+                   emotion: PetEmotion): List<IntArray> {
+        require(original.size == width*height)
+        val eyePatches = eyes.map { Patch(original,width,height,it) }
+        val mouthPatch = Patch(original,width,height,mouth)
+        val animated = FaceExpression.animatedMouth(emotion)
+        return List(if (animated) 10 else 5) { index ->
+            val step = index % 5
+            val open = index >= 5
+            original.copyOf().also { out ->
+                if (emotion != PetEmotion.IDLE)
+                    mouthPatch.paintMouth(out, emotion, open, beak)
+                eyePatches.forEachIndexed { i, patch ->
+                    if (step != 0 || emotion != PetEmotion.IDLE)
+                        patch.paint(out,step,emotion,if (i == 0) 1f else -1f)
+                }
+            }
+        }
+    }
+
     private class Patch(val original: IntArray, val width: Int, val height: Int,
                         val eye: EyeRegion) {
         val left = max(0, floor(eye.centerX - eye.radiusX - 2).toInt())
@@ -114,9 +136,11 @@ internal object EyePixelAnimator {
             ink = outline
         }
 
-        fun paint(output: IntArray, step: Int) {
+        fun paint(output: IntArray, step: Int,
+                  emotion: PetEmotion = PetEmotion.IDLE, side: Float = 1f) {
             val anchor = eye.centerY + eye.radiusY * .24f
-            val scale = 1f - step / 4f
+            val scale = (1f - step / 4f) * FaceExpression.eyeScale(emotion)
+            val tilt = FaceExpression.eyeTilt(emotion) * side
             val halfWidth = eye.radiusX * .78f
             for (j in 1 until h - 1) for (i in 1 until w - 1) {
                 val k = j*w+i
@@ -127,7 +151,7 @@ internal object EyePixelAnimator {
                 if (step < 4) {
                     // Transfer the eye's color difference relative to its clean
                     // face, rather than pasting a compressed block of fur.
-                    val sy = anchor + (y - anchor) / scale - top
+                    val sy = anchor + (y - anchor - tilt*(x-eye.centerX)) / scale - top
                     val lo = floor(sy).toInt()
                     val t = sy - lo
                     fun delta(row: Int, shift: Int): Float {
@@ -145,7 +169,7 @@ internal object EyePixelAnimator {
                     val nx = (x-eye.centerX)/halfWidth
                     if (abs(nx) <= 1.05f) {
                         val curveY = anchor + eye.radiusY * (
-                            eye.lidCurve * (1f-nx*nx) + eye.lidTilt*nx)
+                            (if (emotion == PetEmotion.HAPPY) -.30f else eye.lidCurve) * (1f-nx*nx) + (eye.lidTilt+tilt)*nx)
                         val thickness = (eye.radiusY*.10f).coerceIn(.75f,1.65f)
                         val edge = ((1.05f-abs(nx))*5f).coerceIn(0f,1f)
                         val a = ((thickness+.55f-abs(y-curveY))/.9f)
@@ -159,6 +183,81 @@ internal object EyePixelAnimator {
                 output[y*width+x] = c
             }
         }
+
+        /** Replace the painted mouth using native local texture and outline. */
+        fun paintMouth(out: IntArray, emotion: PetEmotion, open: Boolean, beak: Boolean) {
+            val pose = FaceExpression.mouth(emotion,open)
+            for (j in 1 until h-1) for (i in 1 until w-1) {
+                val k=j*w+i
+                if (!mask[k]) continue
+                val x=left+i
+                val y=top+j
+                var c=clean[k]
+                val nx=(x-eye.centerX)/eye.radiusX
+                val ny=(y-eye.centerY)/eye.radiusY
+                if (beak) {
+                    // Keep the owl's original colored beak, not a mammal mouth.
+                    // Stretch/compress its own pixel layer according to the expression.
+                    val scale = when (pose) {
+                        MouthPose.SLEEP, MouthPose.REST -> .70f
+                        MouthPose.FROWN, MouthPose.POUT -> .83f
+                        MouthPose.ROUND, MouthPose.OPEN, MouthPose.YAWN -> 1.12f
+                        else -> 1f
+                    }
+                    val sy = ((y-eye.centerY)/scale+eye.centerY-top).roundToInt()
+                    if (sy in 0 until h) {
+                        val q=sy*w+i
+                        if (mask[q]) c=pack(channel(c,24),
+                            (channel(c,16)+channel(native[q],16)-channel(clean[q],16)).toFloat(),
+                            (channel(c,8)+channel(native[q],8)-channel(clean[q],8)).toFloat(),
+                            (channel(c,0)+channel(native[q],0)-channel(clean[q],0)).toFloat())
+                    }
+                } else {
+                    val rx=when(pose) {
+                        MouthPose.ROUND -> .37f
+                        MouthPose.POUT -> .36f
+                        MouthPose.YAWN -> .53f
+                        MouthPose.OPEN -> .69f
+                        else -> .69f
+                    }
+                    val ry=when(pose) {
+                        MouthPose.OPEN -> .58f
+                        MouthPose.ROUND -> .61f
+                        MouthPose.YAWN -> .79f
+                        else -> 0f
+                    }
+                    val q=nx/rx
+                    if (ry>0f) {
+                        val cy=if(pose==MouthPose.OPEN) -.06f else 0f
+                        val d=q*q+((ny-cy)/ry).pow(2)
+                        val alpha=((1.08f-d)*3.8f).coerceIn(0f,1f)
+                        if(alpha>0f) {
+                            val tongue=ny>cy+ry*.27f && abs(nx)<rx*.68f && d<.78f
+                            val color=if(tongue) 0xFFE78B9E.toInt() else ink
+                            c=mix(c,color,alpha)
+                        }
+                    } else if(abs(q)<1.1f) {
+                        val curve=when(pose) {
+                            MouthPose.SMILE -> .30f*(1f-q*q)
+                            MouthPose.FROWN -> -.28f*(1f-q*q)
+                            MouthPose.POUT -> -.10f*(1f-q*q)
+                            MouthPose.SLEEP -> .03f*(1f-q*q)
+                            else -> .13f*(1f-q*q)
+                        }
+                        val lineY=eye.centerY+curve*eye.radiusY
+                        val alpha=((1.1f-abs(y-lineY))/.8f).coerceIn(0f,1f) *
+                            ((1.1f-abs(q))*5f).coerceIn(0f,1f)
+                        c=mix(c,ink,alpha)
+                    }
+                }
+                out[y*width+x]=c
+            }
+        }
+
+        private fun mix(a: Int,b: Int,t: Float): Int = pack(channel(a,24),
+            channel(a,16)*(1f-t)+channel(b,16)*t,
+            channel(a,8)*(1f-t)+channel(b,8)*t,
+            channel(a,0)*(1f-t)+channel(b,0)*t)
     }
 
     private fun channel(c: Int, shift: Int) = (c ushr shift) and 255

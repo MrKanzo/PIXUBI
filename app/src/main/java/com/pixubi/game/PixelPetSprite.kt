@@ -84,14 +84,14 @@ fun PixelPetSprite(
     val appContext = LocalContext.current.applicationContext
     // The image itself has eyes. Build a few blink frames FROM its own pixels,
     // instead of drawing a second pair of eyes on top.
-    val nativeFrames = remember(species, sex, coatIndex) {
+    val nativeFrames = remember(species, sex, coatIndex, emotion) {
         NativeSpriteEyes.frames(
             PixubiSpriteCache.get(appContext, species, sex, coatIndex),
-            species, GrowthStage.ADULT
+            species, GrowthStage.ADULT, emotion
         ).map { it.asImageBitmap() }
     }
     val closure = NativeEyeMotion.closure(emotion, eyeClosure, blink)
-    val frame = nativeFrames[NativeEyeMotion.frameIndex(closure)]
+    val frame = nativeFrames[FaceExpression.frameIndex(emotion,closure,chewOpen)]
     Box(modifier, contentAlignment = Alignment.Center) {
         Image(
             bitmap = frame,

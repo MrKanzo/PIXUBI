@@ -46,6 +46,7 @@ fun GrowthSprite(
                     stage = stage,
                     emotion = emotion,
                     blink = blink,
+                    chewOpen = chewOpen,
                     eyeClosure = eyeClosure,
                     modifier = Modifier.fillMaxSize()
                 )
