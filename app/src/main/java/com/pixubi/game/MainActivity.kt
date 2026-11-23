@@ -1,10 +1,13 @@
 package com.pixubi.game
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
@@ -56,6 +59,35 @@ class MainActivity : ComponentActivity() {
         setContent {
             val storage = remember { PetStorage(applicationContext) }
             val audioStore = remember { SoundSettingsStore(applicationContext) }
+            val notificationStore = remember { PixubiNotificationSettingsStore(applicationContext) }
+            var notificationSettings by remember { mutableStateOf(notificationStore.load()) }
+            val notificationPermission = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted) {
+                    val updated = notificationSettings.copy(enabled = true)
+                    notificationSettings = updated
+                    notificationStore.save(updated)
+                    PixubiNeedsNotifier.sync(applicationContext, updated)
+                } else {
+                    Toast.makeText(applicationContext,
+                        "Сповіщення заборонено в Android. Можна увімкнути у налаштуваннях телефону.",
+                        Toast.LENGTH_LONG).show()
+                }
+            }
+            fun saveNotifications(next: PixubiNotificationSettings) {
+                if (next.enabled && !PixubiNeedsNotifier.permissionGranted(applicationContext)) {
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    return
+                }
+                notificationSettings = next
+                notificationStore.save(next)
+                PixubiNeedsNotifier.sync(applicationContext, next)
+            }
+            LaunchedEffect(Unit) {
+                PixubiNeedsNotifier.createChannel(applicationContext)
+                PixubiNeedsNotifier.sync(applicationContext, notificationSettings)
+            }
             val audio = remember { PixubiAudio(applicationContext) }
             var soundSettings by remember { mutableStateOf(audioStore.load()) }
             var showSettings by remember { mutableStateOf(false) }
@@ -149,10 +181,14 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
+                            PixubiNeedsNotifier.markVisible(true)
+                            PixubiNeedsNotifier.clear(applicationContext)
                             audio.setForeground(true)
                             refresh(offline = true)
                         }
                         Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                            PixubiNeedsNotifier.markVisit(applicationContext)
+                            PixubiNeedsNotifier.markVisible(false)
                             refresh()
                             audio.setForeground(false)
                         }
@@ -162,6 +198,7 @@ class MainActivity : ComponentActivity() {
                 lifecycle.lifecycle.addObserver(observer)
                 onDispose {
                     lifecycle.lifecycle.removeObserver(observer)
+                    PixubiNeedsNotifier.markVisible(false)
                     audio.close()
                 }
             }
@@ -195,6 +232,17 @@ class MainActivity : ComponentActivity() {
                         )
                         showSettings -> PixubiSettingsScreen(
                             settings = soundSettings,
+                            notificationSettings = notificationSettings,
+                            onNotificationSettingsChange = { saveNotifications(it) },
+                            onTestNotification = {
+                                if (PixubiNeedsNotifier.permissionGranted(applicationContext)) {
+                                    PixubiNeedsNotifier.sendTest(applicationContext, current)
+                                } else {
+                                    Toast.makeText(applicationContext,
+                                        "Потрібно дозволити сповіщення PIXUBI в Android.",
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            },
                             currentRegion = current?.region ?: Region.FOREST,
                             previewRegion = auditionRegion,
                             onSettingsChange = { saveSound(it) },
