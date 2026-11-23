@@ -208,6 +208,16 @@ class MainActivity : ComponentActivity() {
                     refresh()
                 }
             }
+            // Finish a real-world expedition exactly when its saved deadline arrives.
+            LaunchedEffect(pet?.expeditionStartedAt) {
+                val started = pet?.expeditionStartedAt ?: 0L
+                if (started > 0L) {
+                    val remaining = (started + GameEngine.EXPEDITION_MINUTES * 60_000L -
+                        System.currentTimeMillis()).coerceAtLeast(0L)
+                    delay(remaining + 300L)
+                    refresh()
+                }
+            }
             MaterialTheme(colorScheme = darkColorScheme(
                 primary = Color(0xFF98E6CD), secondary = Color(0xFFFFD58A),
                 background = night, surface = navy, onBackground = Color.White,
@@ -549,6 +559,9 @@ private fun HomeScreen(
             }
         }
         WorldScene(pet, reaction, onPetTap)
+        if (pet.expeditionStartedAt > 0L && pet.mode == Mode.AWAKE) {
+            SearchProgressCard(pet)
+        }
         GrowthProgressCard(pet, onGallery = { showGrowthGallery = true })
         Card(colors = CardDefaults.cardColors(containerColor = navy)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -619,6 +632,41 @@ private fun HomeScreen(
     }
 }
 
+/** Countdown is visual only; the reward is settled by the saved timestamp in GameEngine. */
+@Composable
+private fun SearchProgressCard(pet: Pet) {
+    var now by remember(pet.expeditionStartedAt) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(pet.expeditionStartedAt) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
+    val duration = GameEngine.EXPEDITION_MINUTES * 60_000L
+    val elapsed = (now - pet.expeditionStartedAt).coerceIn(0L, duration)
+    val secondsLeft = (duration - elapsed + 999L) / 1000L
+    Card(colors = CardDefaults.cardColors(containerColor = navy)) {
+        Column(Modifier.fillMaxWidth().padding(13.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(PixubiSearch.icon(pet.species) + " " + PixubiSearch.activity(pet.species),
+                    modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall)
+                Text(String.format("%02d:%02d", secondsLeft / 60, secondsLeft % 60),
+                    color = Color(0xFFFFD58A), fontWeight = FontWeight.Bold)
+            }
+            LinearProgressIndicator(
+                progress = { elapsed.toFloat() / duration.toFloat() },
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF98E6CD),
+                trackColor = Color(0xFF39485F)
+            )
+            Text("Пошук іде за справжнім часом, навіть коли телефон заблокований.",
+                style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+        }
+    }
+}
+
 @Composable
 private fun StatLine(name: String, value: Double) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -659,7 +707,14 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         initialValue = -1.5f, targetValue = 1.5f,
         animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "sway"
     )
+    val scoutCycle by loop.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(7200, easing = LinearEasing)),
+        label = "species-search"
+    )
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
+    val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
+    val searchPose = if (searching) PixubiSearch.pose(pet.species, scoutCycle) else SearchPose()
     val eyeBlink = !sleeping && blinkCycle > 0.93f && blinkCycle < 0.985f
     val travelY = when (emotion) {
         PetEmotion.HAPPY -> -12f * bob
@@ -668,7 +723,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         PetEmotion.SAD, PetEmotion.TIRED -> 3f
         else -> -4f * bob
     }
-    val speech = EmotionResolver.bubble(pet, emotion)
+    val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
     Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {
         Canvas(Modifier.fillMaxSize()) {
@@ -816,15 +871,92 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
-                .offset(y = (17f + travelY).dp)
+                .offset(x = searchPose.xDp.dp, y = (17f + travelY + searchPose.yDp).dp)
                 .size(194.dp)
                 .graphicsLayer {
-                    rotationZ = if (emotion == PetEmotion.HAPPY) sway * 2.5f else sway
-                    scaleY = if (sleeping) 0.93f + bob * .035f else 1f - bob * .025f
+                    rotationZ = searchPose.rotation +
+                        (if (emotion == PetEmotion.HAPPY) sway * 2.5f else sway)
+                    scaleX = searchPose.scale
+                    scaleY = searchPose.scale *
+                        (if (sleeping) .93f + bob * .035f else 1f - bob * .025f)
+                    alpha = when {
+                        !searching -> 1f
+                        pet.species == Species.PISHCHANYK -> 1f - searchPose.submerged * .97f
+                        pet.species == Species.KRAPLYK -> 1f - searchPose.submerged * .72f
+                        else -> 1f
+                    }
                 }
-                .clickable(enabled = pet.mode == Mode.AWAKE) { onPetTap() },
+                .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
             emotion = emotion, blink = eyeBlink, chewOpen = bob > .45f
         )
+        if (searching) {
+            // Foreground effects: each pet visibly searches in a different way.
+            Canvas(Modifier.fillMaxSize()) {
+                val x = size.width * .5f + searchPose.xDp.dp.toPx()
+                val ground = size.height * .84f
+                when (pet.species) {
+                    Species.LISYK -> {
+                        for (i in 0..4) {
+                            val stepX = x - 96.dp.toPx() + i * 30.dp.toPx()
+                            drawCircle(Color(0xFFCEED9D).copy(alpha = .32f + i * .09f),
+                                4.dp.toPx(), Offset(stepX, ground + (i % 2) * 7.dp.toPx()))
+                        }
+                    }
+                    Species.ISKRYK -> {
+                        val bolt = Path().apply {
+                            moveTo(x + 41.dp.toPx(), ground - 85.dp.toPx())
+                            lineTo(x + 24.dp.toPx(), ground - 58.dp.toPx())
+                            lineTo(x + 39.dp.toPx(), ground - 58.dp.toPx())
+                            lineTo(x + 19.dp.toPx(), ground - 28.dp.toPx())
+                        }
+                        drawPath(bolt, Color(0xFFFFF3A3).copy(alpha = .5f + bob * .5f),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx()))
+                    }
+                    Species.KRAPLYK -> {
+                        val rippleSize = (27f + 12f * bob).dp.toPx()
+                        drawOval(Color(0xFFB6F6FF).copy(alpha = .74f),
+                            topLeft = Offset(x - rippleSize, ground - rippleSize * .23f),
+                            size = Size(rippleSize * 2f, rippleSize * .65f),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
+                        drawCircle(Color.White.copy(alpha = .65f), 5.dp.toPx(),
+                            Offset(x + 24.dp.toPx(), ground - 57.dp.toPx() - 9.dp.toPx() * bob))
+                    }
+                    Species.PISHCHANYK -> {
+                        val buried = searchPose.submerged
+                        if (buried > .05f) {
+                            val moundWidth = (37f + 29f * buried).dp.toPx()
+                            drawOval(Color(0xFFE7B678),
+                                Offset(x - moundWidth, ground - 14.dp.toPx()),
+                                Size(moundWidth * 2f, 34.dp.toPx()))
+                            drawCircle(Color(0xFFFFE0A5), 5.dp.toPx(),
+                                Offset(x - 21.dp.toPx(), ground - 23.dp.toPx()))
+                            drawCircle(Color(0xFFFFE0A5), 4.dp.toPx(),
+                                Offset(x + 31.dp.toPx(), ground - 18.dp.toPx()))
+                        }
+                    }
+                    Species.KHMARYK -> {
+                        for (i in 0..2) {
+                            val cloudX = x - 70.dp.toPx() + i * 68.dp.toPx()
+                            val cloudY = ground - 56.dp.toPx() + i * 8.dp.toPx()
+                            drawCircle(Color.White.copy(alpha = .52f), 15.dp.toPx(),
+                                Offset(cloudX, cloudY))
+                            drawCircle(Color.White.copy(alpha = .45f), 12.dp.toPx(),
+                                Offset(cloudX + 12.dp.toPx(), cloudY + 2.dp.toPx()))
+                        }
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFFFDF9F1),
+                shadowElevation = 5.dp
+            ) {
+                Text(PixubiSearch.icon(pet.species) + " Шукаю!",
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    color = Color(0xFF253149), fontWeight = FontWeight.Bold)
+            }
+        }
         if (speech != null) {
             Surface(
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp)
@@ -838,7 +970,11 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             }
         }
         Text(
-            if (sleeping) "Тихенько, відпочиваю…" else "Торкнись мене ✨",
+            when {
+                searching -> "🔎 Досліджую світ…"
+                sleeping -> "Тихенько, відпочиваю…"
+                else -> "Торкнись мене ✨"
+            },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 11.dp),
             style = MaterialTheme.typography.labelSmall,
             color = Color.White.copy(alpha = .90f)

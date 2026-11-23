@@ -104,15 +104,20 @@ object GameEngine {
         if (pet.expeditionStartedAt <= 0L ||
             now - pet.expeditionStartedAt < EXPEDITION_MINUTES * 60_000L) return pet
         val completed = pet.expeditionsDone
+        val rare = PixubiSearch.foundRareTreasure(pet)
+        val coinsFound = if (rare) 28 else 8
         return pet.copy(
             expeditionStartedAt = 0L,
             expeditionsDone = completed + 1,
-            coins = (pet.coins + 8).coerceAtMost(9999),
+            coins = (pet.coins + coinsFound).coerceAtMost(9999),
             foodStock = (pet.foodStock + if (completed % 3 == 0) 1 else 0).coerceAtMost(30),
             waterStock = (pet.waterStock + if (completed % 3 == 1) 1 else 0).coerceAtMost(30),
             chargeStock = (pet.chargeStock + if (completed % 3 == 2) 1 else 0).coerceAtMost(30),
             xp = (pet.xp.toLong() + 4L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-            message = "🧭 Повернувся з прогулянки! +8 🪙 і корисна знахідка."
+            message = if (rare)
+                "💎 Неймовірно! Знайшов рідкісний скарб! +28 🪙 та ресурси."
+            else
+                "${PixubiSearch.icon(pet.species)} ${PixubiSearch.returnMessage(pet.species)} +8 🪙 і ресурси."
         )
     }
 
@@ -238,6 +243,9 @@ object GameEngine {
             if (pet.energy < 15.0)
                 return pet.copy(lastUpdatedAt = now, message = "💤 Спочатку відпочину перед прогулянкою.")
         }
+        if (action == Action.SLEEP && pet.expeditionStartedAt > 0L)
+            return pet.copy(lastUpdatedAt = now,
+                message = "🔎 Я зараз на пошуках! Спершу повернуся, а потім посплю.")
         val updated = when (action) {
             Action.FEED -> pet.copy(foodStock = pet.foodStock - 1, hunger = gain(pet.hunger, if (pet.hasBowl) 32.0 else 24.0),
                 message = if (PetGrowth.stage(pet) in listOf(GrowthStage.EGG, GrowthStage.COCOON))
@@ -254,7 +262,7 @@ object GameEngine {
                     expeditionDay = today,
                     expeditionToday = (if (today == pet.expeditionDay) pet.expeditionToday else 0) + 1,
                     energy = gain(pet.energy, -8.0),
-                    message = "🧭 Вирушаю на 20 хвилин шукати монетки та ресурси!")
+                    message = "${PixubiSearch.icon(pet.species)} ${PixubiSearch.activity(pet.species)}! Повернуся через 20 хвилин.")
             }
             Action.SLEEP -> pet.copy(mode = Mode.SLEEP, message = "На добраніч! 🌙")
             Action.WAKE -> pet.copy(mode = Mode.AWAKE, message = "Я прокинувся! Привіт! ☀️")
