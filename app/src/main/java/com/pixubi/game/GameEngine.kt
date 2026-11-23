@@ -185,7 +185,8 @@ object GameEngine {
             val diedFromAge = age >= NATURAL_LIFE_DAYS * 24 * 60
             val diedFromNeglect = danger >= CRITICAL_LIMIT_MINUTES
             val oldStage = PetGrowth.stage(pet)
-            val bonus = PetGrowth.survivalBonus(pet.activeMinutes, age)
+            val bonus = PetGrowth.survivalBonus(pet.activeMinutes, age) +
+                (age / 60L - pet.activeMinutes / 60L).coerceAtMost(30L).toInt() // +1 XP per lived active hour
             val nextXp = (pet.xp.toLong() + bonus).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             val evolved = pet.copy(activeMinutes = age, xp = nextXp)
             val nextStage = PetGrowth.stage(evolved)
