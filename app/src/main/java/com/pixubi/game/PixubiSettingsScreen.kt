@@ -1,5 +1,12 @@
 package com.pixubi.game
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +51,14 @@ fun PixubiSettingsScreen(
     checkingForUpdates: Boolean,
     onBack: () -> Unit
 ) {
+    val context=LocalContext.current
+    val version=remember(context){context.packageManager.getPackageInfo(context.packageName,0).versionName ?: "?"}
+    var showAbout by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled=showAbout){showAbout=false}
+    if(showAbout) {
+        PixubiAboutScreen(version){showAbout=false}
+        return
+    }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -55,6 +70,9 @@ fun PixubiSettingsScreen(
                 Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
+        }
+        OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
+            Text("📖 Про PIXUBI · Світ, види та автори")
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
@@ -166,7 +184,7 @@ fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Поточна версія: 0.10.0" +
+                Text("Поточна версія: $version" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = onCheckUpdates,
