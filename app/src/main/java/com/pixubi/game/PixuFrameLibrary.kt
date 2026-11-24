@@ -31,8 +31,7 @@ internal object PixuFrameLibrary {
         if(!directional(k.clip))return false
         val pack=PetPosePack.forPet(k.species,k.stage)
         if(pack!=null)return left&&pack.locomotion(k.clip)
-        // The old juvenile illustration faces left, while the reference adults
-        // and ultra crops have their visible muzzle turned to the right.
+        // The old juvenile illustration faces left; all ten new older sprites face right.
         return if(k.stage==GrowthStage.YOUNG)!left else left
     }
 
@@ -42,9 +41,9 @@ internal object PixuFrameLibrary {
         val raw=when {
             pack!=null -> pack.bitmap(context,k.clip,k.emotion,k.frame,k.closure>=3)
             k.stage==GrowthStage.ADULT||k.stage==GrowthStage.ULTRA -> {
-                val src=nativeOlder.getOrPut(k.species to k.stage){UltraPixuArtwork.pixels(k.species,k.stage)}
-                val pixels=OlderPixuFrames.frame(src,k.species,k.stage,k.clip,k.frame,k.emotion,k.closure)
-                Bitmap.createBitmap(pixels,48,48,Bitmap.Config.ARGB_8888)
+                val src=nativeOlder.getOrPut(k.species to k.stage){ReferenceOlderArtwork.pixels(context,k.species,k.stage)}
+                val pixels=ReferenceOlderFrames.frame(src,k.species,k.stage,k.clip,k.frame,k.emotion,k.closure)
+                Bitmap.createBitmap(pixels,CELL,CELL,Bitmap.Config.ARGB_8888)
             }
             else -> {
                 val src=nativeYoung.getOrPut(k.species){

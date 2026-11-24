@@ -120,18 +120,22 @@ internal object IllustratedMotionFrames {
         }
     }
 
-    fun frame(src:IntArray,n:Int,s:Species,g:GrowthStage,clip:SpriteClip,index:Int):IntArray {
+    fun frame(src:IntArray,n:Int,s:Species,g:GrowthStage,clip:SpriteClip,index:Int):IntArray =
+        frameWithParts(src,n,s,parts(s,g),clip,index)
+
+    /** The new atlas supplies its own measured per-character attachment map. */
+    fun frameWithParts(src:IntArray,n:Int,s:Species,parts:Parts,clip:SpriteClip,index:Int,
+                       older:Boolean=false):IntArray {
         require(n>0 && src.size==n*n)
         val out=src.copyOf()
         if(clip==SpriteClip.SLEEP || clip==SpriteClip.SAD || clip==SpriteClip.TIRED || index==0)return out
-        val parts=parts(s,g)
         val wag=when(index%4){1->-.075f;2->0f;3->.075f;else->0f}
         val strong=clip in listOf(SpriteClip.HAPPY,SpriteClip.SWIM,SpriteClip.FLY)
         for((i,t) in parts.tips.withIndex()) {
-            val angle=wag*(if(strong)1.5f else 1f)*(if(s==Species.KHMARYK&&i%2==1)-1f else 1f)
+            val angle=wag*(if(strong)1.5f else 1f)*(if(older).65f else 1f)*(if(s==Species.KHMARYK&&i%2==1)-1f else 1f)
             turn(out,src,n,t,angle)
         }
-        if(clip in listOf(SpriteClip.WALK,SpriteClip.DIG,SpriteClip.HOP,SpriteClip.SWIM,SpriteClip.FLY)) {
+        if(clip in listOf(SpriteClip.WALK,SpriteClip.DIG,SpriteClip.HOP) || (!older && clip in listOf(SpriteClip.SWIM,SpriteClip.FLY))) {
             val i=when(index%4){1->0;3->1;else->-1}
             if(i>=0 && parts.paws.isNotEmpty()) {
                 // Lift alternating intact paws by just a few source pixels.
