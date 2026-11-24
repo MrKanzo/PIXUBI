@@ -773,7 +773,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val worldX=if(manualWalk)manualX else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
     val worldY=if(newIskryk&&clip==SpriteClip.HOP)0f
-        else if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if(illustratedBaby&&(wandering||searching))0f
+        else if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if((illustratedBaby&&(wandering||searching))||(newKraplyk&&clip==SpriteClip.WALK))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
         else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
     val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)

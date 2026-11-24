@@ -37,6 +37,14 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
             contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
         return
     }
+    if(KraplykSideArtwork.matches(species,stage)&&KraplykSideArtwork.usesSide(clip)) {
+        val index=KraplykSideArtwork.index(frame)
+        val image=remember(index){KraplykSideArtwork.get(index).asImageBitmap()}
+        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     val source=remember(species,stage,sex,gene) {
         if(stage==GrowthStage.ADULT)PixubiSpriteCache.get(context,species,sex,gene)
         else EvolutionSprites.get(context,species,stage)
