@@ -71,3 +71,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 - Original catalog contains ten female baby/adult authored two-pose walking previews. These remain untouched. The missing female teen and Ultra sets are separate work.
 - Five female teen 12-cell candidates (60 cells) now use their own native sprites, three visible limb regions and 3px rise. Exact neutral, upper-body identity after rise, binary alpha, unique walking cells and ground row 115 checked locally. Visual review shows seated-looking body and subtle paw movement; these are review-only, not natural completed gait.
 - Shared loader and developer route select species, age and sex. No change to live gameplay or original female artwork. Female Ultra remains missing.
+
+## Female Ultra gait candidates
+- Five additional 12-cell atlases built from each female Ultra's three visible limb regions. All 60 cells pass local binary-alpha, ground-row 115, unchanged upper 94 rows and unique walking-cell checks. Neutral cells retain original pixels. An isolated ten-pixel fragment beneath Iskryk's original paws was removed from generated movement cells, not from original art.
+- All 30 planned candidate sets now exist (360 cells); ten female baby/adult forms retain their original two-pose previews. These are review assets, not completed natural walking: female Ultra torso remains mostly seated and static. Developer-only access, no production movement unlock or save changes. Device visual review and CI remain required.
