@@ -37,57 +37,17 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
             contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
         return
     }
-    if(KraplykSideArtwork.matches(species,stage)&&KraplykSideArtwork.usesSide(clip)) {
-        val index=KraplykSideArtwork.index(frame)
-        val image=remember(index){KraplykSideArtwork.get(index).asImageBitmap()}
+    if(KraplykBabyArtwork.matches(species,stage)) {
+        val index=KraplykBabyArtwork.index(clip,emotion,frame,blink||eyeClosure>.50f)
+        val image=remember(index){KraplykBabyArtwork.get(context,index).asImageBitmap()}
         Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
-            modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&KraplykBabyArtwork.locomotion(clip))-1f else 1f},
             contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
         return
     }
     val source=remember(species,stage,sex,gene) {
         if(stage==GrowthStage.ADULT)PixubiSpriteCache.get(context,species,sex,gene)
         else EvolutionSprites.get(context,species,stage)
-    }
-    if(KraplykSwimFrames.matches(species,stage,clip)) {
-        val frames=remember(source) {
-            NativeSpriteEyes.frames(source,species,stage,PetEmotion.IDLE).take(5).map { face ->
-                val px=IntArray(KraplykSwimFrames.SIZE*KraplykSwimFrames.SIZE)
-                face.getPixels(px,0,KraplykSwimFrames.SIZE,0,0,KraplykSwimFrames.SIZE,KraplykSwimFrames.SIZE)
-                List(4) { i ->
-                    android.graphics.Bitmap.createBitmap(
-                        KraplykSwimFrames.pose(px,i),KraplykSwimFrames.SIZE,KraplykSwimFrames.SIZE,
-                        android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
-                }
-            }
-        }
-        val eye=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
-        Image(bitmap=frames[eye][frame],contentDescription=species.title+" — "+stage.title,
-            modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},
-            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
-        return
-    }
-    if(KraplykLandFrames.matches(species,stage)) {
-        val faceEmotion=KraplykLandFrames.faceEmotion(clip,emotion)
-        val faces=remember(source,faceEmotion) {
-            NativeSpriteEyes.frames(source,species,stage,faceEmotion).map { face ->
-                IntArray(KraplykLandFrames.SIZE*KraplykLandFrames.SIZE).also {
-                    face.getPixels(it,0,KraplykLandFrames.SIZE,0,0,KraplykLandFrames.SIZE,KraplykLandFrames.SIZE)
-                }
-            }
-        }
-        val face=KraplykLandFrames.faceIndex(clip,emotion,frame,eyeClosure,blink)
-        val frames=remember(faces,clip,face) {
-            List(clip.count) { i ->
-                android.graphics.Bitmap.createBitmap(
-                    KraplykLandFrames.pose(faces[face],clip,i),KraplykLandFrames.SIZE,KraplykLandFrames.SIZE,
-                    android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
-            }
-        }
-        Image(bitmap=frames[frame],contentDescription=species.title+" — "+stage.title,
-            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&KraplykLandFrames.locomotion(clip))-1f else 1f},
-            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
-        return
     }
     val n=source.width
     val authored=remember(species,stage,sex,gene,clip) {
