@@ -11,14 +11,14 @@ import android.util.Log
 import org.json.JSONObject
 import java.io.FileNotFoundException
 import java.util.Locale
-import java.util.zip.ZipInputStream
+
 
 /** Test-only import. Stable artwork remains available until the new animation set is complete. */
 internal object ImportedPixuArt {
-    const val ZIP = "PIXUBI_GameAssets_v2.zip"
+    const val CATALOG = "imported_v2/catalog.json"
     const val NATIVE = 128
-    data class Form(val prefix:String,val frames:Set<String>,val missing:List<String>,val mirrorWalk:Boolean)
-    private data class Pack(val images:Map<String,ByteArray>,val forms:Map<String,Form>)
+    data class Form(val prefix:String,val frames:Set<String>,val missing:List<String>,val mirrorWalk:Boolean,val atlas:String="",val rects:Map<String,IntArray> = emptyMap())
+    private data class Pack(val forms:Map<String,Form>)
     private var attempted=false
     private var pack:Pack?=null
     fun stageName(stage:GrowthStage):String=when(GrowthStage.migrate(stage)){
@@ -42,50 +42,36 @@ internal object ImportedPixuArt {
         if(attempted)return pack
         attempted=true
         try {
-            val entries=mutableMapOf<String,ByteArray>()
-            context.assets.open(ZIP).use{source->
-                ZipInputStream(source).use{zip->
-                    while(true){
-                        val entry=zip.nextEntry?:break
-                        val path=entry.name
-                        if(!entry.isDirectory && (path.endsWith("/sprite.json") ||
-                            path.contains("/frames/") && path.endsWith(".png")) && path.startsWith("pixubi/")){
-                            val out=java.io.ByteArrayOutputStream()
-                            val buffer=ByteArray(8192)
-                            while(true){
-                                val n=zip.read(buffer)
-                                if(n<0)break
-                                require(out.size()+n<=1_048_576){"Oversized art entry"}
-                                out.write(buffer,0,n)
-                            }
-                            require(entries.size<500 && entries.put(path,out.toByteArray())==null){"Invalid archive"}
-                        }
-                        zip.closeEntry()
+            val catalog=context.assets.open(CATALOG).bufferedReader().use{JSONObject(it.readText())}
+            require(catalog.getInt("schemaVersion")==2 && catalog.getInt("nativeCell")==NATIVE)
+            val list=catalog.getJSONArray("forms")
+            require(list.length()==40)
+            val forms=mutableMapOf<String,Form>()
+            for(i in 0 until list.length()){
+                val m=list.getJSONObject(i)
+                val p=m.getString("prefix")
+                val atlas=m.getString("atlas")
+                require(atlas.matches(Regex("imported_v2/pixubi_[a-z_]+[.]png")))
+                val dims=m.getJSONArray("size")
+                val w=dims.getInt(0); val h=dims.getInt(1)
+                val opts=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                context.assets.open(atlas).use{BitmapFactory.decodeStream(it,null,opts)}
+                require(opts.outWidth==w && opts.outHeight==h)
+                val frameObject=m.getJSONObject("frames")
+                val rects=frameObject.keys().asSequence().associateWith{name->
+                    val rect=frameObject.getJSONArray(name)
+                    IntArray(4){rect.getInt(it)}.also{r->
+                        require(r[0]>=0 && r[1]>=0 && r[2]==NATIVE && r[3]==NATIVE &&
+                            r[0]+r[2]<=w && r[1]+r[3]<=h)
                     }
                 }
+                require("neutral" in rects)
+                val missing=m.getJSONArray("missing").let{ar->List(ar.length()){ar.getString(it)}}
+                require(forms.put(p,Form(p,rects.keys,missing,m.optBoolean("mirrorWalkLeft"),atlas,rects))==null)
             }
-            val forms=mutableMapOf<String,Form>()
-            for(s in Species.entries)for(g in GrowthStage.playable)for(sex in Sex.entries){
-                val p=prefix(s,g,sex)
-                val manifest=JSONObject(entries.getValue("$p/sprite.json").toString(Charsets.UTF_8))
-                require(manifest.getInt("schemaVersion")==2)
-                require(manifest.getString("id")==s.name.lowercase(Locale.ROOT))
-                require(manifest.getString("stage")==stageName(g))
-                require(manifest.getString("sex")==(if(sex==Sex.GIRL)"female" else "male"))
-                val names=manifest.getJSONObject("frames").keys().asSequence().toSet()
-                require("neutral" in names)
-                for(name in names){
-                    require(name.matches(Regex("[a-z_0-9]+")))
-                    val bytes=entries.getValue("$p/frames/$name.png")
-                    val opts=BitmapFactory.Options().apply{inJustDecodeBounds=true}
-                    BitmapFactory.decodeByteArray(bytes,0,bytes.size,opts)
-                    require(opts.outWidth==NATIVE && opts.outHeight==NATIVE){"Invalid frame: $p/$name"}
-                }
-                val missing=manifest.getJSONArray("missing").let{a->List(a.length()){a.getString(it)}}
-                forms[p]=Form(p,names,missing,manifest.optBoolean("mirrorWalkLeft"))
-            }
-            require(forms.size==40)
-            pack=Pack(entries,forms)
+            for(s in Species.entries)for(g in GrowthStage.playable)for(sex in Sex.entries)
+                require(prefix(s,g,sex) in forms)
+            pack=Pack(forms)
         }catch(e:FileNotFoundException){
             Log.i("PIXUBI","Imported art not installed; using original poses")
         }catch(e:Exception){
@@ -119,8 +105,9 @@ internal object ImportedPixuArt {
     fun bitmap(context:Context,key:PixuFrameKey,form:Form):Bitmap{
         // Unsupported action: a static portrait, not a claimed animation.
         val name=select(form,key.clip,key.emotion,key.frame)?:"neutral"
-        val bytes=checkNotNull(load(context)).images.getValue(form.prefix+"/frames/"+name+".png")
-        val raw=BitmapFactory.decodeByteArray(bytes,0,bytes.size)?:error("Invalid imported frame")
+        val r=form.rects.getValue(name)
+        val atlas=context.assets.open(form.atlas).use{BitmapFactory.decodeStream(it)}?:error("Invalid atlas")
+        val raw=Bitmap.createBitmap(atlas,r[0],r[1],r[2],r[3])
         val colored=PixuPalette.apply(raw,key.species,Sex.BOY,key.gene)
         val result=Bitmap.createBitmap(PixuFrameLibrary.CELL,PixuFrameLibrary.CELL,Bitmap.Config.ARGB_8888)
         val size=size(key.stage)

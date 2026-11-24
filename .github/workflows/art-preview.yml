@@ -11,7 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check imported artwork
-        run: test -f app/src/main/assets/PIXUBI_GameAssets_v2.zip
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, hashlib, struct
+          root=pathlib.Path('app/src/main/assets')
+          data=json.loads((root/'imported_v2/catalog.json').read_text())
+          forms=data['forms']
+          assert len(forms)==len({f['prefix'] for f in forms})==40
+          assert sum(len(f['frames']) for f in forms)==180
+          for f in forms:
+              b=(root/f['atlas']).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==f['sha256']
+              assert b[:8]==b'\x89PNG\r\n\x1a\n'
+              w,h=struct.unpack('>II',b[16:24])
+              assert [w,h]==f['size']
+              assert 'neutral' in f['frames']
+              for x,y,cw,ch in f['frames'].values():
+                  assert cw==ch==128 and 0<=x<=w-cw and 0<=y<=h-ch
+          print('Verified 40 original PNG atlases and 180 frame references')
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
