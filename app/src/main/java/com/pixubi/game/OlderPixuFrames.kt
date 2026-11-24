@@ -129,8 +129,7 @@ internal object OlderPixuFrames {
         val (eye,mouth)=face(s,g)
         val step=if(e==PetEmotion.SLEEPING||e==PetEmotion.HIBERNATING)4 else closure.coerceIn(0,4)
         val face=if(step==0&&e==PetEmotion.IDLE)src else
-            EyePixelAnimator.faceFrames(src,N,N,listOf(eye),mouth,s==Species.KHMARYK,e)
-                [step+if(FaceExpression.animatedMouth(e)&&index%2==1)5 else 0]
+            EyePixelAnimator.faceFrames(src,N,N,listOf(eye),mouth,s==Species.KHMARYK,e)[step+if(FaceExpression.animatedMouth(e)&&index%2==1)5 else 0]
         return motion(face,s,g,clip,index)
     }
 }
