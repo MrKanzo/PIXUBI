@@ -501,13 +501,13 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
             modifier = Modifier.fillMaxWidth(), label = { Text("Ім'я (необов'язково)") },
             singleLine = true
         )
-        Text("🥚 Спочатку з’явиться цифрове яйце. Потім малюк, підліток, кокон і дорослий Піксубі. Зростання потребує активних днів та XP.", color = Color(0xFFD4DBE8), style = MaterialTheme.typography.bodySmall)
+        Text("🐾 Твій Піксубі починає життя малюком, потім стає юним, дорослим і відкриває ультра-форму. Зростання потребує активних днів та XP.", color = Color(0xFFD4DBE8), style = MaterialTheme.typography.bodySmall)
         Text("🎲 Забарвлення при народженні визначиться випадково. Його не можна обрати вручну.", color = Color(0xFFD4DBE8), style = MaterialTheme.typography.bodySmall)
         Text("⚠️ Піксубі може померти без їжі та води. Коли йдеш надовго — обов’язково вмикай сплячку, вона зупиняє час.", color = Color(0xFFFFD58A), style = MaterialTheme.typography.bodySmall)
         Button(
             onClick = { onHatch(GameEngine.hatch(species, sex, region, petName, System.currentTimeMillis())) },
             modifier = Modifier.fillMaxWidth().height(52.dp)
-        ) { Text("🥚 Створити яйце Піксубі") }
+        ) { Text("🐾 Створити Піксубі") }
         Text("Без інтернету • Без реклами • Збереження на телефоні", modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
         Spacer(Modifier.height(16.dp))
@@ -764,12 +764,12 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         homeFlight -> PetMotion.FLOAT
         wandering -> PetMotion.WALK
         newKhmaryk&&searching -> PetMotion.FLOAT
-        newPishchanyk&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
+        pet.species==Species.PISHCHANYK&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
         illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING&&pet.species!=Species.KRAPLYK -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
     val clip = SpriteTimeline.clip(motion,emotion)
-    val hasMovementArt = posePack?.locomotion(clip) ?: (stage in GrowthStage.playable && clip in listOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.SWIM,SpriteClip.DIG,SpriteClip.FLY))
+    val hasMovementArt = PixuFrameLibrary.moves(pet.species,stage,clip)
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
@@ -778,7 +778,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         else if(hasMovementArt) (if(searching) searchPose.xDp else wanderX)+bodyMotion.xDp else 0f
     val worldY=if(homeFlight)-42f*flightArc else if(newKhmaryk&&searchFrame!=null)searchPose.yDp
         else if(newKhmaryk&&clip==SpriteClip.FLY)-35f+bodyMotion.yDp
-        else if(newPishchanyk&&searchFrame!=null)67f*searchFrame.concealment
+        else if(pet.species==Species.PISHCHANYK&&searchFrame!=null)67f*searchFrame.concealment
         else if(newIskryk&&clip==SpriteClip.HOP)0f
         else if((developer?.action==DevAction.HOP&&hasMovementArt)||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if((illustratedBaby&&(wandering||searching))||(newKraplyk&&clip==SpriteClip.WALK))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp

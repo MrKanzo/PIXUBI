@@ -165,7 +165,7 @@ object GameEngine {
             geneB = secondGene,
             bornAt = now,
             lastUpdatedAt = now,
-            message = "Моє цифрове яйце чекає на твою турботу! 🥚"
+            message = "Привіт! Я твій маленький Піксубі! 🐾"
         )
     }
 
