@@ -1,5 +1,6 @@
 package com.pixubi.game
 
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +36,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     }
     val pet=remember(spec,action){spec.pet(action)}
     val control=DevScene(action,seconds,left)
+    val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
     Column(Modifier.fillMaxSize().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -84,7 +86,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     repeat(3-row.size){Spacer(Modifier.weight(1f))}
                 }
             }
-            if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
+            if(imported!=null)
+                Text("Новий набір • тест. Кадрів: "+imported.frames.size+". Не готові: "+imported.missing.joinToString(", "),
+                    color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            else if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: 4 кадри плавання з оригінальної моделі. Дія «Пошук» перевіряє занурення; решта поз ще потребує художніх кадрів.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
             else if(LisykStandardArtwork.matches(spec.species,spec.stage))

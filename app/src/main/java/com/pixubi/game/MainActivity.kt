@@ -1,5 +1,6 @@
 package com.pixubi.game
 
+import androidx.compose.ui.platform.LocalContext
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -729,18 +730,20 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
     val stage = PetGrowth.stage(pet)
-    val posePack=PetPosePack.forPet(pet.species,stage)
+    val context=LocalContext.current.applicationContext
+    val imported=ImportedPixuArt.form(context,pet.species,stage,pet.sex)!=null
+    val posePack=if(imported)null else PetPosePack.forPet(pet.species,stage)
     val newYoungLisyk=posePack==PetPosePack.LISYK_YOUNG
-    val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
-    val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
+    val newLisyk=!imported&&LisykBabyArtwork.matches(pet.species,stage)
+    val newIskryk=!imported&&IskrykBabyArtwork.matches(pet.species,stage)
     val newKraplyk=posePack==PetPosePack.KRAPLYK_BABY
-    val newPishchanyk=PishchanykBabyArtwork.matches(pet.species,stage)
-    val newKhmaryk=KhmarykBabyArtwork.matches(pet.species,stage)
+    val newPishchanyk=!imported&&PishchanykBabyArtwork.matches(pet.species,stage)
+    val newKhmaryk=!imported&&KhmarykBabyArtwork.matches(pet.species,stage)
     val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||newYoungLisyk
     val homePhase=scoutCycle%1f
     val wandering=(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
-    val homeFlight=pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val homeFlight=!imported&&pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in .56f.. .88f
     val flightProgress=((homePhase-.56f)/.32f).coerceIn(0f,1f)
     val flightArc=if(homeFlight)kotlin.math.sin(kotlin.math.PI*flightProgress).toFloat() else 0f
@@ -769,14 +772,16 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
     val clip = SpriteTimeline.clip(motion,emotion)
-    val hasMovementArt = PixuFrameLibrary.moves(pet.species,stage,clip)
+    val hasMovementArt = PixuFrameLibrary.moves(context,pet.species,stage,pet.sex,clip)
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(imported&&!hasMovementArt)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt) (if(searching) searchPose.xDp else wanderX)+bodyMotion.xDp else 0f
-    val worldY=if(homeFlight)-42f*flightArc else if(newKhmaryk&&searchFrame!=null)searchPose.yDp
+    val worldY=if(imported) {
+        if(hasMovementArt)searchPose.yDp+bodyMotion.yDp else 0f
+    } else if(homeFlight)-42f*flightArc else if(newKhmaryk&&searchFrame!=null)searchPose.yDp
         else if(newKhmaryk&&clip==SpriteClip.FLY)-35f+bodyMotion.yDp
         else if(pet.species==Species.PISHCHANYK&&searchFrame!=null)67f*searchFrame.concealment
         else if(newIskryk&&clip==SpriteClip.HOP)0f

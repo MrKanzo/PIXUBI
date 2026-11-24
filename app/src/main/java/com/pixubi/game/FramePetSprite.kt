@@ -22,7 +22,7 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val closure=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
     val key=PixuFrameKey(species,form,sex,gene.coerceIn(0,5),clip,frame,emotion,closure)
     val image=remember(key){PixuFrameLibrary.get(context,key).asImageBitmap()}
-    val mirror=PixuFrameLibrary.mirror(key,facingLeft)
+    val mirror=PixuFrameLibrary.mirror(context,key,facingLeft)
     Image(bitmap=image,contentDescription=species.title+" — "+form.title,
         modifier=modifier.graphicsLayer{scaleX=if(mirror)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)

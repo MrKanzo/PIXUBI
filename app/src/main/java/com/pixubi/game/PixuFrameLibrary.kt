@@ -22,11 +22,17 @@ internal object PixuFrameLibrary {
     private val nativeYoung=mutableMapOf<Species,IntArray>()
 
     fun directional(clip:SpriteClip)=clip in setOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.DIG,SpriteClip.SWIM,SpriteClip.FLY)
+    fun moves(context:Context,s:Species,g:GrowthStage,sex:Sex,clip:SpriteClip):Boolean =
+        ImportedPixuArt.form(context,s,g,sex)?.let{ImportedPixuArt.movement(it,clip)} ?: moves(s,g,clip)
     fun moves(s:Species,g:GrowthStage,clip:SpriteClip):Boolean {
         if(!directional(clip))return false
         val pack=PetPosePack.forPet(s,g)
         return pack?.locomotion(clip)==true || clip==SpriteClip.HOP || pack==null
     }
+    fun mirror(context:Context,k:PixuFrameKey,left:Boolean):Boolean =
+        ImportedPixuArt.form(context,k.species,k.stage,k.sex)?.let{
+            left && it.mirrorWalk && ImportedPixuArt.movement(it,k.clip)
+        } ?: mirror(k,left)
     fun mirror(k:PixuFrameKey,left:Boolean):Boolean {
         if(!directional(k.clip))return false
         if(LisykStandardArtwork.matches(k.species,k.stage))return left
@@ -38,6 +44,9 @@ internal object PixuFrameLibrary {
 
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
         cache.get(k)?.let{return it}
+        ImportedPixuArt.form(context,k.species,k.stage,k.sex)?.let{form->
+            return ImportedPixuArt.bitmap(context,k,form).also{cache.put(k,it)}
+        }
         val pack=PetPosePack.forPet(k.species,k.stage)
         val raw=when {
             pack!=null -> pack.bitmap(context,k.clip,k.emotion,k.frame,k.closure>=3)
