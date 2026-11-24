@@ -84,7 +84,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     repeat(3-row.size){Spacer(Modifier.weight(1f))}
                 }
             }
-            if(!LisykBabyArtwork.matches(spec.species,spec.stage))
+            if(!LisykBabyArtwork.matches(spec.species,spec.stage)&&!IskrykBabyArtwork.matches(spec.species,spec.stage))
                 Text("Для цієї форми деякі рухи ще не мають готових художніх кадрів. Режим покаже поточну реалізацію, а не вигадану анімацію.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             Row(verticalAlignment=Alignment.CenterVertically) {

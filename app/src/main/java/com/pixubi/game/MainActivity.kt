@@ -730,34 +730,47 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val searchPose = searchFrame?.pose ?: SearchPose()
     val stage = PetGrowth.stage(pet)
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
+    val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
+    val illustratedBaby=newLisyk||newIskryk
     val homePhase=scoutCycle%1f
-    val wandering=newLisyk&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=illustratedBaby&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
     val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
     val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
     val wanderX=if(wandering)sign*32f*kotlin.math.sin(kotlin.math.PI*walkProgress).toFloat() else 0f
-    val facingLeft=if(developer!=null&&!searching&&developer.action!=DevAction.AUTO)developer.left else if(searching) (searchFrame?.entryXDp?:0f)<0f
+    val manualWalkDirection=developer?.action==DevAction.WALK
+    val searchDirection=if(searching) {
+        val before=PixubiSearch.frame(pet.species,scoutCycle-.001f,pet.geneA+pet.geneB*3)
+        val after=PixubiSearch.frame(pet.species,scoutCycle+.001f,pet.geneA+pet.geneB*3)
+        val dx=after.pose.xDp-before.pose.xDp
+        if(kotlin.math.abs(dx)>.001f) dx<0f else (searchFrame?.entryXDp?:0f)<0f
+    }else false
+    val facingLeft=if(developer!=null&&!searching&&developer.action!=DevAction.AUTO)
+        if(manualWalkDirection&&movementCycle>.5f)!developer.left else developer.left
+        else if(searching)searchDirection
         else wandering&&(if(walkProgress<.5f)sign<0f else sign>0f)
     val motion=when {
         developer?.action?.motion!=null -> developer.action.motion!!
         wandering -> PetMotion.WALK
-        newLisyk&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
+        illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val clip = SpriteTimeline.clip(motion,emotion)
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
         (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
+        (newIskryk&&IskrykBabyArtwork.locomotion(clip)) ||
         (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
             PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
     }
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
-    val manualX=if(manualWalk)(if(facingLeft)-1f else 1f)*35f*
+    val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(manualWalk)manualX else if(newLisyk) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(manualWalk)manualX else if(illustratedBaby) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
-    val worldY=if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if(newLisyk&&(wandering||searching))0f
+    val worldY=if(newIskryk&&clip==SpriteClip.HOP)0f
+        else if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if(illustratedBaby&&(wandering||searching))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
         else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
     val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)

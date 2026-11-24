@@ -18,6 +18,14 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val context=LocalContext.current.applicationContext
     val clip=SpriteTimeline.clip(motion,emotion)
     val frame=SpriteTimeline.index(clip,phase)
+    if(IskrykBabyArtwork.matches(species,stage)) {
+        val index=IskrykBabyArtwork.index(clip,emotion,frame,blink||eyeClosure>.50f)
+        val image=remember(index){IskrykBabyArtwork.get(context,index).asImageBitmap()}
+        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&IskrykBabyArtwork.locomotion(clip))-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     if(LisykBabyArtwork.matches(species,stage)) {
         val cell=LisykBabyArtwork.cell(clip,frame)
         val image=if(LisykFrontArtwork.usesFront(clip)) {
