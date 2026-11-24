@@ -732,7 +732,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
     val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
     val newKraplyk=KraplykLandFrames.matches(pet.species,stage)
-    val illustratedBaby=newLisyk||newIskryk
+    val newPishchanyk=PishchanykBabyArtwork.matches(pet.species,stage)
+    val illustratedBaby=newLisyk||newIskryk||newPishchanyk
     val homePhase=scoutCycle%1f
     val wandering=(illustratedBaby||newKraplyk)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
@@ -753,6 +754,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val motion=when {
         developer?.action?.motion!=null -> developer.action.motion!!
         wandering -> PetMotion.WALK
+        newPishchanyk&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
         illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
@@ -761,6 +763,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
         (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
         (newIskryk&&IskrykBabyArtwork.locomotion(clip)) ||
+        (newPishchanyk&&PishchanykBabyArtwork.locomotion(clip)) ||
         (newKraplyk&&KraplykLandFrames.locomotion(clip)) ||
         KraplykSwimFrames.matches(pet.species,stage,clip) ||
         (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
@@ -772,7 +775,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
     val worldX=if(manualWalk)manualX else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
-    val worldY=if(newIskryk&&clip==SpriteClip.HOP)0f
+    val worldY=if(newPishchanyk&&searchFrame!=null)67f*searchFrame.concealment
+        else if(newIskryk&&clip==SpriteClip.HOP)0f
         else if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if((illustratedBaby&&(wandering||searching))||(newKraplyk&&clip==SpriteClip.WALK))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
         else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
@@ -917,7 +921,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                 style = MaterialTheme.typography.labelMedium, color = Color.White)
         }
-        if (!(searching && pet.species == Species.KRAPLYK && stage == GrowthStage.BABY)) Box(
+        if (!(searching && pet.species == Species.KRAPLYK && stage == GrowthStage.BABY) &&
+            !(newPishchanyk && searchFrame?.phase==SearchPhase.HIDDEN)) Box(
             Modifier.align(Alignment.BottomCenter).offset(x=worldX.dp,y = (-35).dp)
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))
