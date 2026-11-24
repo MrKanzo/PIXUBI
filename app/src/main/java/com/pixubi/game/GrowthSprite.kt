@@ -55,16 +55,10 @@ fun GrowthSprite(
                     modifier = Modifier.fillMaxSize()
                 )
             GrowthStage.ADULT ->
-                PixelPetSprite(
-                    species = pet.species,
-                    sex = pet.sex,
-                    coatIndex = pet.colorIndex,
-                    emotion = emotion,
-                    blink = blink,
-                    chewOpen = chewOpen,
-                    motionPhase = motionPhase,
-                    motion = motion,
-                    eyeClosure = eyeClosure,
+                FramePetSprite(
+                    species = pet.species, stage = stage, sex = pet.sex, gene = pet.colorIndex,
+                    emotion = emotion, motion = motion, phase = motionPhase, blink = blink,
+                    eyeClosure = eyeClosure, facingLeft = facingLeft,
                     modifier = Modifier.fillMaxSize()
                 )
         }
