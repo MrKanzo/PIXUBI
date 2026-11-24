@@ -36,7 +36,8 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
         }
     }
     val pet=remember(spec,action){spec.pet(action)}
-    val currentGaitVersion=if(spec.species==Species.LISYK)gaitVersion else 3
+    val legacyComparison=spec.species==Species.LISYK&&spec.stage==GrowthStage.BABY
+    val currentGaitVersion=if(legacyComparison)gaitVersion else 3
     val control=DevScene(action,seconds,left,gaitPreview=currentGaitVersion==3)
     val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
     Column(Modifier.fillMaxSize().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
@@ -78,8 +79,8 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 }
             }
             if(imported!=null && ImportedWalkCandidate.available(spec.species,spec.stage,spec.sex)){
-                Text("Кандидат ходьби • "+spec.species.title+", хлопчик, малий",fontWeight=FontWeight.Bold)
-                if(spec.species==Species.LISYK)DevChoices(listOf(1,2,3),gaitVersion,{gaitVersion=it;seconds=0f}){ "v"+it }
+                Text("Кандидат ходьби • "+spec.species.title+", хлопчик, "+spec.stage.title,fontWeight=FontWeight.Bold)
+                if(legacyComparison)DevChoices(listOf(1,2,3),gaitVersion,{gaitVersion=it;seconds=0f}){ "v"+it }
                 if(currentGaitVersion==3){
                     OutlinedButton(onClick={action=DevAction.WALK;seconds=0f;running=true},
                         modifier=Modifier.fillMaxWidth()){Text("▶ Тест прогулянки у світі")}
@@ -88,7 +89,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                         Text("Кадр: ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp",
                             style=MaterialTheme.typography.labelSmall)
                     }
-                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species)
+                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage)
                 }
                 else WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=gaitVersion==2)
                 Text(when(currentGaitVersion){3->"12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},

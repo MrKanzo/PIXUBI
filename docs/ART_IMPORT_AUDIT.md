@@ -54,3 +54,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 
 ## Shared male baby gait review
 - Four more 12-cell constructed gait candidates, using each species' own original raster and individually traced limbs. All five male baby forms now share the same explicit developer-only route and image loader. Female and older forms are not changed. The new 48 cells retain the native upper-body pixels during gait and binary alpha. Pishchanyk and Khmaryk each have one frame with a one-pixel ground discrepancy; tolerance is explicit in the test. These are experimental seated-to-standing pixel rigs, not artist-approved walk cycles; no production movement is unlocked. Added species-specific identity and isolation tests.
+
+## Teen male gait review
+- Five additional 12-cell candidate atlases, each with individual limb regions and 5px body lift; 60 cells preserve binary alpha, exact original seated pose, unchanged raised upper body during walking and ground row 115. Removed isolated lower fragments of up to five pixels after visual review. Candidates are constructed pixel rigs, not approved new illustrations.
+- Shared developer scene now selects stage-specific PNG, uses the normal age-dependent 128/147px size and pivot, and limits older v1/v2 comparison to the original baby Lisyk. Ten male forms have review routes; female and adult/Ultra candidates remain unchanged. No release or save changes.

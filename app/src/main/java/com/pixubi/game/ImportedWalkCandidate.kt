@@ -30,8 +30,8 @@ internal object ImportedWalkCandidate {
         return sequence[tick.mod(sequence.size)]
     }
     fun available(s:Species,g:GrowthStage,sex:Sex)=
-        g==GrowthStage.BABY && sex==Sex.BOY
-    fun asset(s:Species):String="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+"_male_young_gait_v3.png"
+        g in setOf(GrowthStage.BABY,GrowthStage.YOUNG) && sex==Sex.BOY
+    fun asset(s:Species,g:GrowthStage=GrowthStage.BABY):String="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+"_male_"+ImportedPixuArt.stageName(g)+"_gait_v3.png"
     fun index(phase:Float)=ImportedMotionTiming.frame(SpriteClip.WALK,phase)
 }
 @Composable
@@ -52,10 +52,10 @@ internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Mod
 }
 
 @Composable
-internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier,species:Species=Species.LISYK){
+internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier,species:Species=Species.LISYK,stage:GrowthStage=GrowthStage.BABY){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context,species){
-        val atlas=context.assets.open(ImportedWalkCandidate.asset(species)).use{BitmapFactory.decodeStream(it)}
+    val cells=remember(context,species,stage){
+        val atlas=context.assets.open(ImportedWalkCandidate.asset(species,stage)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
         List(12){i->Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128).asImageBitmap()}
     }
@@ -67,16 +67,19 @@ internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Mo
 
 /** Same native cell size, scale and pivot as the imported world sprite. */
 @Composable
-internal fun GaitWorldPreview(frame:Int,left:Boolean,gene:Int,modifier:Modifier=Modifier,species:Species=Species.LISYK){
+internal fun GaitWorldPreview(frame:Int,left:Boolean,gene:Int,modifier:Modifier=Modifier,species:Species=Species.LISYK,stage:GrowthStage=GrowthStage.BABY){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context,gene,species){
-        val atlas=context.assets.open(ImportedWalkCandidate.asset(species)).use{BitmapFactory.decodeStream(it)}
+    val cells=remember(context,gene,species,stage){
+        val atlas=context.assets.open(ImportedWalkCandidate.asset(species,stage)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
         List(12){i->
             val raw=Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128)
             val colored=PixuPalette.apply(raw,species,Sex.BOY,gene)
             val cell=Bitmap.createBitmap(192,192,Bitmap.Config.ARGB_8888)
-            Canvas(cell).drawBitmap(colored,null,Rect(32,58,160,186),Paint().apply{isFilterBitmap=false})
+            val size=ImportedPixuArt.size(stage)
+            val x=(192-size)/2
+            val y=174-116*size/128
+            Canvas(cell).drawBitmap(colored,null,Rect(x,y,x+size,y+size),Paint().apply{isFilterBitmap=false})
             cell.asImageBitmap()
         }
     }

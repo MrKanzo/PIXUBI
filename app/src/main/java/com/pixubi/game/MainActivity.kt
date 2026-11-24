@@ -968,7 +968,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         }
         // No sliding a seated portrait; no partial alpha on the character.
         if(gaitReview!=null) GaitWorldPreview(gaitReview.frame,gaitReview.left,pet.colorIndex,
-            Modifier.align(Alignment.Center).offset(x=worldX.dp,y=17.dp).size(194.dp),species=pet.species)
+            Modifier.align(Alignment.Center).offset(x=worldX.dp,y=17.dp).size(194.dp),species=pet.species,stage=stage)
         else if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
