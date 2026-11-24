@@ -79,8 +79,21 @@ internal object ImportedPixuArt {
                 val missing=m.getJSONArray("missing").let{ar->List(ar.length()){ar.getString(it)}}
                 require(forms.put(p,Form(p,rects.keys,missing,m.optBoolean("mirrorWalkLeft"),atlas,rects))==null)
             }
-            for(s in Species.entries)for(g in GrowthStage.playable)for(sex in Sex.entries)
-                require(prefix(s,g,sex) in forms)
+            fun checkBounds(path:String,w:Int,h:Int){
+                val opts=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                context.assets.open(path).use{BitmapFactory.decodeStream(it,null,opts)}
+                require(opts.outWidth==w&&opts.outHeight==h){"Invalid candidate: $path"}
+            }
+            for(s in Species.entries)for(g in GrowthStage.playable)for(sex in Sex.entries){
+                val f=forms.getValue(prefix(s,g,sex))
+                if(ImportedWalkCandidate.available(s,g,sex))
+                    checkBounds(ImportedWalkCandidate.asset(s,g,sex),512,384)
+                if(ImportedSleepCandidate.available(s,g,sex)&&"sleep" !in f.frames)
+                    checkBounds(ImportedSleepCandidate.asset(s,g,sex),384,256)
+            }
+            checkBounds(ImportedUltraEffects.ASSET,768,1280)
+            checkBounds(ImportedWalkCandidate.ASSET,512,128)
+            checkBounds(ImportedWalkCandidate.STANDING_ASSET,512,128)
             pack=Pack(forms)
         }catch(e:FileNotFoundException){
             Log.i("PIXUBI","Imported art not installed; using original poses")

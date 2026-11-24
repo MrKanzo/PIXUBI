@@ -45,10 +45,12 @@ internal object PixuFrameLibrary {
     }
 
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
-        cache.get(k)?.let{return it}
         ImportedPixuArt.form(context,k.species,k.stage,k.sex)?.let{form->
-            return ImportedPixuArt.bitmap(context,k,form).also{cache.put(k,it)}
+            val key=ImportedFrameCacheKey.normalize(k,form)
+            cache.get(key)?.let{return it}
+            return ImportedPixuArt.bitmap(context,key,form).also{cache.put(key,it)}
         }
+        cache.get(k)?.let{return it}
         val pack=PetPosePack.forPet(k.species,k.stage)
         val raw=when {
             pack!=null -> pack.bitmap(context,k.clip,k.emotion,k.frame,k.closure>=3)

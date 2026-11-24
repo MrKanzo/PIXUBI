@@ -114,3 +114,9 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Care animation preview
 - Feed, water and charge reactions are triggered only when the relevant stock is actually consumed compared with the advanced baseline. Failed care attempts do not play success reactions. GameEngine resource values and progression remain unchanged.
 - Imported debug sprites use localized head nods with existing mouth frames. Pixel props distinguish purchased bowl/cup/charger from basic consumables; a separate charging light cycle and developer CHARGE action are provided. Visual clock resets on each accepted care action. Props are suppressed while asleep, dead or on expedition. No independently illustrated full-body care poses; device review pending. Stable character art remains unchanged.
+
+
+## Debug APK readiness audit
+- Canonical imported cache keys collapse unused frame/closure dimensions for static authored emotions, while preserving blink, movement, mouth, breathing and other procedural phase inputs. Legacy cache keys unchanged. This reduces redundant entries by construction; actual frame timing and memory use still require device measurement.
+- Import loader validates dimensions of all candidate gait/rest atlases, Ultra effects and original Lisyk comparison assets before enabling imported rendering. An invalid pack falls back to original artwork.
+- CI generates a 600-case manual visual checklist (15 actions for each of 40 forms), verifies the debug APK signature and package ID, and exports checksum and JVM results. No visual tests are marked passed automatically. Production release, signing configuration and saved pet untouched.

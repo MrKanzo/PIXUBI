@@ -42,3 +42,14 @@ with (out/"animation-coverage.csv").open("w",newline="",encoding="utf-8") as fp:
     w.writerow(["form","original_cells","walk","emotion","sleep","jump","blink","eat_drink","run","species_search","charge","device_visual_review"])
     w.writerows(rows)
 print("40 forms: 10 original walk/sleep sets, 30 gait candidates, 30 constructed rest sets; device review pending")
+
+# Keep review status explicit: files existing is not visual approval.
+actions = ["idle", "blink", "walk", "run", "hop", "happy", "sad", "surprise",
+           "tired", "eat", "drink", "charge", "sleep", "hibernate", "explore"]
+with (out/"device-checklist.csv").open("w",newline="",encoding="utf-8") as fp:
+    w=csv.writer(fp)
+    w.writerow(["form","action","visual_result","notes"])
+    for f in forms:
+        for action in actions:
+            w.writerow([f["prefix"],action,"not_tested",""])
+print(f"Device review checklist: {len(forms)*len(actions)} cases, none marked passed automatically")
