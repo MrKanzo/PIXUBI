@@ -106,3 +106,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 
 ## Sprint review
 - All 40 forms now have a separate developer-only sprint route: 16fps, acceleration/braking, two suspension arcs per eight step samples, 64dp travel and seated turns. Existing 30 gait candidates or ten authored walk sets are reused with integer forward lean, not independently authored running art. Native row pixels and ground contact retained; no normal gameplay run unlock. Added route, isolation, frame-step and raster invariants; device visual review still required.
+
+
+## Species search choreography
+- Imported search now uses an explicit species policy: Lisyk head-nod sniff preview (stationary when no authored walk); Iskryk stepped dash route with shared hop clock; Kraplyk original water route and tail preview; Pishchanyk centered digging/concealment until verified gait; Khmaryk flight envelope with takeoff/landing. World and cover positions use the same search frame, including the developer phase label. No independent new illustrated species frames; all remain procedural previews. Search rewards, expedition timing, stable release and saved pet unchanged.

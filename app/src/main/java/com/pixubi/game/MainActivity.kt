@@ -733,10 +733,10 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val importedForm=ImportedPixuArt.form(context,pet.species,stage,pet.sex)
     val imported=importedForm!=null
     val searchClip=SpriteTimeline.clip(MotionResolver.resolve(pet,PetEmotion.IDLE,true),PetEmotion.IDLE)
+    val searchWalk=importedForm?.let{ImportedPixuArt.movement(it,SpriteClip.WALK)}==true
+    val searchSeed=pet.geneA+pet.geneB*3
     val searchFrame=initialSearchFrame?.let{sf->
-        if(importedForm!=null && !ImportedPixuArt.movement(importedForm,searchClip) &&
-            !ImportedPawMotion.supportsPreviewTravel(pet.species,searchClip))
-            ImportedPawMotion.stationarySearch(pet.species,sf) else sf
+        if(imported)ImportedSpeciesSearch.frame(pet.species,scoutCycle,searchSeed,searchWalk) else sf
     }
     val searchPose=searchFrame?.pose ?: SearchPose()
     val posePack=if(imported)null else PetPosePack.forPet(pet.species,stage)
@@ -758,7 +758,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
     val wanderX=if(wandering)sign*32f*kotlin.math.sin(kotlin.math.PI*walkProgress).toFloat() else 0f
     val manualWalkDirection=developer?.action in listOf(DevAction.WALK,DevAction.RUN)
-    val searchDirection=if(searching) {
+    val searchDirection=if(searching&&imported)ImportedSpeciesSearch.direction(pet.species,scoutCycle,searchSeed,searchWalk) else if(searching) {
         val before=PixubiSearch.frame(pet.species,scoutCycle-.001f,pet.geneA+pet.geneB*3)
         val after=PixubiSearch.frame(pet.species,scoutCycle+.001f,pet.geneA+pet.geneB*3)
         val dx=after.pose.xDp-before.pose.xDp
@@ -772,6 +772,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val motion=when {
         developer?.action?.motion!=null -> developer.action.motion!!
         homeFlight -> PetMotion.FLOAT
+        imported&&searching&&pet.species==Species.LISYK&&(!searchWalk||searchFrame?.phase!=SearchPhase.WANDERING) -> PetMotion.DIG
         wandering -> PetMotion.WALK
         newKhmaryk&&searching -> PetMotion.FLOAT
         pet.species==Species.PISHCHANYK&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
@@ -790,14 +791,15 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val manualWalk=manualWalkDirection&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(runReview!=null)runReview.xDp else if(gaitReview!=null)gaitReview.xDp else if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(runReview!=null)runReview.xDp else if(gaitReview!=null)gaitReview.xDp else if(imported&&searching)searchPose.xDp else if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt||previewTravel) (if(searching) searchPose.xDp else wanderX)+
             (if(imported&&clip==SpriteClip.WALK)0f else bodyMotion.xDp) else 0f
     val worldY=if(runReview!=null)runReview.yDp else if(gaitReview!=null)0f else if(imported) {
         when {
+            searching -> searchPose.yDp
             homeFlight -> -42f*flightArc
             previewTravel&&searching -> searchPose.yDp+bodyMotion.yDp
-            previewTravel&&clip==SpriteClip.FLY -> -25f+bodyMotion.yDp
+            previewTravel&&clip==SpriteClip.FLY -> (-42f+bodyMotion.yDp)*ImportedSpeciesSearch.flightEnvelope(movementCycle)
             previewTravel -> bodyMotion.yDp
             clip==SpriteClip.DIG&&pet.species==Species.PISHCHANYK -> searchPose.yDp
             hasMovementArt&&clip==SpriteClip.WALK -> if(searching)searchPose.yDp else 0f
@@ -987,7 +989,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
             eyeClosure = eyeClosure,
             chewOpen = movementCycle > .5f,
             motion = motion,
-            motionPhase = if(developer?.action==DevAction.RUN)movementCycle*2f else movementCycle,
+            motionPhase = if(imported&&searching&&pet.species==Species.ISKRYK)ImportedSpeciesSearch.dashClock(scoutCycle)
+                else if(developer?.action==DevAction.RUN)movementCycle*2f else movementCycle,
             facingLeft = facingLeft
         )
         if (searching && searchFrame != null) {
@@ -999,7 +1002,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 color = Color(0xFFFDF9F1),
                 shadowElevation = 5.dp
             ) {
-                Text(PixubiSearch.icon(pet.species) + " Шукаю!",
+                Text(PixubiSearch.icon(pet.species) + " " + if(imported)ImportedSpeciesSearch.label(pet.species) else "Шукаю!",
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     color = Color(0xFF253149), fontWeight = FontWeight.Bold)
             }

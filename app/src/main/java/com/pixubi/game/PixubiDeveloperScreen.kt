@@ -70,7 +70,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             Text("Час сцени: ${(seconds*10).toInt()/10f} с",style=MaterialTheme.typography.bodySmall)
             Slider(value=seconds,onValueChange={running=false;seconds=it},valueRange=0f..47.99f)
             if(action==DevAction.EXPLORE) {
-                Text("Фаза пошуку: "+PixubiSearch.frame(spec.species,control.scoutCycle,spec.color).phase.name,
+                Text("Фаза пошуку: "+(imported?.let{ImportedSpeciesSearch.frame(spec.species,control.scoutCycle,spec.color,ImportedPixuArt.movement(it,SpriteClip.WALK))}?:PixubiSearch.frame(spec.species,control.scoutCycle,spec.color)).phase.name,
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
                     listOf("Підхід" to .12f,"Ховається" to .37f,"Схований" to .50f,"Виходить" to .70f).forEach{(label,t)->
@@ -114,6 +114,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     Text("Біг: кадр ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp • Y: ${p.yDp.toInt()} dp",
                         style=MaterialTheme.typography.bodySmall)
                 }
+            }
+            if(imported!=null){
+                OutlinedButton(onClick={action=DevAction.EXPLORE;seconds=0f;running=true},
+                    modifier=Modifier.fillMaxWidth()){Text("▶ "+ImportedSpeciesSearch.label(spec.species))}
             }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
             DevAction.entries.chunked(3).forEach { row ->

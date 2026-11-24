@@ -32,7 +32,7 @@ internal object PixuFrameLibrary {
     fun mirror(context:Context,k:PixuFrameKey,left:Boolean):Boolean =
         ImportedPixuArt.form(context,k.species,k.stage,k.sex)?.let{
             left && ((it.mirrorWalk && ImportedPixuArt.movement(it,k.clip)) ||
-                (ImportedPawMotion.supportsPreviewTravel(k.species,k.clip) &&
+                ((ImportedPawMotion.supportsPreviewTravel(k.species,k.clip)||(k.species==Species.ISKRYK&&k.clip==SpriteClip.HOP)||(k.species==Species.LISYK&&k.clip==SpriteClip.DIG)) &&
                     !(k.stage==GrowthStage.BABY && k.sex==Sex.GIRL)))
         } ?: mirror(k,left)
     fun mirror(k:PixuFrameKey,left:Boolean):Boolean {

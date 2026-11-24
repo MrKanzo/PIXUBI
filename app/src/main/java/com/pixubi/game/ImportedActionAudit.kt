@@ -18,8 +18,8 @@ internal object ImportedActionAudit {
         DevAction.EAT,DevAction.DRINK -> "Програмні рухи рота; немає повного циклу тіла"
         DevAction.SLEEP -> if("sleep" in f.frames)"Оригінальна поза лежачи + легке дихання" else if(ImportedSleepCandidate.available(s,g,sex))"Тестова низька поза відпочинку + дихання" else "Програмно закриті очі; немає пози лежачи"
         DevAction.HIBERNATE -> if("sleep" in f.frames)"Оригінальна нерухома поза; сплячка" else if(ImportedSleepCandidate.available(s,g,sex))"Тестова нерухома поза відпочинку" else "Програмно закриті очі; немає пози лежачи"
-        DevAction.EXPLORE -> "Видова сцена пошуку; рух залежить від доступної анімації"
-        DevAction.DIG -> if(s==Species.PISHCHANYK)"Тестове копання лапами" else "Немає окремої пози нюхання/копання"
+        DevAction.EXPLORE -> ImportedSpeciesSearch.label(s)+"; програмна сцена пошуку"
+        DevAction.DIG -> when(s){Species.PISHCHANYK->"Тестове копання лапами";Species.LISYK->"Тестове нюхання: рух голови";else->"Немає окремої пози копання"}
         DevAction.SWIM -> if(s==Species.KRAPLYK)"Програмний водяний рух" else "Немає видової анімації плавання"
         DevAction.FLY -> if(s==Species.KHMARYK)"Програмний рух крил" else "Немає видової анімації польоту"
     }
