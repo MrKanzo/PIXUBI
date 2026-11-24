@@ -14,7 +14,7 @@ internal object UnifiedEvolutionArt {
     const val GRID = 64
     private data class Key(val species:Species,val stage:GrowthStage,val sex:Sex,val gene:Int,
         val clip:SpriteClip,val frame:Int,val blink:Boolean)
-    private val cache = LruCache<Key,Bitmap>(256)
+    private val cache by lazy { LruCache<Key,Bitmap>(256) }
     fun matches(stage:GrowthStage)=stage==GrowthStage.YOUNG||stage==GrowthStage.ADULT
     fun locomotion(clip:SpriteClip)=clip in listOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.DIG,SpriteClip.SWIM,SpriteClip.FLY)
     private fun rgb(n:Int)=n or 0xff000000.toInt()
