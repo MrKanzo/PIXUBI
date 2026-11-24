@@ -20,14 +20,9 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val frame=SpriteTimeline.index(clip,phase)
     if(LisykBabyArtwork.matches(species,stage)) {
         val cell=LisykBabyArtwork.cell(clip,frame)
-        val faceEmotion=when(emotion) {
-            PetEmotion.EATING,PetEmotion.DRINKING,PetEmotion.TIRED -> emotion
-            else -> PetEmotion.IDLE
-        }
-        val image=if(cell==4) {
-            val faces=remember(faceEmotion){LisykBabyArtwork.sittingFaces(context,faceEmotion).map{it.asImageBitmap()}}
-            val closure=NativeEyeMotion.closure(faceEmotion,eyeClosure,blink)
-            faces[FaceExpression.frameIndex(faceEmotion,closure,frame%2==1)]
+        val image=if(LisykFrontArtwork.usesFront(clip)) {
+            val index=LisykFrontArtwork.index(emotion,frame,blink||eyeClosure>.50f)
+            remember(index){LisykFrontArtwork.get(context,index).asImageBitmap()}
         } else remember(cell){LisykBabyArtwork.get(context,cell).asImageBitmap()}
         Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
             modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&LisykBabyArtwork.locomotion(clip))-1f else 1f},

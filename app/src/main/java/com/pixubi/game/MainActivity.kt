@@ -726,7 +726,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     val stage = PetGrowth.stage(pet)
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
     val homePhase=scoutCycle%1f
-    val wandering=newLisyk&&!searching&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=newLisyk&&!searching&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
     val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
     val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
