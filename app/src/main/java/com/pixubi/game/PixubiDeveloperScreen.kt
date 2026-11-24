@@ -87,7 +87,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 }
             }
             if(imported!=null)
-                Text("Новий набір • тест. Міміка для відсутніх поз — програмна. Художніх кадрів: "+imported.frames.size+". Не готові: "+imported.missing.joinToString(", "),
+                Text("Новий набір • тест. Міміка, рух лап, плавання й політ для відсутніх поз — тестові. Художніх кадрів: "+imported.frames.size+". Не готові: "+imported.missing.joinToString(", "),
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             else if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: 4 кадри плавання з оригінальної моделі. Дія «Пошук» перевіряє занурення; решта поз ще потребує художніх кадрів.",

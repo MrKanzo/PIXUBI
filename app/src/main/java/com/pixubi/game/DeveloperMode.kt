@@ -5,6 +5,7 @@ internal enum class DevAction(val title:String,val emotion:PetEmotion?,val motio
     AUTO("Автономно",null,null),
     IDLE("Спокій",PetEmotion.IDLE,PetMotion.IDLE),
     WALK("Ходьба",PetEmotion.IDLE,PetMotion.WALK),
+    RUN("Швидкі кроки (тест)",PetEmotion.IDLE,PetMotion.WALK),
     HOP("Стрибок",PetEmotion.IDLE,PetMotion.HOP),
     HAPPY("Радість",PetEmotion.HAPPY,PetMotion.BOUNCE),
     SAD("Сум",PetEmotion.SAD,PetMotion.SLOUCH),

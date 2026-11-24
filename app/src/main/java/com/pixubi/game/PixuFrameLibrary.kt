@@ -31,7 +31,9 @@ internal object PixuFrameLibrary {
     }
     fun mirror(context:Context,k:PixuFrameKey,left:Boolean):Boolean =
         ImportedPixuArt.form(context,k.species,k.stage,k.sex)?.let{
-            left && it.mirrorWalk && ImportedPixuArt.movement(it,k.clip)
+            left && ((it.mirrorWalk && ImportedPixuArt.movement(it,k.clip)) ||
+                (ImportedPawMotion.supportsPreviewTravel(k.species,k.clip) &&
+                    !(k.stage==GrowthStage.BABY && k.sex==Sex.GIRL)))
         } ?: mirror(k,left)
     fun mirror(k:PixuFrameKey,left:Boolean):Boolean {
         if(!directional(k.clip))return false
