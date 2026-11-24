@@ -53,6 +53,14 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
             contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
         return
     }
+    if(KhmarykBabyArtwork.matches(species,stage)) {
+        val index=KhmarykBabyArtwork.index(clip,emotion,frame,blink||eyeClosure>.50f)
+        val image=remember(index){KhmarykBabyArtwork.get(context,index).asImageBitmap()}
+        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&KhmarykBabyArtwork.locomotion(clip))-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     val source=remember(species,stage,sex,gene) {
         if(stage==GrowthStage.ADULT)PixubiSpriteCache.get(context,species,sex,gene)
         else EvolutionSprites.get(context,species,stage)
