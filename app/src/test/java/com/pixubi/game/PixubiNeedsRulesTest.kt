@@ -60,10 +60,10 @@ class PixubiNeedsRulesTest {
         assertTrue(missed.single().message.contains("скучив"))
     }
 
-    @Test fun gamesAreNotOfferedToEggsAndCocoons() {
-        val egg = pet().copy(activeMinutes = 0, xp = 0, happiness = 10.0)
-        val cocoon = pet().copy(activeMinutes = 4320, xp = 120, happiness = 10.0)
-        assertFalse(PixubiNeedRules.findNeeds(egg, enabled).any { it.need == PixubiNeed.PLAY })
-        assertFalse(PixubiNeedRules.findNeeds(cocoon, enabled).any { it.need == PixubiNeed.PLAY })
+    @Test fun bothBabyAndYoungCanAskToPlay() {
+        val baby = pet().copy(activeMinutes = 0, xp = 0, happiness = 10.0)
+        val young = pet().copy(activeMinutes = 4320, xp = 120, happiness = 10.0)
+        assertTrue(PixubiNeedRules.findNeeds(baby, enabled).any { it.need == PixubiNeed.PLAY })
+        assertTrue(PixubiNeedRules.findNeeds(young, enabled).any { it.need == PixubiNeed.PLAY })
     }
 }

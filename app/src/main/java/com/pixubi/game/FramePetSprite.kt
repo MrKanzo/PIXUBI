@@ -21,10 +21,10 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val frame=SpriteTimeline.index(clip,phase)
     val pack=PetPosePack.forPet(species,stage)
     val closed=blink||eyeClosure>.50f
-    if(stage==GrowthStage.ULTRA) {
+    if(stage==GrowthStage.ULTRA || stage==GrowthStage.ADULT) {
         val closure=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
-        val art=remember(species,sex,gene,clip,frame,emotion,closure) {
-            UltraPixuArtwork.bitmap(species,sex,gene,clip,frame,emotion,closure).asImageBitmap()
+        val art=remember(species,stage,sex,gene,clip,frame,emotion,closure) {
+            UltraPixuArtwork.bitmap(species,sex,gene,clip,frame,emotion,closure,stage).asImageBitmap()
         }
         Image(bitmap=art,contentDescription=species.title+" — "+stage.title,
             modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},

@@ -16,8 +16,17 @@ internal object UltraPixuArtwork {
         "eNrtVbuuJDUQHdvd7i67bHdV+fEB8B83gogUaQNy/gACJBCCgL9APLKFkAQJJBIkJB7JrlbaYEVEspuwCwEICWrmzrL3wtwrEAHJltTqGfvYrlPnlPu333/59eGjn+7df/jl3Tvf/3jr07sf3Xvw8g+Pvnv352/f//jrN29/8PYXr7x+86uXvnnvxudv3fjsw7Pbr5598tqzt1547o2zZ955Pt+M/sXd03ga/y34X+JLCNcD4uW/NeRpug6e/zJQcwa8Br7ff1wYGTkTsXu8elyCC2VNF8fF0VSI+nZcEOrYT47zMpDiGacDHg4jXicCC1c68ppCrQnrKPscSxHJEXiMZpfD9DoXyVk4FCnHFCJgWpC3tJMcOGu00eZ5PeS0rjNKL11C7rogpVQbR2/XNTH1nJkypVatWdJ58utqfB2JS6F+UGLKBdEv64IixF0Y/WbmZW3nx6+6wG7BVxbhCXejtU35pWWpOhC4oSFwdm3nJRpjXWYHHEzQvZQrRgYbUppCEinM3pCAXerRN6m11bgsGwaLPYxRa4xgja0hVOnJBEIi3GBeDwSWBROj6KEtmFrSqJ474JaqhjQ/MZhNwCzrkYCm76L0MFF1tcekcrF11PXdZYQggJrPvBzrc6iog75FqlPq4rENdNbCpvA+piDRE2h56p9+WBcH4mzowbYuVFo0szPGtz6qSQRFCFPlJ42yJhLZsrTgtqYEAI2drU1D2bbsI+nq2cATx3k9AKYsNdhpKpv30ZrZenShlUnTd3u6/aJvp9w5Ku1aSu0CPvriIbWupYz6qDsu+3xHJOgiiHIsoBZQx6lgBL7T5JbUxt87SUSAqaUQSgtpVU9LVP40zbOZT7ReVtbCLUJKUFPC0Q9ov6nFTjcrAHOcapstq7qNiWBTaduV3a3abq2B8RvVpqU9hWmzMY9/ql7Mmzepcy9jnNwSjY8HLXoFLmC5eaMNSzhO34dgCcha6slBQ3StIuglQXAymx2SU31cVLgTjg5Vs6h4LlfURIBk0y516tKmttRe3F9C/Qq8UU3RI1IETUk7V1ustDHAXlFDE4UigZ6yv05Gr5UhaRXsP7nda6hqlRDSJf9eE36PQzNn9398vP4ATFxdpg=="
     )
 
-    fun pixels(species:Species):IntArray {
-        val bytes=InflaterInputStream(Base64.getDecoder().decode(data[species.ordinal]).inputStream()).use{it.readBytes()}
+    private val adultData=listOf(
+        "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"
+    )
+    fun pixels(species:Species,stage:GrowthStage=GrowthStage.ULTRA):IntArray {
+        require(stage==GrowthStage.ADULT||stage==GrowthStage.ULTRA)
+        val encoded=(if(stage==GrowthStage.ADULT)adultData else data)[species.ordinal]
+        val bytes=InflaterInputStream(Base64.getDecoder().decode(encoded).inputStream()).use{it.readBytes()}
         require(bytes.size==69+N*N)
         fun b(i:Int)=bytes[i].toInt() and 255
         return IntArray(N*N){i->
@@ -29,12 +38,22 @@ internal object UltraPixuArtwork {
         }
     }
 
-    private fun eye(s:Species):EyeRegion=when(s){
-        Species.LISYK -> EyeRegion(38f,19f,2.4f,1.8f)
-        Species.ISKRYK -> EyeRegion(38f,19f,2.4f,1.8f)
-        Species.KRAPLYK -> EyeRegion(37f,19f,2.4f,1.8f)
-        Species.PISHCHANYK -> EyeRegion(36f,19f,2.4f,1.8f)
-        Species.KHMARYK -> EyeRegion(27f,17f,2.4f,1.8f)
+    private fun face(s:Species,stage:GrowthStage):Pair<EyeRegion,EyeRegion>{
+        val positions=if(stage==GrowthStage.ADULT)when(s){
+            Species.LISYK -> intArrayOf(16,23,21,26)
+            Species.ISKRYK -> intArrayOf(20,22,24,25)
+            Species.KRAPLYK -> intArrayOf(39,22,40,25)
+            Species.PISHCHANYK -> intArrayOf(23,25,27,28)
+            Species.KHMARYK -> intArrayOf(26,24,30,26)
+        }else when(s){
+            Species.LISYK -> intArrayOf(39,23,42,26)
+            Species.ISKRYK -> intArrayOf(38,22,42,25)
+            Species.KRAPLYK -> intArrayOf(39,22,41,25)
+            Species.PISHCHANYK -> intArrayOf(39,22,42,25)
+            Species.KHMARYK -> intArrayOf(27,24,29,26)
+        }
+        return EyeRegion(positions[0].toFloat(),positions[1].toFloat(),2.3f,1.8f) to
+            EyeRegion(positions[2].toFloat(),positions[3].toFloat(),2.2f,1.6f)
     }
 
     /** Only move opaque foot tips by one pixel. Do not stretch the body,
@@ -52,10 +71,12 @@ internal object UltraPixuArtwork {
         return result
     }
 
-    fun bitmap(species:Species,sex:Sex,gene:Int,clip:SpriteClip,frame:Int,emotion:PetEmotion,closure:Int):Bitmap {
-        val original=pixels(species)
+    fun bitmap(species:Species,sex:Sex,gene:Int,clip:SpriteClip,frame:Int,emotion:PetEmotion,closure:Int,stage:GrowthStage=GrowthStage.ULTRA):Bitmap {
+        val original=pixels(species,stage)
         val blink=if(emotion==PetEmotion.SLEEPING||emotion==PetEmotion.HIBERNATING)4 else closure.coerceIn(0,4)
-        val face=if(blink==0)original else EyePixelAnimator.frame(original,N,N,listOf(eye(species)),blink)
+        val (eye,mouth)=face(species,stage)
+        val face=if(blink==0&&emotion==PetEmotion.IDLE)original else
+            EyePixelAnimator.faceFrames(original,N,N,listOf(eye),mouth,species==Species.KHMARYK,emotion)[FaceExpression.frameIndex(emotion,blink/4f,frame%2==1)]
         val moved=step(face,clip,frame)
         return PixuPalette.apply(Bitmap.createBitmap(moved,N,N,Bitmap.Config.ARGB_8888),species,sex,gene)
     }
