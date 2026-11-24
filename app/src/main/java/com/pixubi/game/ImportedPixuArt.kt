@@ -148,11 +148,16 @@ internal object ImportedPixuArt {
                 ImportedPawMotion.frame(moved,key.species,key.stage,key.sex,key.frame) else moved
             Bitmap.createBitmap(pose,NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
         }else raw
+        val caring=if(ImportedCareMotion.applies(key)){
+            val px=IntArray(NATIVE*NATIVE)
+            moving.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
+            Bitmap.createBitmap(ImportedCareMotion.nod(px,key.species,key.stage,key.sex,key.clip,key.frame),NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
+        }else moving
         val sniffing=if(ImportedSpeciesSearch.sniffApplies(key,name)){
             val px=IntArray(NATIVE*NATIVE)
             moving.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
             Bitmap.createBitmap(ImportedSpeciesSearch.sniff(px,key.stage,key.sex,key.frame),NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
-        }else moving
+        }else caring
         val hopping=if(ImportedJumpMotion.applies(form,key.clip)){
             val px=IntArray(NATIVE*NATIVE)
             sniffing.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)

@@ -142,11 +142,14 @@ class MainActivity : ComponentActivity() {
             }
             var temporaryEmotion by remember { mutableStateOf<PetEmotion?>(null) }
             var reactionVersion by remember { mutableIntStateOf(0) }
-            fun react(emotion: PetEmotion?) { temporaryEmotion = emotion; reactionVersion++ }
+            var careVisual by remember { mutableStateOf<CareVisual?>(null) }
+            fun react(emotion: PetEmotion?,care:CareVisual?=null) { temporaryEmotion = emotion; careVisual=care; reactionVersion++ }
             LaunchedEffect(reactionVersion) {
                 if (temporaryEmotion != null) {
                     delay(1800L)
-                    if (temporaryEmotion == PetEmotion.EATING || temporaryEmotion == PetEmotion.DRINKING) {
+                    val wasCare=careVisual!=null
+                    careVisual=null
+                    if (wasCare || temporaryEmotion == PetEmotion.EATING || temporaryEmotion == PetEmotion.DRINKING) {
                         temporaryEmotion = PetEmotion.HAPPY
                         delay(1400L)
                     }
@@ -336,8 +339,18 @@ class MainActivity : ComponentActivity() {
                             pet = current,
                             collection = collection,
                             reaction = temporaryEmotion,
+                            careVisual=careVisual,
+                            careVersion=reactionVersion,
                             onAction = { action ->
-                                store(GameEngine.act(current, action, System.currentTimeMillis()))
+                                val now=System.currentTimeMillis()
+                                val baseline=GameEngine.advance(current,now)
+                                val next=GameEngine.act(current,action,now)
+                                val accepted=ImportedCareMotion.accepted(baseline,next,action)
+                                store(next)
+                                val careAttempt=action in listOf(Action.FEED,Action.WATER,Action.CHARGE)
+                                if(careAttempt&&accepted==null){
+                                    react(null)
+                                }else{
                                 audio.effect(when (action) {
                                     Action.FEED -> PixubiSound.FEED
                                     Action.WATER -> PixubiSound.WATER
@@ -351,12 +364,13 @@ class MainActivity : ComponentActivity() {
                                 react(when (action) {
                                     Action.FEED -> PetEmotion.EATING
                                     Action.WATER -> PetEmotion.DRINKING
-                                    Action.CHARGE -> PetEmotion.HAPPY
+                                    Action.CHARGE -> PetEmotion.IDLE
                                     Action.EXPLORE -> null
                                     Action.WAKE -> PetEmotion.HAPPY
                                     Action.PLAY_WIN -> PetEmotion.HAPPY
                                     Action.SLEEP, Action.HIBERNATE -> null
-                                })
+                                },accepted)
+                                }
                             },
                             onBuy = { item ->
                                 store(GameEngine.buy(current, item, System.currentTimeMillis()))
@@ -520,6 +534,8 @@ private fun HomeScreen(
     pet: Pet,
     collection: PlayerCollection,
     reaction: PetEmotion?,
+    careVisual:CareVisual?,
+    careVersion:Int,
     onAction: (Action) -> Unit,
     onBuy: (ShopItem) -> Unit,
     onPetTap: () -> Unit,
@@ -560,7 +576,7 @@ private fun HomeScreen(
                     style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
             }
         }
-        WorldScene(pet, reaction, onPetTap)
+        WorldScene(pet, reaction, onPetTap,careVisual=careVisual,careVersion=careVersion)
         if (pet.expeditionStartedAt > 0L && pet.mode == Mode.AWAKE) {
             SearchProgressCard(pet)
         }
@@ -687,7 +703,7 @@ private fun StatLine(name: String, value: Double) {
 
 
 @Composable
-internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null) {
+internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null,careVisual:CareVisual?=null,careVersion:Int=0) {
     val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
     val emotion = if(searching) PetEmotion.IDLE else EmotionResolver.resolve(pet, reaction)
     val landscape = when (pet.region) {
@@ -732,6 +748,16 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val context=LocalContext.current.applicationContext
     val importedForm=ImportedPixuArt.form(context,pet.species,stage,pet.sex)
     val imported=importedForm!=null
+    val care=if(imported&&ImportedCareMotion.allowed(pet,searching))
+        if(developer!=null)ImportedCareMotion.fromDeveloper(developer.action) else careVisual else null
+    var careSeconds by remember(care,careVersion){mutableFloatStateOf(0f)}
+    LaunchedEffect(care,careVersion,developer!=null){
+        if(care!=null&&developer==null){
+            val start=withFrameNanos{it}
+            while(true){val now=withFrameNanos{it};careSeconds=(now-start)/1_000_000_000f}
+        }
+    }
+    val carePhase=ImportedCareMotion.phase(developer?.seconds?:careSeconds)
     val searchClip=SpriteTimeline.clip(MotionResolver.resolve(pet,PetEmotion.IDLE,true),PetEmotion.IDLE)
     val searchWalk=importedForm?.let{ImportedPixuArt.movement(it,SpriteClip.WALK)}==true
     val searchSeed=pet.geneA+pet.geneB*3
@@ -748,9 +774,9 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val newKhmaryk=!imported&&KhmarykBabyArtwork.matches(pet.species,stage)
     val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||newYoungLisyk
     val homePhase=scoutCycle%1f
-    val wandering=ImportedMotionTiming.canWander(importedForm)&&(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=ImportedMotionTiming.canWander(importedForm)&&(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&care==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
-    val homeFlight=pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val homeFlight=pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&care==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in .56f.. .88f
     val flightProgress=((homePhase-.56f)/.32f).coerceIn(0f,1f)
     val flightArc=if(homeFlight)kotlin.math.sin(kotlin.math.PI*flightProgress).toFloat() else 0f
@@ -967,7 +993,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         if (searchFrame != null) {
             SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = false)
         }
-        if(imported&&stage==GrowthStage.ULTRA&&pet.alive&&!sleeping&&!searching&&emotion==PetEmotion.HAPPY){
+        if(imported&&stage==GrowthStage.ULTRA&&pet.alive&&!sleeping&&!searching&&emotion==PetEmotion.HAPPY&&care==null){
             ImportedUltraEffect(pet.species,pet.sex,movementCycle,
                 Modifier.align(Alignment.Center).offset(x=worldX.dp,y=(17f+worldY).dp).size(210.dp))
         }
@@ -989,10 +1015,11 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
             eyeClosure = eyeClosure,
             chewOpen = movementCycle > .5f,
             motion = motion,
-            motionPhase = if(imported&&searching&&pet.species==Species.ISKRYK)ImportedSpeciesSearch.dashClock(scoutCycle)
+            motionPhase = if(care!=null)carePhase else if(imported&&searching&&pet.species==Species.ISKRYK)ImportedSpeciesSearch.dashClock(scoutCycle)
                 else if(developer?.action==DevAction.RUN)movementCycle*2f else movementCycle,
             facingLeft = facingLeft
         )
+        if(care!=null)CareSceneProps(pet,stage,care,carePhase,Modifier.fillMaxSize())
         if (searching && searchFrame != null) {
             // Draw over the character: it goes behind foliage, rock, water, sand or cloud.
             SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = true)

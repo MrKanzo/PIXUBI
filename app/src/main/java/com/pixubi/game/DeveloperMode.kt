@@ -13,6 +13,7 @@ internal enum class DevAction(val title:String,val emotion:PetEmotion?,val motio
     TIRED("Втома",PetEmotion.TIRED,PetMotion.TIRED),
     EAT("Їжа",PetEmotion.EATING,PetMotion.CHEW),
     DRINK("Пиття",PetEmotion.DRINKING,PetMotion.DRINK),
+    CHARGE("Заряджання",PetEmotion.IDLE,PetMotion.IDLE),
     SLEEP("Сон",PetEmotion.SLEEPING,PetMotion.SLEEP),
     HIBERNATE("Сплячка",PetEmotion.HIBERNATING,PetMotion.SLEEP),
     EXPLORE("Експедиція",PetEmotion.IDLE,null),

@@ -15,7 +15,8 @@ internal object ImportedActionAudit {
             val name=when(action){DevAction.HAPPY->"happy";DevAction.SAD->"sad";DevAction.SURPRISE->"surprised";else->"tired"}
             if(name in f.frames)"Оригінальна статична емоція" else "Програмна міміка; потрібна художня перевірка"
         }
-        DevAction.EAT,DevAction.DRINK -> "Програмні рухи рота; немає повного циклу тіла"
+        DevAction.EAT,DevAction.DRINK -> "Програмні рухи рота і голови + предмети; не художні кадри"
+        DevAction.CHARGE -> "Тест заряджання: платформа та світловий цикл"
         DevAction.SLEEP -> if("sleep" in f.frames)"Оригінальна поза лежачи + легке дихання" else if(ImportedSleepCandidate.available(s,g,sex))"Тестова низька поза відпочинку + дихання" else "Програмно закриті очі; немає пози лежачи"
         DevAction.HIBERNATE -> if("sleep" in f.frames)"Оригінальна нерухома поза; сплячка" else if(ImportedSleepCandidate.available(s,g,sex))"Тестова нерухома поза відпочинку" else "Програмно закриті очі; немає пози лежачи"
         DevAction.EXPLORE -> ImportedSpeciesSearch.label(s)+"; програмна сцена пошуку"

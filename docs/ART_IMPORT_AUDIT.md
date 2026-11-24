@@ -110,3 +110,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 
 ## Species search choreography
 - Imported search now uses an explicit species policy: Lisyk head-nod sniff preview (stationary when no authored walk); Iskryk stepped dash route with shared hop clock; Kraplyk original water route and tail preview; Pishchanyk centered digging/concealment until verified gait; Khmaryk flight envelope with takeoff/landing. World and cover positions use the same search frame, including the developer phase label. No independent new illustrated species frames; all remain procedural previews. Search rewards, expedition timing, stable release and saved pet unchanged.
+
+## Care animation preview
+- Feed, water and charge reactions are triggered only when the relevant stock is actually consumed compared with the advanced baseline. Failed care attempts do not play success reactions. GameEngine resource values and progression remain unchanged.
+- Imported debug sprites use localized head nods with existing mouth frames. Pixel props distinguish purchased bowl/cup/charger from basic consumables; a separate charging light cycle and developer CHARGE action are provided. Visual clock resets on each accepted care action. Props are suppressed while asleep, dead or on expedition. No independently illustrated full-body care poses; device review pending. Stable character art remains unchanged.
