@@ -83,3 +83,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Authored sleep breathing
 - Reviewed ten original lying sprites and rejected the Magnific male baby Lisyk draft: changed facial silhouette and accessories, not suitable for replacement. No generated pose integrated.
 - Added three rear-body breathing levels to the ten authored sleep poses, anchored at ground row 115, with no changes outside the bounded rear region. Hibernation holds original resting pose. All ten local pixel tests passed; CI will verify and export a review sheet. No fabricated lying poses for the other 30 models and no changes to game time or saves.
+
+## Male baby sleep candidates
+- Five individual six-cell rest candidates, 30 cells total, built from each original male baby sprite by lowering the head, closing original eye pixels and compressing the rear body toward the grounded paws. Exact original neutral cell, distinct frames and binary alpha verified locally. Visual inspection shows a low crouch, not a fully curled sleeping animal; keep the candidate label.
+- Debug imported sleep uses the candidate resting/breathing cells only where original sleep art is absent. Hibernation holds frame 3. Developer panel previews lowering, breathing and rising; live world wake/sleep transition is not yet implemented. Original ten lying poses, stable release and saved game are unchanged. Remaining 25 forms lack low-rest candidates.

@@ -97,6 +97,14 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 Text(when(currentGaitVersion){3->if(spec.stage in setOf(GrowthStage.ADULT,GrowthStage.ULTRA))"12 кадрів: підготовка, 8 фаз кроку та зупинка. Тестовий цикл." else "12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             }
+            if(imported!=null&&ImportedSleepCandidate.available(spec.species,spec.stage,spec.sex)){
+                Text("Тест засинання та пробудження",fontWeight=FontWeight.Bold)
+                SleepCandidatePreview(spec.species,seconds,Modifier.fillMaxWidth().height(128.dp))
+                OutlinedButton(onClick={action=DevAction.SLEEP;seconds=0f;running=true},
+                    modifier=Modifier.fillMaxWidth()){Text("Перевірити сон у світі")}
+                Text("Шість кадрів: опускання голови, закриті очі, дихання. Перехід перевіряється в цьому вікні.",
+                    color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
             DevAction.entries.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
