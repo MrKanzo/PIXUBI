@@ -760,6 +760,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
         (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
         (newIskryk&&IskrykBabyArtwork.locomotion(clip)) ||
+        KraplykSwimFrames.matches(pet.species,stage,clip) ||
         (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
             PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
     }
@@ -914,7 +915,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                 style = MaterialTheme.typography.labelMedium, color = Color.White)
         }
-        Box(
+        if (!(searching && pet.species == Species.KRAPLYK && stage == GrowthStage.BABY)) Box(
             Modifier.align(Alignment.BottomCenter).offset(x=worldX.dp,y = (-35).dp)
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))

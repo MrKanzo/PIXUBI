@@ -27,7 +27,7 @@ fun SearchCover(
     abovePet: Boolean = true
 ) {
     // Opaque scenery is composited in front instead of cross-fading the pet.
-    if(abovePet && frame.phase==SearchPhase.WANDERING)return
+    if(abovePet && frame.phase==SearchPhase.WANDERING && species!=Species.KRAPLYK)return
     Canvas(modifier.fillMaxSize()) {
         val ground = size.height * .84f
         val left = size.width * .5f + frame.entryXDp.dp.toPx()
@@ -75,7 +75,8 @@ fun SearchCover(
                 }
             }
             Species.KRAPLYK -> {
-                // A wide pond with animated ripples and rising bubbles.
+                // Draw the pond behind the creature, then its opaque front lip over it.
+                if (!abovePet) {
                 drawOval(
                     Color(0xFF124B8A), Offset(size.width * .5f - 105.dp.toPx(),
                         ground - 35.dp.toPx()),
@@ -91,6 +92,14 @@ fun SearchCover(
                     drawLine(Color(0xFFBDF5FA).copy(alpha = .6f), Offset(xx, ground - 17.dp.toPx()),
                         Offset(xx + 20.dp.toPx(), ground - 17.dp.toPx()), 2.dp.toPx())
                 }
+                } else {
+                    val cx=size.width*.5f
+                    drawOval(Color(0xFF298EBE),Offset(cx-98.dp.toPx(),ground-16.dp.toPx()),
+                        Size(196.dp.toPx(),45.dp.toPx()))
+                    drawLine(Color(0xFFBDF5FA),Offset(cx-72.dp.toPx(),ground-6.dp.toPx()),
+                        Offset(cx+72.dp.toPx(),ground-6.dp.toPx()),2.dp.toPx())
+                }
+                if (!abovePet) return@Canvas
                 val ripple = (15f + 24f * frame.pulse).dp.toPx()
                 drawOval(
                     Color.White.copy(alpha = .45f + frame.pulse * .42f),

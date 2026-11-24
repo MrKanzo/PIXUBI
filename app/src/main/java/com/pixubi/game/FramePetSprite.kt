@@ -41,6 +41,24 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
         if(stage==GrowthStage.ADULT)PixubiSpriteCache.get(context,species,sex,gene)
         else EvolutionSprites.get(context,species,stage)
     }
+    if(KraplykSwimFrames.matches(species,stage,clip)) {
+        val frames=remember(source) {
+            NativeSpriteEyes.frames(source,species,stage,PetEmotion.IDLE).take(5).map { face ->
+                val px=IntArray(KraplykSwimFrames.SIZE*KraplykSwimFrames.SIZE)
+                face.getPixels(px,0,KraplykSwimFrames.SIZE,0,0,KraplykSwimFrames.SIZE,KraplykSwimFrames.SIZE)
+                List(4) { i ->
+                    android.graphics.Bitmap.createBitmap(
+                        KraplykSwimFrames.pose(px,i),KraplykSwimFrames.SIZE,KraplykSwimFrames.SIZE,
+                        android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+                }
+            }
+        }
+        val eye=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
+        Image(bitmap=frames[eye][frame],contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     val n=source.width
     val authored=remember(species,stage,sex,gene,clip) {
         PixuArtPack.loadClip(context,species,stage,sex,gene,clip)?.map{PixuArtPack.composite(it).asImageBitmap()}
