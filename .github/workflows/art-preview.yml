@@ -61,3 +61,9 @@ jobs:
           name: PIXUBI-expression-review
           path: app/build/imported-preview/expressions-40.png
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PIXUBI-appendage-review
+          path: app/build/imported-preview/appendage-40.png
+          if-no-files-found: error

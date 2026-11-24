@@ -140,7 +140,13 @@ internal object ImportedPixuArt {
             }
             Bitmap.createBitmap(frames[key.closure.coerceIn(0,4)],NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
         }else original
-        val colored=PixuPalette.apply(raw,key.species,Sex.BOY,key.gene)
+        val moving=if(ImportedAppendageMotion.applies(key)&&key.frame.mod(4) in listOf(1,3)){
+            val px=IntArray(NATIVE*NATIVE)
+            raw.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
+            Bitmap.createBitmap(ImportedAppendageMotion.frame(px,key.species,key.stage,key.sex,key.frame),
+                NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
+        }else raw
+        val colored=PixuPalette.apply(moving,key.species,Sex.BOY,key.gene)
         val result=Bitmap.createBitmap(PixuFrameLibrary.CELL,PixuFrameLibrary.CELL,Bitmap.Config.ARGB_8888)
         val size=size(key.stage)
         val x=(PixuFrameLibrary.CELL-size)/2

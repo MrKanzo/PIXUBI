@@ -20,3 +20,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 - Individually measured mouth regions for 40 forms. Authored frames remain preferred; missing happy/sad/surprise/tired and sleep poses plus eat/drink face cycles use local native pixel reconstruction. No new eyes or external emoji overlay. These are candidate frames, not finished illustrated full-body actions.
 - Existing jump poses now use neutral at start/end instead of a continuous held jump. Other missing locomotion remains explicitly unsupported.
 - Lazy bounded Android caches avoid JVM test initialization. Added contact sheet and tests for alpha and edit bounds. Visual review pending.
+
+## Local appendage idle preview
+- Individual 128px rear appendage regions for 40 forms; four phases with two motion extremes, neutral on phases 0 and 2. Original PNGs unchanged. No whole-sprite translation for idle appendage motion.
+- Local vertical pixel displacement tapers at the root and boundaries. This is a procedural preview of tail/wing motion, not authored full flight, swimming, or running. Existing 10 drawn walk sets remain preferred; 30 forms still require drawn locomotion. Tests verify changed pixel bounds and invariant ground row; contact sheet is produced by CI.
