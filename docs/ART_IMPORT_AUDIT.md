@@ -58,3 +58,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Teen male gait review
 - Five additional 12-cell candidate atlases, each with individual limb regions and 5px body lift; 60 cells preserve binary alpha, exact original seated pose, unchanged raised upper body during walking and ground row 115. Removed isolated lower fragments of up to five pixels after visual review. Candidates are constructed pixel rigs, not approved new illustrations.
 - Shared developer scene now selects stage-specific PNG, uses the normal age-dependent 128/147px size and pivot, and limits older v1/v2 comparison to the original baby Lisyk. Ten male forms have review routes; female and adult/Ultra candidates remain unchanged. No release or save changes.
+
+## Adult male gait review
+- Five additional 12-cell atlases constructed from existing adult limbs, not duplicated limbs. All 60 cells have unchanged upper 94 rows, binary alpha and identical ground row 115; eight distinct gait poses per species. The neutral cell is pixel-identical to the original. Lower limb masks and overlap remain experimental and require on-device visual review.
+- Shared developer route and age-dependent scaling now cover all 15 male baby, teen and adult forms. No change to normal gameplay, stable release or saved games. Ultra and female forms still require completion.

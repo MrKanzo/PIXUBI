@@ -30,7 +30,7 @@ internal object ImportedWalkCandidate {
         return sequence[tick.mod(sequence.size)]
     }
     fun available(s:Species,g:GrowthStage,sex:Sex)=
-        g in setOf(GrowthStage.BABY,GrowthStage.YOUNG) && sex==Sex.BOY
+        g in setOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) && sex==Sex.BOY
     fun asset(s:Species,g:GrowthStage=GrowthStage.BABY):String="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+"_male_"+ImportedPixuArt.stageName(g)+"_gait_v3.png"
     fun index(phase:Float)=ImportedMotionTiming.frame(SpriteClip.WALK,phase)
 }

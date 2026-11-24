@@ -24,11 +24,12 @@ class GaitReviewRouteTest {
         for(s in Species.entries){
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.BABY,Sex.BOY,true))
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.YOUNG,Sex.BOY,true))
+            assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.ADULT,Sex.BOY,true))
         }
         assertFalse(GaitReviewRoute.enabled(null,Species.LISYK,GrowthStage.BABY,Sex.BOY,true))
         assertFalse(GaitReviewRoute.enabled(d.copy(gaitPreview=false),Species.LISYK,GrowthStage.BABY,Sex.BOY,true))
         assertFalse(GaitReviewRoute.enabled(d,Species.LISYK,GrowthStage.BABY,Sex.GIRL,true))
-        assertFalse(GaitReviewRoute.enabled(d,Species.LISYK,GrowthStage.ADULT,Sex.BOY,true))
+        assertFalse(GaitReviewRoute.enabled(d,Species.LISYK,GrowthStage.ULTRA,Sex.BOY,true))
         assertFalse(GaitReviewRoute.enabled(d.copy(action=DevAction.EAT),Species.LISYK,GrowthStage.BABY,Sex.BOY,true))
     }
 }
