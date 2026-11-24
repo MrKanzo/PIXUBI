@@ -731,9 +731,10 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val stage = PetGrowth.stage(pet)
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
     val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
+    val newKraplyk=KraplykLandFrames.matches(pet.species,stage)
     val illustratedBaby=newLisyk||newIskryk
     val homePhase=scoutCycle%1f
-    val wandering=illustratedBaby&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=(illustratedBaby||newKraplyk)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
     val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
     val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
@@ -760,6 +761,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
         (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
         (newIskryk&&IskrykBabyArtwork.locomotion(clip)) ||
+        (newKraplyk&&KraplykLandFrames.locomotion(clip)) ||
         KraplykSwimFrames.matches(pet.species,stage,clip) ||
         (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
             PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
@@ -768,7 +770,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(manualWalk)manualX else if(illustratedBaby) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(manualWalk)manualX else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
     val worldY=if(newIskryk&&clip==SpriteClip.HOP)0f
         else if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if(illustratedBaby&&(wandering||searching))0f
