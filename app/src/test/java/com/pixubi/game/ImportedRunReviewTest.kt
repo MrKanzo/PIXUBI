@@ -41,10 +41,13 @@ class ImportedRunReviewTest {
                 "imported_v2/pixubi_${s.name.lowercase(java.util.Locale.ROOT)}_${gender}_${ImportedPixuArt.stageName(g)}.png"
                 else ImportedWalkCandidate.asset(s,g,sex)))
             for(i in 0..11){
-                // Original atlas neutral, walk_a and walk_b are located via catalog in runtime.
-                // For JVM coverage, test the actual neutral source and all candidate cells.
-                val px=if(authored)atlas.getRGB(0,0,128,128,null,0,128)
-                    else atlas.getRGB(i%4*128,i/4*128,128,128,null,0,128)
+                // These ten original atlases share the verified catalog coordinates.
+                val (x,y)=if(authored)when(ImportedRunReview.authoredPose(i)){
+                    "walk_a" -> 128 to 128
+                    "walk_b" -> 256 to 128
+                    else -> 0 to 0
+                } else i%4*128 to i/4*128
+                val px=atlas.getRGB(x,y,128,128,null,0,128)
                 val f=ImportedRunReview.lean(px,i)
                 assertEquals(px.count{it ushr 24!=0},f.count{it ushr 24!=0})
                 assertEquals(px.indexOfLast{it ushr 24!=0}/128,f.indexOfLast{it ushr 24!=0}/128)
