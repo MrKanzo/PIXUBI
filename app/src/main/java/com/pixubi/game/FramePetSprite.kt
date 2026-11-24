@@ -18,6 +18,16 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val context=LocalContext.current.applicationContext
     val clip=SpriteTimeline.clip(motion,emotion)
     val frame=SpriteTimeline.index(clip,phase)
+    if(UnifiedEvolutionArt.matches(stage)) {
+        val closed=blink||eyeClosure>.50f
+        val image=remember(species,stage,sex,gene,clip,frame,closed) {
+            UnifiedEvolutionArt.get(species,stage,sex,gene,clip,frame,closed).asImageBitmap()
+        }
+        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&UnifiedEvolutionArt.locomotion(clip))-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     if(IskrykBabyArtwork.matches(species,stage)) {
         val index=IskrykBabyArtwork.index(clip,emotion,frame,blink||eyeClosure>.50f)
         val image=remember(index){IskrykBabyArtwork.get(context,index).asImageBitmap()}
@@ -58,14 +68,6 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
         val image=remember(index){KhmarykBabyArtwork.get(context,index).asImageBitmap()}
         Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
             modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&KhmarykBabyArtwork.locomotion(clip))-1f else 1f},
-            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
-        return
-    }
-    if(LisykYoungArtwork.matches(species,stage)) {
-        val index=LisykYoungArtwork.index(clip,emotion,frame,blink||eyeClosure>.50f)
-        val image=remember(index){LisykYoungArtwork.get(context,index).asImageBitmap()}
-        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
-            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&LisykYoungArtwork.locomotion(clip))-1f else 1f},
             contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
         return
     }
