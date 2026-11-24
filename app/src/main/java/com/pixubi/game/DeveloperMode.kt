@@ -64,7 +64,7 @@ internal data class DevSpec(
 }
 
 /** Same world-scene code as normal play, but with a deterministic manual clock. */
-internal data class DevScene(val action:DevAction,val seconds:Float,val left:Boolean) {
+internal data class DevScene(val action:DevAction,val seconds:Float,val left:Boolean,val gaitPreview:Boolean=false) {
     private val t=if(seconds.isFinite())seconds.coerceAtLeast(0f)else 0f
     val movementCycle:Float get()=(t/2.5f)%1f
     val scoutCycle:Float get()=(t/12f)%4f

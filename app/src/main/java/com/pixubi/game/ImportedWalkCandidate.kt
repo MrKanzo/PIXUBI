@@ -2,6 +2,9 @@ package com.pixubi.game
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -57,6 +60,27 @@ internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Mo
     }
     Image(bitmap=cells[ImportedWalkCandidate.sequenceIndex(seconds)],
         contentDescription="Лісик: вставання, ходьба, повернення до спокою",
+        modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
+        contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+}
+
+/** Same native cell size, scale and pivot as the imported world sprite. */
+@Composable
+internal fun GaitWorldPreview(frame:Int,left:Boolean,gene:Int,modifier:Modifier=Modifier){
+    val context=LocalContext.current.applicationContext
+    val cells=remember(context,gene){
+        val atlas=context.assets.open(ImportedWalkCandidate.GAIT_ASSET).use{BitmapFactory.decodeStream(it)}
+            ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
+        List(12){i->
+            val raw=Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128)
+            val colored=PixuPalette.apply(raw,Species.LISYK,Sex.BOY,gene)
+            val cell=Bitmap.createBitmap(192,192,Bitmap.Config.ARGB_8888)
+            Canvas(cell).drawBitmap(colored,null,Rect(32,58,160,186),Paint().apply{isFilterBitmap=false})
+            cell.asImageBitmap()
+        }
+    }
+    Image(bitmap=cells[frame.coerceIn(0,11)],
+        contentDescription="Лісик — експериментальна ходьба v3",
         modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }

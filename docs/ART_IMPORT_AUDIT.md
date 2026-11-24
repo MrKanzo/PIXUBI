@@ -47,3 +47,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Gait v3
 - Added a separate 12-cell experimental atlas for male baby Lisyk: native seated pose, two rise intermediates, standing pose, and eight distinct step samples. All cells maintain binary alpha and ground row 115. Walking frames preserve the original raised head/upper body exactly.
 - Developer comparison supports v1/v2/v3, with a 10fps sit-rise-walk-sit sequence. This constructed candidate remains review-only. Real gait anatomy and other 29 missing forms are not complete; no release or save changes.
+
+## Gait v3 scene review
+- Explicit developer WALK action with v3 selected renders the candidate on the normal scene, normalized to the same 192px cell and ground pivot. Route moves only on eight walking phases, with seated reversals at endpoints and a return to origin. Gene accents are applied as for the original male sprite. No changes to normal gameplay, art catalog completeness, progression, storage or stable release.
+- Added route continuity and developer isolation tests. Candidate is still not a completed artist-approved gait; test on Android before expanding to other forms.

@@ -782,13 +782,15 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val hasMovementArt = PixuFrameLibrary.moves(context,pet.species,stage,pet.sex,clip)
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val previewTravel=imported&&ImportedPawMotion.supportsPreviewTravel(pet.species,clip)
+    val gaitReview=if(GaitReviewRoute.enabled(developer,pet.species,stage,pet.sex,imported))
+        GaitReviewRoute.pose(developer!!.seconds,developer.left) else null
     val manualWalk=manualWalkDirection&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(gaitReview!=null)gaitReview.xDp else if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt||previewTravel) (if(searching) searchPose.xDp else wanderX)+
             (if(imported&&clip==SpriteClip.WALK)0f else bodyMotion.xDp) else 0f
-    val worldY=if(imported) {
+    val worldY=if(gaitReview!=null)0f else if(imported) {
         when {
             homeFlight -> -42f*flightArc
             previewTravel&&searching -> searchPose.yDp+bodyMotion.yDp
@@ -965,7 +967,9 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 Modifier.align(Alignment.Center).offset(x=worldX.dp,y=(17f+worldY).dp).size(210.dp))
         }
         // No sliding a seated portrait; no partial alpha on the character.
-        if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
+        if(gaitReview!=null) GaitWorldPreview(gaitReview.frame,gaitReview.left,pet.colorIndex,
+            Modifier.align(Alignment.Center).offset(x=worldX.dp,y=17.dp).size(194.dp))
+        else if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
                 .offset(
