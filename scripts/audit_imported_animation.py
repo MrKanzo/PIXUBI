@@ -32,7 +32,7 @@ for f in forms:
     rows.append([f["prefix"],len(poses),"original_2_pose" if authored else "developer_candidate_12_cells",
                  "original" if {"happy","sad","surprised","tired"} <= poses else "procedural",
                  "original_lying_with_breathing" if "sleep" in poses else "constructed_rest_candidate",
-                 "original_pose" if "jump" in poses else "missing",
+                 "original_pose" if "jump" in poses else "procedural_four_phase",
                  "procedural_neutral", "procedural_mouth", "pending"])
 assert len(rows)==40 and len(expected)==30 and len(expected_sleep)==30
 assert set((root/"imported_v2/candidates").glob("*_sleep_v1.png"))==expected_sleep

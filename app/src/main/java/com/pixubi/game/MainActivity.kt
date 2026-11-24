@@ -780,6 +780,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     }
     val clip = SpriteTimeline.clip(motion,emotion)
     val hasMovementArt = PixuFrameLibrary.moves(context,pet.species,stage,pet.sex,clip)
+    val previewHop=importedForm?.let{ImportedJumpMotion.applies(it,clip)}==true
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val previewTravel=imported&&ImportedPawMotion.supportsPreviewTravel(pet.species,clip)
     val gaitReview=if(GaitReviewRoute.enabled(developer,pet.species,stage,pet.sex,imported))
@@ -798,7 +799,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
             previewTravel -> bodyMotion.yDp
             clip==SpriteClip.DIG&&pet.species==Species.PISHCHANYK -> searchPose.yDp
             hasMovementArt&&clip==SpriteClip.WALK -> if(searching)searchPose.yDp else 0f
-            hasMovementArt&&clip==SpriteClip.HOP -> ImportedMotionTiming.jumpY(movementCycle)+(if(searching)searchPose.yDp.coerceAtLeast(0f) else 0f)
+            (hasMovementArt||previewHop)&&clip==SpriteClip.HOP -> ImportedMotionTiming.jumpY(movementCycle)+(if(searching)searchPose.yDp.coerceAtLeast(0f) else 0f)
             hasMovementArt -> searchPose.yDp+bodyMotion.yDp
             else -> 0f
         }

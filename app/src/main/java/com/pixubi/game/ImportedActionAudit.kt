@@ -10,7 +10,7 @@ internal object ImportedActionAudit {
             else if(ImportedPixuArt.movement(f,SpriteClip.WALK))"Дві оригінальні пози ходьби"
             else "Локальні рухи лап без прогулянки"
         DevAction.RUN -> if(ImportedPixuArt.movement(f,SpriteClip.WALK))"Прискорена ходьба; окремого бігу немає" else "Прискорені рухи лап на місці"
-        DevAction.HOP -> if(ImportedPixuArt.movement(f,SpriteClip.HOP))"Оригінальний стрибок + траєкторія" else "Немає художньої пози стрибка"
+        DevAction.HOP -> if(ImportedPixuArt.movement(f,SpriteClip.HOP))"Оригінальний стрибок + траєкторія" else "Чотири програмні фази стрибка на місці; не художні кадри"
         DevAction.HAPPY,DevAction.SAD,DevAction.SURPRISE,DevAction.TIRED -> {
             val name=when(action){DevAction.HAPPY->"happy";DevAction.SAD->"sad";DevAction.SURPRISE->"surprised";else->"tired"}
             if(name in f.frames)"Оригінальна статична емоція" else "Програмна міміка; потрібна художня перевірка"
