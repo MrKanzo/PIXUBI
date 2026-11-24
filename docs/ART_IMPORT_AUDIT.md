@@ -95,3 +95,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Adult male sleep candidates
 - Five new six-cell rest atlases, 30 cells. Each uses the corresponding original adult male raster, an individually traced head region, original eye reconstruction, ground-anchored body compression and rear-body breathing. Exact neutral, binary alpha, unchanged ground and distinct cells verified locally. Visual review still shows a crouched rest pose rather than natural lying, and head/armor joins need refinement.
 - Existing debug sleep routing and developer transition preview now include adult males. Original female adult lying art remains preferred. 30/40 forms have original or constructed rest art; all ten Ultra forms remain missing. No save changes or stable release.
+
+## Ultra sleep candidate coverage
+- Ten additional six-cell rest atlases for both sexes (60 cells), constructed from the exact Ultra originals with individually traced head masks, reconstructed eyelids, grounded compression and local breathing. Local tests checked exact original first cell, six distinct cells, binary alpha and ground invariance. Visual inspection still shows crouching and imperfect eyelid/armor joins, not approved lying art.
+- All 40 forms now have original or constructed rest poses (10 original lying, 30 candidates / 180 cells). Debug sleep and hibernation use the existing routing; transition preview remains separate from live gameplay. Added CI assertions for the complete 30 sleep atlas paths and dimensions. Stable release and saved games unchanged.

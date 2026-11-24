@@ -45,7 +45,7 @@ class ImportedSleepCandidateTest {
                 for(j in 0 until i)assertFalse(f.contentEquals(frames[j]))
             }
             assertTrue(ImportedSleepCandidate.available(s,GrowthStage.YOUNG,sex))
-            assertFalse(ImportedSleepCandidate.available(s,GrowthStage.ULTRA,sex))
+            assertTrue(ImportedSleepCandidate.available(s,GrowthStage.ULTRA,sex))
         }
     }
     @Test fun adultMaleRestCandidatesHaveDistinctGroundedCells(){
@@ -66,6 +66,26 @@ class ImportedSleepCandidateTest {
             }
             assertTrue(ImportedSleepCandidate.available(s,GrowthStage.ADULT,Sex.BOY))
             assertFalse(ImportedSleepCandidate.available(s,GrowthStage.ADULT,Sex.GIRL))
+        }
+    }
+    @Test fun ultraRestCandidatesHaveDistinctGroundedCells(){
+        val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
+        for(s in Species.entries)for(sex in Sex.entries){
+            val gender=if(sex==Sex.BOY)"male" else "female"
+            val original=ImageIO.read(File(root,"imported_v2/pixubi_${s.name.lowercase(java.util.Locale.ROOT)}_${gender}_ultra.png"))
+            val native=original.getRGB(0,0,128,128,null,0,128)
+            val atlas=ImageIO.read(File(root,ImportedSleepCandidate.asset(s,GrowthStage.ULTRA,sex)))
+            assertEquals(384,atlas.width);assertEquals(256,atlas.height)
+            val frames=(0..5).map{atlas.getRGB((it%3)*128,(it/3)*128,128,128,null,0,128)}
+            assertArrayEquals(native,frames[0])
+            val ground=native.indices.last{native[it] ushr 24!=0}/128
+            for(i in frames.indices){
+                val f=frames[i]
+                assertTrue(f.all{(it ushr 24) in listOf(0,255)})
+                assertEquals(ground,f.indices.last{f[it] ushr 24!=0}/128)
+                for(j in 0 until i)assertFalse(f.contentEquals(frames[j]))
+            }
+            assertTrue(ImportedSleepCandidate.available(s,GrowthStage.ULTRA,sex))
         }
     }
     @Test fun breathingAndHibernationSelectDifferentFrames(){

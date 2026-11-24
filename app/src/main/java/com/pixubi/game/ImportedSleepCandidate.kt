@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 /** Constructed rest poses, not authored curled-body illustrations.
  * Original sleep art always takes precedence. */
 internal object ImportedSleepCandidate {
-    fun available(s:Species,g:GrowthStage,sex:Sex)=g==GrowthStage.YOUNG||(g in setOf(GrowthStage.BABY,GrowthStage.ADULT)&&sex==Sex.BOY)
+    fun available(s:Species,g:GrowthStage,sex:Sex)=g in setOf(GrowthStage.YOUNG,GrowthStage.ULTRA)||(g in setOf(GrowthStage.BABY,GrowthStage.ADULT)&&sex==Sex.BOY)
     fun asset(s:Species,g:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY)="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+(if(sex==Sex.BOY)"_male_" else "_female_")+ImportedPixuArt.stageName(g)+"_sleep_v1.png"
     fun applies(f:ImportedPixuArt.Form,k:PixuFrameKey)=
         k.clip==SpriteClip.SLEEP&&"sleep" !in f.frames&&available(k.species,k.stage,k.sex)

@@ -25,7 +25,7 @@ class ImportedAuditTest {
         val s=Species.LISYK
         assertTrue(ImportedActionAudit.describe(f,s,GrowthStage.BABY,Sex.BOY,DevAction.WALK,true).contains("Експериментальні"))
         assertTrue(ImportedActionAudit.describe(f,s,GrowthStage.BABY,Sex.BOY,DevAction.WALK,false).contains("без прогулянки"))
-        assertTrue(ImportedActionAudit.describe(f,s,GrowthStage.ULTRA,Sex.BOY,DevAction.SLEEP,false).contains("немає пози"))
+        assertTrue(ImportedActionAudit.describe(f,s,GrowthStage.ULTRA,Sex.BOY,DevAction.SLEEP,false).contains("Тестова"))
         assertTrue(ImportedActionAudit.describe(f.copy(frames=setOf("neutral","walk_a","walk_b")),s,GrowthStage.BABY,Sex.GIRL,DevAction.WALK,false).contains("оригінальні"))
     }
 }
