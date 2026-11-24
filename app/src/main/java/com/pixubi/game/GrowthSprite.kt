@@ -28,7 +28,8 @@ fun GrowthSprite(
     chewOpen: Boolean = false,
     motion: PetMotion = PetMotion.IDLE,
     motionPhase: Float = 0f,
-    eyeClosure: Float = 0f
+    eyeClosure: Float = 0f,
+    facingLeft: Boolean = false
 ) {
     val stage = previewStage ?: PetGrowth.stage(pet)
     Box(modifier, contentAlignment = Alignment.Center) {
@@ -50,6 +51,7 @@ fun GrowthSprite(
                     motion = motion,
                     motionPhase = motionPhase,
                     eyeClosure = eyeClosure,
+                    facingLeft = facingLeft,
                     modifier = Modifier.fillMaxSize()
                 )
             GrowthStage.ADULT ->

@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 
@@ -13,14 +14,31 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     emotion:PetEmotion,motion:PetMotion,phase:Float,blink:Boolean,eyeClosure:Float,
-    modifier:Modifier=Modifier) {
+    modifier:Modifier=Modifier,facingLeft:Boolean=false) {
     val context=LocalContext.current.applicationContext
+    val clip=SpriteTimeline.clip(motion,emotion)
+    val frame=SpriteTimeline.index(clip,phase)
+    if(LisykBabyArtwork.matches(species,stage)) {
+        val cell=LisykBabyArtwork.cell(clip,frame)
+        val faceEmotion=when(emotion) {
+            PetEmotion.EATING,PetEmotion.DRINKING,PetEmotion.TIRED -> emotion
+            else -> PetEmotion.IDLE
+        }
+        val image=if(cell==4) {
+            val faces=remember(faceEmotion){LisykBabyArtwork.sittingFaces(context,faceEmotion).map{it.asImageBitmap()}}
+            val closure=NativeEyeMotion.closure(faceEmotion,eyeClosure,blink)
+            faces[FaceExpression.frameIndex(faceEmotion,closure,frame%2==1)]
+        } else remember(cell){LisykBabyArtwork.get(context,cell).asImageBitmap()}
+        Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&LisykBabyArtwork.locomotion(clip))-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     val source=remember(species,stage,sex,gene) {
         if(stage==GrowthStage.ADULT)PixubiSpriteCache.get(context,species,sex,gene)
         else EvolutionSprites.get(context,species,stage)
     }
     val n=source.width
-    val clip=SpriteTimeline.clip(motion,emotion)
     val authored=remember(species,stage,sex,gene,clip) {
         PixuArtPack.loadClip(context,species,stage,sex,gene,clip)?.map{PixuArtPack.composite(it).asImageBitmap()}
     }
@@ -34,7 +52,6 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
         }
     }
     val step=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
-    val frame=SpriteTimeline.index(clip,phase)
     val mouth=faceEmotion==PetEmotion.EATING||faceEmotion==PetEmotion.DRINKING
     val image=authored?.get(frame)?:faces[step+if(mouth&&frame%2==1)5 else 0]
     Image(bitmap=image,contentDescription=species.title+" — "+stage.title,

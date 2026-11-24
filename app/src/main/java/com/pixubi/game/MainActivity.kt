@@ -723,15 +723,34 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
-    val motion = MotionResolver.resolve(pet,emotion,searching)
     val stage = PetGrowth.stage(pet)
+    val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
+    val homePhase=scoutCycle%1f
+    val wandering=newLisyk&&!searching&&pet.alive&&pet.mode==Mode.AWAKE&&
+        (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
+    val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
+    val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
+    val wanderX=if(wandering)sign*32f*kotlin.math.sin(kotlin.math.PI*walkProgress).toFloat() else 0f
+    val facingLeft=if(searching) (searchFrame?.entryXDp?:0f)<0f
+        else wandering&&(if(walkProgress<.5f)sign<0f else sign>0f)
+    val motion=when {
+        wandering -> PetMotion.WALK
+        newLisyk&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
+        else -> MotionResolver.resolve(pet,emotion,searching)
+    }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val clip = SpriteTimeline.clip(motion,emotion)
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
-        stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
-            PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null
+        (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
+        (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
+            PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
     }
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
+    val worldX=if(newLisyk) (if(searching)searchPose.xDp else wanderX)
+        else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
+    val worldY=if(newLisyk&&(wandering||searching))0f
+        else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
+        else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
     val eyeClosure = if(sleeping)1f else NativeEyeMotion.blinkAt(blinkCycle)
     val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
@@ -874,7 +893,7 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
                 style = MaterialTheme.typography.labelMedium, color = Color.White)
         }
         Box(
-            Modifier.align(Alignment.BottomCenter).offset(y = (-35).dp)
+            Modifier.align(Alignment.BottomCenter).offset(x=worldX.dp,y = (-35).dp)
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))
         )
@@ -886,9 +905,8 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
                 .offset(
-                    x = (if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f).dp,
-                    y = (17f + (if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
-                        else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f)).dp
+                    x = worldX.dp,
+                    y = (17f + worldY).dp
                 )
                 .size(194.dp)
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
@@ -896,7 +914,8 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             eyeClosure = eyeClosure,
             chewOpen = movementCycle > .5f,
             motion = motion,
-            motionPhase = movementCycle
+            motionPhase = movementCycle,
+            facingLeft = facingLeft
         )
         if (searching && searchFrame != null) {
             // Draw over the character: it goes behind foliage, rock, water, sand or cloud.

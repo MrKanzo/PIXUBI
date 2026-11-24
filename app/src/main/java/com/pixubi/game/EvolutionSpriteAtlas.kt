@@ -73,7 +73,8 @@ fun IllustratedYoungPixu(
     eyeClosure: Float = 0f,
     chewOpen: Boolean = false,
     motion: PetMotion = PetMotion.IDLE,
-    motionPhase: Float = 0f
+    motionPhase: Float = 0f,
+    facingLeft: Boolean = false
 ) {
     val geneAccent = listOf(
         Color(0xFF75DDCB), Color(0xFFFFB37A), Color(0xFFC5A8FF),
@@ -81,7 +82,7 @@ fun IllustratedYoungPixu(
     )[colorIndex.coerceIn(0,5)]
     Box(modifier, contentAlignment = Alignment.Center) {
         FramePetSprite(species,stage,sex,colorIndex,emotion,motion,
-            motionPhase,blink,eyeClosure,Modifier.fillMaxSize())
+            motionPhase,blink,eyeClosure,Modifier.fillMaxSize(),facingLeft)
         // The inherited gene color is a distinct glowing badge until the fully
         // individualized adult appearance is revealed.
         Text("◆", color = geneAccent, fontSize = 20.sp,
