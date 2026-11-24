@@ -85,9 +85,9 @@ fun IllustratedYoungPixu(
             motionPhase,blink,eyeClosure,Modifier.fillMaxSize(),facingLeft)
         // The inherited gene color is a distinct glowing badge until the fully
         // individualized adult appearance is revealed.
-        if (!UnifiedEvolutionArt.matches(stage)) Text("◆", color = geneAccent, fontSize = 20.sp,
+        Text("◆", color = geneAccent, fontSize = 20.sp,
             modifier = Modifier.align(Alignment.BottomStart).padding(start=7.dp,bottom=5.dp))
-        if (sex == Sex.GIRL && !UnifiedEvolutionArt.matches(stage)) {
+        if (sex == Sex.GIRL) {
             Text("🎀", fontSize = 18.sp,
                 modifier = Modifier.align(Alignment.TopEnd).padding(top=7.dp,end=7.dp))
         }
