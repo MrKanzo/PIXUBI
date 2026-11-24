@@ -79,3 +79,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Cross-form animation audit
 - Catalog checked: 40 original neutral frames, 25 complete authored emotion sets, 10 authored walk/jump/sleep sets; 30 developer-only gait candidates. All device visual approvals remain pending. New CSV audit records source for each form and verifies all 30 expected gait files and dimensions. It is not a quality certification.
 - Fixed neutral-art blinking during procedural neutral actions, without applying neutral coordinates to separately drawn poses. Fixed 10fps review frame stepping and synchronized the comparison image to the actual scene route. Developer UI now reports the source of the selected action, including missing or procedural-only art. No production gait unlock or release changes.
+
+## Authored sleep breathing
+- Reviewed ten original lying sprites and rejected the Magnific male baby Lisyk draft: changed facial silhouette and accessories, not suitable for replacement. No generated pose integrated.
+- Added three rear-body breathing levels to the ten authored sleep poses, anchored at ground row 115, with no changes outside the bounded rear region. Hibernation holds original resting pose. All ten local pixel tests passed; CI will verify and export a review sheet. No fabricated lying poses for the other 30 models and no changes to game time or saves.

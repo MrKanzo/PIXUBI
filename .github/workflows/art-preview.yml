@@ -84,3 +84,9 @@ jobs:
           name: PIXUBI-animation-coverage
           path: app/build/imported-preview/animation-coverage.csv
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PIXUBI-sleep-breathing-review
+          path: app/build/imported-preview/sleep-breathing.png
+          if-no-files-found: error

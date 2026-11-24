@@ -16,7 +16,8 @@ internal object ImportedActionAudit {
             if(name in f.frames)"Оригінальна статична емоція" else "Програмна міміка; потрібна художня перевірка"
         }
         DevAction.EAT,DevAction.DRINK -> "Програмні рухи рота; немає повного циклу тіла"
-        DevAction.SLEEP,DevAction.HIBERNATE -> if("sleep" in f.frames)"Оригінальна статична поза сну" else "Програмно закриті очі; немає пози лежачи"
+        DevAction.SLEEP -> if("sleep" in f.frames)"Оригінальна поза лежачи + легке дихання" else "Програмно закриті очі; немає пози лежачи"
+        DevAction.HIBERNATE -> if("sleep" in f.frames)"Оригінальна нерухома поза; сплячка" else "Програмно закриті очі; немає пози лежачи"
         DevAction.EXPLORE -> "Видова сцена пошуку; рух залежить від доступної анімації"
         DevAction.DIG -> if(s==Species.PISHCHANYK)"Тестове копання лапами" else "Немає окремої пози нюхання/копання"
         DevAction.SWIM -> if(s==Species.KRAPLYK)"Програмний водяний рух" else "Немає видової анімації плавання"

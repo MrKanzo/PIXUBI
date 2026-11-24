@@ -148,7 +148,12 @@ internal object ImportedPixuArt {
                 ImportedPawMotion.frame(moved,key.species,key.stage,key.sex,key.frame) else moved
             Bitmap.createBitmap(pose,NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
         }else raw
-        val colored=PixuPalette.apply(moving,key.species,Sex.BOY,key.gene)
+        val resting=if(ImportedSleepMotion.applies(name,key.clip,key.emotion)&&key.frame>0){
+            val px=IntArray(NATIVE*NATIVE)
+            moving.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
+            Bitmap.createBitmap(ImportedSleepMotion.frame(px,key.frame),NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
+        }else moving
+        val colored=PixuPalette.apply(resting,key.species,Sex.BOY,key.gene)
         val result=Bitmap.createBitmap(PixuFrameLibrary.CELL,PixuFrameLibrary.CELL,Bitmap.Config.ARGB_8888)
         val size=size(key.stage)
         val x=(PixuFrameLibrary.CELL-size)/2
