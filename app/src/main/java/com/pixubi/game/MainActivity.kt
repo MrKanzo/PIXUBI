@@ -729,13 +729,13 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
     val stage = PetGrowth.stage(pet)
-    val newYoungLisyk=LisykYoungArtwork.matches(pet.species,stage)
+    val matureArt=UnifiedEvolutionArt.matches(stage)
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
     val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
     val newKraplyk=KraplykLandFrames.matches(pet.species,stage)
-    val newPishchanyk=PishchanykBabyArtwork.matches(pet.species,stage)
-    val newKhmaryk=KhmarykBabyArtwork.matches(pet.species,stage)
-    val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||newYoungLisyk
+    val newPishchanyk=PishchanykBabyArtwork.matches(pet.species,stage)||(matureArt&&pet.species==Species.PISHCHANYK)
+    val newKhmaryk=KhmarykBabyArtwork.matches(pet.species,stage)||(matureArt&&pet.species==Species.KHMARYK)
+    val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||matureArt
     val homePhase=scoutCycle%1f
     val wandering=(illustratedBaby||newKraplyk)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
@@ -764,13 +764,13 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         wandering -> PetMotion.WALK
         newKhmaryk&&searching -> PetMotion.FLOAT
         newPishchanyk&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
-        illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
+        illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING&&pet.species!=Species.KRAPLYK -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val clip = SpriteTimeline.clip(motion,emotion)
     val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
-        (newYoungLisyk&&LisykYoungArtwork.locomotion(clip)) ||
+        (matureArt&&UnifiedEvolutionArt.locomotion(clip)) ||
         (newLisyk&&LisykBabyArtwork.locomotion(clip)) ||
         (newIskryk&&IskrykBabyArtwork.locomotion(clip)) ||
         (newPishchanyk&&PishchanykBabyArtwork.locomotion(clip)) ||
