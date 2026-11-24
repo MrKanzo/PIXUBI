@@ -22,12 +22,15 @@ internal object ImportedPixuArt {
     private data class Pack(val forms:Map<String,Form>)
     private var attempted=false
     private var pack:Pack?=null
-    private val atlases=object:LruCache<String,Bitmap>(8*1024*1024){
+    private val atlases by lazy { object:LruCache<String,Bitmap>(8*1024*1024){
         override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount
-    }
-    private val blinks=object:LruCache<String,List<IntArray>>(8*1024*1024){
+    } }
+    private val blinks by lazy { object:LruCache<String,List<IntArray>>(8*1024*1024){
         override fun sizeOf(key:String,value:List<IntArray>)=value.sumOf{it.size*4}
-    }
+    } }
+    private val expressions by lazy { object:LruCache<String,List<IntArray>>(8*1024*1024){
+        override fun sizeOf(key:String,value:List<IntArray>)=value.sumOf{it.size*4}
+    } }
     fun stageName(stage:GrowthStage):String=when(GrowthStage.migrate(stage)){
         GrowthStage.BABY -> "young"
         GrowthStage.YOUNG -> "teen"
@@ -95,7 +98,7 @@ internal object ImportedPixuArt {
     fun select(form:Form,clip:SpriteClip,emotion:PetEmotion,frame:Int):String?{
         val desired=when(clip){
             SpriteClip.WALK -> if(movement(form,clip))if(frame.mod(2)==0)"walk_a" else "walk_b" else null
-            SpriteClip.HOP -> if(movement(form,clip))"jump" else null
+            SpriteClip.HOP -> if(movement(form,clip))if(frame.mod(4) in 1..2)"jump" else "neutral" else null
             SpriteClip.SLEEP -> "sleep"
             SpriteClip.EAT,SpriteClip.DRINK,SpriteClip.DIG,SpriteClip.SWIM,SpriteClip.FLY -> null
             else -> when(emotion){
@@ -110,12 +113,25 @@ internal object ImportedPixuArt {
         return desired?.takeIf{it in form.frames}
     }
     @Synchronized fun bitmap(context:Context,key:PixuFrameKey,form:Form):Bitmap{
-        // Unsupported action: a static portrait, not a claimed animation.
-        val name=select(form,key.clip,key.emotion,key.frame)?:"neutral"
+        // Authored poses take priority; missing expressions use the same portrait.
+        val authored=select(form,key.clip,key.emotion,key.frame)
+        val expression=ImportedFaceGeometry.fallback(key.clip,key.emotion,authored)
+        val name=authored?:"neutral"
         val r=form.rects.getValue(name)
         val atlas=atlases.get(form.atlas) ?: (context.assets.open(form.atlas).use{BitmapFactory.decodeStream(it)}?:error("Invalid atlas")).also{atlases.put(form.atlas,it)}
         val original=Bitmap.createBitmap(atlas,r[0],r[1],r[2],r[3])
-        val raw=if(ImportedEyeGeometry.applies(key)){
+        val raw=if(expression!=null){
+            val id=form.prefix+":"+expression.name
+            val frames=expressions.get(id) ?: run {
+                val px=IntArray(NATIVE*NATIVE)
+                original.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
+                ImportedFaceGeometry.frames(px,key.species,key.stage,key.sex,expression)
+                    .also{expressions.put(id,it)}
+            }
+            val closure=if(key.clip==SpriteClip.SLEEP)4 else key.closure
+            Bitmap.createBitmap(frames[ImportedFaceGeometry.frameIndex(expression,closure,key.frame)],
+                NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
+        }else if(ImportedEyeGeometry.applies(key)){
             val frames=blinks.get(form.prefix) ?: run {
                 val px=IntArray(NATIVE*NATIVE)
                 original.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)

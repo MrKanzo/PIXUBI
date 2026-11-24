@@ -55,3 +55,9 @@ jobs:
           name: PIXUBI-eye-review
           path: app/build/imported-preview/blink-40.png
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PIXUBI-expression-review
+          path: app/build/imported-preview/expressions-40.png
+          if-no-files-found: error
