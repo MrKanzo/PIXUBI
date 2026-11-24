@@ -686,7 +686,8 @@ private fun StatLine(name: String, value: Double) {
 
 @Composable
 private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
-    val emotion = EmotionResolver.resolve(pet, reaction)
+    val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
+    val emotion = if(searching) PetEmotion.IDLE else EmotionResolver.resolve(pet, reaction)
     val landscape = when (pet.region) {
         Region.FOREST -> Color(0xFF61BA9D) to Color(0xFF245C56)
         Region.MOUNTAINS -> Color(0xFF7997CD) to Color(0xFF394E78)
@@ -718,28 +719,20 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         label = "pixubi-body-motion"
     )
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
-    val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
     val searchFrame = if (searching)
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
-    // Occasionally walk a short loop at home, not only during expeditions.
-    val wanderPhase = scoutCycle % 1f
-    val wandering = !searching && pet.alive && pet.mode == Mode.AWAKE &&
-        emotion == PetEmotion.IDLE && wanderPhase in 0.15f..0.48f
-    val walkT = ((wanderPhase - .15f) / .33f).coerceIn(0f,1f)
-    val wanderX = if (wandering) (kotlin.math.sin(kotlin.math.PI * walkT).toFloat() *
-        (if ((scoutCycle.toInt() + pet.geneA) % 2 == 0) 19f else -19f)) else 0f
-    val motion = if(wandering) PetMotion.WALK else MotionResolver.resolve(pet, emotion, searching)
-    val bodyMotion = MotionResolver.pose(motion, movementCycle)
-    val eyeClosure = if (sleeping) 1f else NativeEyeMotion.blinkAt(blinkCycle)
-    val travelY = when (emotion) {
-        PetEmotion.HAPPY -> 0f  // BodyMotion already handles happy hops; no double bouncing.
-        PetEmotion.EATING, PetEmotion.DRINKING -> 3f * bob
-        PetEmotion.SLEEPING, PetEmotion.HIBERNATING -> 4f * bob
-        PetEmotion.SAD, PetEmotion.TIRED -> 3f
-        else -> -4f * bob
+    val motion = MotionResolver.resolve(pet,emotion,searching)
+    val stage = PetGrowth.stage(pet)
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val clip = SpriteTimeline.clip(motion,emotion)
+    val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
+        stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
+            PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null
     }
+    val bodyMotion = MotionResolver.pose(motion,movementCycle)
+    val eyeClosure = if(sleeping)1f else NativeEyeMotion.blinkAt(blinkCycle)
     val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
     Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {
@@ -888,20 +881,16 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         if (searchFrame != null) {
             SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = false)
         }
-        GrowthSprite(
+        // No sliding a seated portrait; no partial alpha on the character.
+        if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
             pet = pet,
             modifier = Modifier.align(Alignment.Center)
                 .offset(
-                    x = (searchPose.xDp + bodyMotion.xDp + wanderX).dp,
-                    y = (17f + searchPose.yDp + (if (motion == PetMotion.WALK) 0f else bodyMotion.yDp)).dp
+                    x = (if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f).dp,
+                    y = (17f + (if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
+                        else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f)).dp
                 )
                 .size(194.dp)
-                .graphicsLayer {
-                    rotationZ = searchPose.rotation
-                    scaleX = searchPose.scale
-                    scaleY = searchPose.scale
-                    alpha = searchFrame?.alpha ?: 1f
-                }
                 .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
             emotion = emotion,
             eyeClosure = eyeClosure,

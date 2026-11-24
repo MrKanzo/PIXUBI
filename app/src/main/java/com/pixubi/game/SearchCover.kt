@@ -26,11 +26,9 @@ fun SearchCover(
     modifier: Modifier = Modifier,
     abovePet: Boolean = true
 ) {
-    // Back layer: the scenery always exists. Front layer: it gradually covers
-    // the pet during hiding, then gradually reveals the pet on emergence.
-    Canvas(modifier.fillMaxSize().graphicsLayer {
-        alpha = if (abovePet) frame.concealment.coerceIn(0f, 1f) else 1f
-    }) {
+    // Opaque scenery is composited in front instead of cross-fading the pet.
+    if(abovePet && frame.phase==SearchPhase.WANDERING)return
+    Canvas(modifier.fillMaxSize()) {
         val ground = size.height * .84f
         val left = size.width * .5f + frame.entryXDp.dp.toPx()
         val right = size.width * .5f + frame.exitXDp.dp.toPx()

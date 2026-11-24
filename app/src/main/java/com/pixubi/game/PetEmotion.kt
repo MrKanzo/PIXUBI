@@ -10,6 +10,7 @@ object EmotionResolver {
         pet.mode == Mode.HIBERNATION -> PetEmotion.HIBERNATING
         pet.mode == Mode.SLEEP -> PetEmotion.SLEEPING
         temporary != null -> temporary
+        pet.expeditionStartedAt > 0L -> PetEmotion.IDLE
         pet.hunger < 25 || pet.thirst < 25 || pet.happiness < 27 -> PetEmotion.SAD
         pet.energy < 25 -> PetEmotion.TIRED
         pet.happiness > 90 -> PetEmotion.HAPPY
