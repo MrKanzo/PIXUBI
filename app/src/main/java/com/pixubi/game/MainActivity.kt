@@ -254,6 +254,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             currentRegion = current?.region ?: Region.FOREST,
+                            developerPet = current,
                             previewRegion = auditionRegion,
                             onSettingsChange = { saveSound(it) },
                             onPreviewRegion = {
@@ -685,7 +686,7 @@ private fun StatLine(name: String, value: Double) {
 
 
 @Composable
-private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
+internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null) {
     val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
     val emotion = if(searching) PetEmotion.IDLE else EmotionResolver.resolve(pet, reaction)
     val landscape = when (pet.region) {
@@ -696,11 +697,11 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         Region.SKY -> Color(0xFFA2C8FF) to Color(0xFF7476BF)
     }
     val loop = rememberInfiniteTransition(label = "pixubi-life")
-    val bob by loop.animateFloat(
+    val liveBob by loop.animateFloat(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(760), RepeatMode.Reverse), label = "bob"
     )
-    val blinkCycle by loop.animateFloat(
+    val liveBlinkCycle by loop.animateFloat(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(3300, easing = LinearEasing)), label = "blink"
     )
@@ -708,16 +709,20 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
         initialValue = -1.5f, targetValue = 1.5f,
         animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "sway"
     )
-    val scoutCycle by loop.animateFloat(
+    val liveScoutCycle by loop.animateFloat(
         initialValue = 0f, targetValue = 4f,
         animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing)),
         label = "species-search"
     )
-    val movementCycle by loop.animateFloat(
+    val liveMovementCycle by loop.animateFloat(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing)),
         label = "pixubi-body-motion"
     )
+    val bob = developer?.bob ?: liveBob
+    val blinkCycle = developer?.blinkCycle ?: liveBlinkCycle
+    val scoutCycle = developer?.scoutCycle ?: liveScoutCycle
+    val movementCycle = developer?.movementCycle ?: liveMovementCycle
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
     val searchFrame = if (searching)
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
@@ -726,14 +731,15 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
     val stage = PetGrowth.stage(pet)
     val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
     val homePhase=scoutCycle%1f
-    val wandering=newLisyk&&!searching&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=newLisyk&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
     val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
     val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
     val wanderX=if(wandering)sign*32f*kotlin.math.sin(kotlin.math.PI*walkProgress).toFloat() else 0f
-    val facingLeft=if(searching) (searchFrame?.entryXDp?:0f)<0f
+    val facingLeft=if(developer!=null&&!searching&&developer.action!=DevAction.AUTO)developer.left else if(searching) (searchFrame?.entryXDp?:0f)<0f
         else wandering&&(if(walkProgress<.5f)sign<0f else sign>0f)
     val motion=when {
+        developer?.action?.motion!=null -> developer.action.motion!!
         wandering -> PetMotion.WALK
         newLisyk&&searching&&searchFrame?.phase==SearchPhase.HIDING -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
@@ -746,12 +752,15 @@ private fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
             PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
     }
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
-    val worldX=if(newLisyk) (if(searching)searchPose.xDp else wanderX)
+    val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
+    val manualX=if(manualWalk)(if(facingLeft)-1f else 1f)*35f*
+        kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
+    val worldX=if(manualWalk)manualX else if(newLisyk) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
-    val worldY=if(newLisyk&&(wandering||searching))0f
+    val worldY=if(developer?.action==DevAction.HOP||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if(newLisyk&&(wandering||searching))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
         else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
-    val eyeClosure = if(sleeping)1f else NativeEyeMotion.blinkAt(blinkCycle)
+    val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)
     val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
     Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {

@@ -1,0 +1,3 @@
+# Developer sandbox
+
+Settings → Режим розробника. A temporary synthetic Pet is rendered using the normal WorldScene and independent animation clock. The screen owns no persistence callback. It can preview all species, sexes, gene colors and growth stages; action overrides, freeze/step/scrub, speed and temporary needs and scenery items. Exit or system Back discards the entire session and returns to normal play. The original pet continues its regular time-based simulation, and no test action unlocks forms, spends or grants coins, changes inventory, or awards expedition rewards. Unauthored motion clips remain the current fallback, not fabricated animations.
