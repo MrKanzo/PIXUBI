@@ -99,7 +99,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             }
             if(imported!=null&&ImportedSleepCandidate.available(spec.species,spec.stage,spec.sex)){
                 Text("Тест засинання та пробудження",fontWeight=FontWeight.Bold)
-                SleepCandidatePreview(spec.species,seconds,Modifier.fillMaxWidth().height(128.dp))
+                SleepCandidatePreview(spec.species,seconds,Modifier.fillMaxWidth().height(128.dp),stage=spec.stage,sex=spec.sex)
                 OutlinedButton(onClick={action=DevAction.SLEEP;seconds=0f;running=true},
                     modifier=Modifier.fillMaxWidth()){Text("Перевірити сон у світі")}
                 Text("Шість кадрів: опускання голови, закриті очі, дихання. Перехід перевіряється в цьому вікні.",

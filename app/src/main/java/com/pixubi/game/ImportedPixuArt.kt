@@ -154,7 +154,7 @@ internal object ImportedPixuArt {
             Bitmap.createBitmap(ImportedSleepMotion.frame(px,key.frame),NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
         }else moving
         val selected=if(ImportedSleepCandidate.applies(form,key)){
-            val path=ImportedSleepCandidate.asset(key.species)
+            val path=ImportedSleepCandidate.asset(key.species,key.stage,key.sex)
             val sleepAtlas=atlases.get(path) ?: (context.assets.open(path).use{BitmapFactory.decodeStream(it)}
                 ?.also{require(it.width==384&&it.height==256)}?:error("Invalid sleep candidate")).also{atlases.put(path,it)}
             val i=ImportedSleepCandidate.restFrame(key.emotion,key.frame)

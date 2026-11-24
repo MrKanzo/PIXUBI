@@ -87,3 +87,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Male baby sleep candidates
 - Five individual six-cell rest candidates, 30 cells total, built from each original male baby sprite by lowering the head, closing original eye pixels and compressing the rear body toward the grounded paws. Exact original neutral cell, distinct frames and binary alpha verified locally. Visual inspection shows a low crouch, not a fully curled sleeping animal; keep the candidate label.
 - Debug imported sleep uses the candidate resting/breathing cells only where original sleep art is absent. Hibernation holds frame 3. Developer panel previews lowering, breathing and rising; live world wake/sleep transition is not yet implemented. Original ten lying poses, stable release and saved game are unchanged. Remaining 25 forms lack low-rest candidates.
+
+## Teen sleep candidates
+- Ten new six-cell male/female teen rest candidates, 60 cells. Local checks verify exact neutral raster, binary alpha, six distinct cells and unchanged ground. Individual head masks and eye regions retain original accessories and palette, but visual review shows a crouch rather than fully curled sleep; some eyelids and head joins need refinement.
+- Debug sleep uses age/sex specific candidate assets with existing breath cycle; hibernation holds resting cell. Transition is preview-only. Original ten lying poses stay preferred. 25/40 forms now have original lying or constructed rest art, 15 still missing. No stable release or save changes.

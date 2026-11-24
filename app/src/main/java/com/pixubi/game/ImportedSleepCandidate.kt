@@ -14,8 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 /** Constructed rest poses, not authored curled-body illustrations.
  * Original sleep art always takes precedence. */
 internal object ImportedSleepCandidate {
-    fun available(s:Species,g:GrowthStage,sex:Sex)=g==GrowthStage.BABY&&sex==Sex.BOY
-    fun asset(s:Species)="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+"_male_young_sleep_v1.png"
+    fun available(s:Species,g:GrowthStage,sex:Sex)=g==GrowthStage.YOUNG||(g==GrowthStage.BABY&&sex==Sex.BOY)
+    fun asset(s:Species,g:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY)="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+(if(sex==Sex.BOY)"_male_" else "_female_")+ImportedPixuArt.stageName(g)+"_sleep_v1.png"
     fun applies(f:ImportedPixuArt.Form,k:PixuFrameKey)=
         k.clip==SpriteClip.SLEEP&&"sleep" !in f.frames&&available(k.species,k.stage,k.sex)
     fun restFrame(emotion:PetEmotion,amplitude:Int)=
@@ -27,10 +27,10 @@ internal object ImportedSleepCandidate {
     }
 }
 @Composable
-internal fun SleepCandidatePreview(species:Species,seconds:Float,modifier:Modifier=Modifier){
+internal fun SleepCandidatePreview(species:Species,seconds:Float,modifier:Modifier=Modifier,stage:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context,species){
-        val atlas=context.assets.open(ImportedSleepCandidate.asset(species)).use{BitmapFactory.decodeStream(it)}
+    val cells=remember(context,species,stage,sex){
+        val atlas=context.assets.open(ImportedSleepCandidate.asset(species,stage,sex)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==384&&it.height==256)}?:error("Invalid sleep candidate")
         List(6){i->Bitmap.createBitmap(atlas,(i%3)*128,(i/3)*128,128,128).asImageBitmap()}
     }
