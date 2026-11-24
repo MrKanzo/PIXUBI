@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.util.Log
+import android.util.LruCache
 import org.json.JSONObject
 import java.io.FileNotFoundException
 import java.util.Locale
@@ -21,6 +22,12 @@ internal object ImportedPixuArt {
     private data class Pack(val forms:Map<String,Form>)
     private var attempted=false
     private var pack:Pack?=null
+    private val atlases=object:LruCache<String,Bitmap>(8*1024*1024){
+        override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount
+    }
+    private val blinks=object:LruCache<String,List<IntArray>>(8*1024*1024){
+        override fun sizeOf(key:String,value:List<IntArray>)=value.sumOf{it.size*4}
+    }
     fun stageName(stage:GrowthStage):String=when(GrowthStage.migrate(stage)){
         GrowthStage.BABY -> "young"
         GrowthStage.YOUNG -> "teen"
@@ -102,12 +109,21 @@ internal object ImportedPixuArt {
         }
         return desired?.takeIf{it in form.frames}
     }
-    fun bitmap(context:Context,key:PixuFrameKey,form:Form):Bitmap{
+    @Synchronized fun bitmap(context:Context,key:PixuFrameKey,form:Form):Bitmap{
         // Unsupported action: a static portrait, not a claimed animation.
         val name=select(form,key.clip,key.emotion,key.frame)?:"neutral"
         val r=form.rects.getValue(name)
-        val atlas=context.assets.open(form.atlas).use{BitmapFactory.decodeStream(it)}?:error("Invalid atlas")
-        val raw=Bitmap.createBitmap(atlas,r[0],r[1],r[2],r[3])
+        val atlas=atlases.get(form.atlas) ?: (context.assets.open(form.atlas).use{BitmapFactory.decodeStream(it)}?:error("Invalid atlas")).also{atlases.put(form.atlas,it)}
+        val original=Bitmap.createBitmap(atlas,r[0],r[1],r[2],r[3])
+        val raw=if(ImportedEyeGeometry.applies(key)){
+            val frames=blinks.get(form.prefix) ?: run {
+                val px=IntArray(NATIVE*NATIVE)
+                original.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)
+                EyePixelAnimator.frames(px,NATIVE,NATIVE,ImportedEyeGeometry.regions(key.species,key.stage,key.sex))
+                    .also{blinks.put(form.prefix,it)}
+            }
+            Bitmap.createBitmap(frames[key.closure.coerceIn(0,4)],NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
+        }else original
         val colored=PixuPalette.apply(raw,key.species,Sex.BOY,key.gene)
         val result=Bitmap.createBitmap(PixuFrameLibrary.CELL,PixuFrameLibrary.CELL,Bitmap.Config.ARGB_8888)
         val size=size(key.stage)
