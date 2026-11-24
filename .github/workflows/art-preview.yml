@@ -28,7 +28,10 @@ jobs:
               assert 'neutral' in f['frames']
               for x,y,cw,ch in f['frames'].values():
                   assert cw==ch==128 and 0<=x<=w-cw and 0<=y<=h-ch
-          print('Verified 40 original PNG atlases and 180 frame references')
+          fx=(root/'imported_v2/ultra_effects.png').read_bytes()
+          assert struct.unpack('>II',fx[16:24])==(768,1280)
+          assert hashlib.sha1(('blob '+str(len(fx))+'\0').encode()+fx).hexdigest()=='0e4500dd6cb92428454edfbb9475a34660697bbe'
+          print('Verified 40 original PNG atlases, 180 frame references, and 60 effect cells')
           PY
       - uses: actions/setup-java@v4
         with:

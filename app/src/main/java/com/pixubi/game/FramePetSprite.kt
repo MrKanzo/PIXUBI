@@ -18,7 +18,8 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val context=LocalContext.current.applicationContext
     val form=GrowthStage.migrate(stage)
     val clip=SpriteTimeline.clip(motion,emotion)
-    val frame=SpriteTimeline.index(clip,phase)
+    val imported=ImportedPixuArt.form(context,species,form,sex)!=null
+    val frame=if(imported)ImportedMotionTiming.frame(clip,phase) else SpriteTimeline.index(clip,phase)
     val closure=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
     val key=PixuFrameKey(species,form,sex,gene.coerceIn(0,5),clip,frame,emotion,closure)
     val image=remember(key){PixuFrameLibrary.get(context,key).asImageBitmap()}

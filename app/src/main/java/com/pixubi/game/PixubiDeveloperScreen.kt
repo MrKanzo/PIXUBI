@@ -98,6 +98,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             else if(PetPosePack.forPet(spec.species,spec.stage)==null)
                 Text("Для цієї форми деякі рухи ще не мають готових художніх кадрів. Режим покаже поточну реалізацію, а не вигадану анімацію.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            if(imported!=null && spec.stage==GrowthStage.ULTRA){
+                OutlinedButton(onClick={action=DevAction.HAPPY;seconds=0f;running=true},
+                    modifier=Modifier.fillMaxWidth()){Text("✨ "+ImportedUltraEffects.title(spec.species))}
+            }
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Text("Рух ліворуч",modifier=Modifier.weight(1f))
                 Switch(checked=left,onCheckedChange={left=it})

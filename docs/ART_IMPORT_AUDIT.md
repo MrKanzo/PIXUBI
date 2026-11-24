@@ -28,3 +28,9 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Locomotion candidate pass
 - All 40 native portraits have individually bounded alternating paw-lift candidates. Authored walk frames still win. Missing 30 full gait sets are deliberately stationary rather than sliding seated portraits. Fast-step developer option reuses a faster walk cycle, not authored running.
 - Kraplyk and Khmaryk now have species-specific procedural tail/wing motion during swimming/flight preview. Pishchanyk uses alternating paws and centered sand concealment. Stationary search does not hide at a distant cover. All preview actions keep gameplay timing and rewards unchanged. Full-body authored locomotion and visual device review still pending.
+
+## Gait timing and Ultra effect pass
+- Ten illustrated walk sets retain original poses. Imported walk cadence is slowed to a separate gait phase; walking ground height and horizontal stride oscillation no longer fight the scene trajectory. Hop height and illustrated jump phases share a clock.
+- Thirty forms without drawn walking no longer interrupt autonomous idle with stationary fake walking. Paw previews remain available in developer mode.
+- All ten Ultra effect atlases from the archive are packed losslessly into one PNG (60 cells). Effects are decorative, behind the pet, during happiness, with a developer test button. No combat, resource or save changes. Shadow is suppressed in hidden and imported fly/swim states.
+- CI validates the effect asset and tests motion phase, capability and effect cell mapping. No claim of artist-approved new walking frames for the remaining 30 forms.
