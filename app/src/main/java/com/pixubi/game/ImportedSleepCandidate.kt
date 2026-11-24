@@ -27,12 +27,12 @@ internal object ImportedSleepCandidate {
     }
 }
 @Composable
-internal fun SleepCandidatePreview(species:Species,seconds:Float,modifier:Modifier=Modifier,stage:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY){
+internal fun SleepCandidatePreview(species:Species,seconds:Float,modifier:Modifier=Modifier,stage:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY,gene:Int=0){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context,species,stage,sex){
+    val cells=remember(context,species,stage,sex,gene){
         val atlas=context.assets.open(ImportedSleepCandidate.asset(species,stage,sex)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==384&&it.height==256)}?:error("Invalid sleep candidate")
-        List(6){i->Bitmap.createBitmap(atlas,(i%3)*128,(i/3)*128,128,128).asImageBitmap()}
+        List(6){i->PixuPalette.apply(Bitmap.createBitmap(atlas,(i%3)*128,(i/3)*128,128,128),species,Sex.BOY,gene).asImageBitmap()}
     }
     Image(bitmap=cells[ImportedSleepCandidate.reviewFrame(seconds)],contentDescription=species.title+" — тест засинання і пробудження",
         modifier=modifier,contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)

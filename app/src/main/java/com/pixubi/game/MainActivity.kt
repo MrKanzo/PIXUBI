@@ -703,7 +703,7 @@ private fun StatLine(name: String, value: Double) {
 
 
 @Composable
-internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null,careVisual:CareVisual?=null,careVersion:Int=0) {
+internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null,careVisual:CareVisual?=null,careVersion:Int=0,reviewClean:Boolean=false) {
     val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
     val emotion = if(searching) PetEmotion.IDLE else EmotionResolver.resolve(pet, reaction)
     val landscape = when (pet.region) {
@@ -713,33 +713,19 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         Region.DESERT -> Color(0xFFFFD294) to Color(0xFFB96F59)
         Region.SKY -> Color(0xFFA2C8FF) to Color(0xFF7476BF)
     }
-    val loop = rememberInfiniteTransition(label = "pixubi-life")
-    val liveBob by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(760), RepeatMode.Reverse), label = "bob"
-    )
-    val liveBlinkCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(3300, easing = LinearEasing)), label = "blink"
-    )
-    val sway by loop.animateFloat(
-        initialValue = -1.5f, targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "sway"
-    )
-    val liveScoutCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 4f,
-        animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing)),
-        label = "species-search"
-    )
-    val liveMovementCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing)),
-        label = "pixubi-body-motion"
-    )
-    val bob = developer?.bob ?: liveBob
-    val blinkCycle = developer?.blinkCycle ?: liveBlinkCycle
-    val scoutCycle = developer?.scoutCycle ?: liveScoutCycle
-    val movementCycle = developer?.movementCycle ?: liveMovementCycle
+    // Developer scenes share one external clock; no independent live animation loops.
+    val live=if(developer==null){
+        val loop=rememberInfiniteTransition(label="pixubi-life")
+        val bob by loop.animateFloat(0f,1f,infiniteRepeatable(tween(760),RepeatMode.Reverse),label="bob")
+        val blink by loop.animateFloat(0f,1f,infiniteRepeatable(tween(3300,easing=LinearEasing)),label="blink")
+        val scout by loop.animateFloat(0f,4f,infiniteRepeatable(tween(48_000,easing=LinearEasing)),label="species-search")
+        val movement by loop.animateFloat(0f,1f,infiniteRepeatable(tween(2500,easing=LinearEasing)),label="pixubi-body-motion")
+        floatArrayOf(bob,blink,scout,movement)
+    }else null
+    val bob=developer?.bob?:live!![0]
+    val blinkCycle=developer?.blinkCycle?:live!![1]
+    val scoutCycle=developer?.scoutCycle?:live!![2]
+    val movementCycle=developer?.movementCycle?:live!![3]
     val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
     val initialSearchFrame = if (searching)
         PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
@@ -840,8 +826,10 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         else if((developer?.action==DevAction.HOP&&hasMovementArt)||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if((illustratedBaby&&(wandering||searching))||(newKraplyk&&clip==SpriteClip.WALK))0f
         else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
         else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
-    val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)
-    val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
+    val eyeClosure = if(sleeping)1f else if(developer?.action==DevAction.BLINK)
+        if(reviewClean)NativeEyeMotion.blinkAt((developer.seconds/1.2f)%1f) else 1f
+        else NativeEyeMotion.blinkAt(blinkCycle)
+    val speech = if (searching||reviewClean) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
     Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {
         Canvas(Modifier.fillMaxSize()) {
@@ -972,7 +960,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 drawRect(Color.White.copy(alpha = .22f), Offset(x, y), Size(4f, 4f))
             }
         }
-        Surface(
+        if(!reviewClean)Surface(
             modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
             color = Color(0xFF15253B).copy(alpha = .7f),
             shape = RoundedCornerShape(12.dp)
@@ -1023,7 +1011,7 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         if (searching && searchFrame != null) {
             // Draw over the character: it goes behind foliage, rock, water, sand or cloud.
             SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = true)
-            Surface(
+            if(!reviewClean)Surface(
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp),
                 shape = RoundedCornerShape(18.dp),
                 color = Color(0xFFFDF9F1),

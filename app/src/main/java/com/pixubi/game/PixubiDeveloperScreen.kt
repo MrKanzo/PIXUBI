@@ -25,6 +25,11 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     var seconds by remember { mutableFloatStateOf(0f) }
     var left by remember { mutableStateOf(false) }
     var gaitVersion by remember { mutableStateOf(3) }
+    var standOpen by remember { mutableStateOf(false) }
+    if(standOpen){
+        PixubiAnimationStand(spec,onSpec={spec=it},onExit={standOpen=false})
+        return
+    }
     LaunchedEffect(running,speed) {
         if(running) {
             var last=withFrameNanos{it}
@@ -50,6 +55,9 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 Text("ТЕСТ • зміни не зберігаються",color=Color(0xFFFFD58A),style=MaterialTheme.typography.labelMedium)
             }
             OutlinedButton(onClick=onExit){Text("Вимкнути")}
+        }
+        Button(onClick={standOpen=true},modifier=Modifier.fillMaxWidth()){
+            Text("🎬 Стенд усіх анімацій • запис відео")
         }
         // Keep the actual game scene visible while scrolling the controls.
         WorldScene(pet,action.emotion,onPetTap={
