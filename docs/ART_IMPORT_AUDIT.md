@@ -91,3 +91,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Teen sleep candidates
 - Ten new six-cell male/female teen rest candidates, 60 cells. Local checks verify exact neutral raster, binary alpha, six distinct cells and unchanged ground. Individual head masks and eye regions retain original accessories and palette, but visual review shows a crouch rather than fully curled sleep; some eyelids and head joins need refinement.
 - Debug sleep uses age/sex specific candidate assets with existing breath cycle; hibernation holds resting cell. Transition is preview-only. Original ten lying poses stay preferred. 25/40 forms now have original lying or constructed rest art, 15 still missing. No stable release or save changes.
+
+## Adult male sleep candidates
+- Five new six-cell rest atlases, 30 cells. Each uses the corresponding original adult male raster, an individually traced head region, original eye reconstruction, ground-anchored body compression and rear-body breathing. Exact neutral, binary alpha, unchanged ground and distinct cells verified locally. Visual review still shows a crouched rest pose rather than natural lying, and head/armor joins need refinement.
+- Existing debug sleep routing and developer transition preview now include adult males. Original female adult lying art remains preferred. 30/40 forms have original or constructed rest art; all ten Ultra forms remain missing. No save changes or stable release.

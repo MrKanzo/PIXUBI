@@ -23,7 +23,7 @@ for f in forms:
         assert not path.exists(), path
     rows.append([f["prefix"],len(poses),"original_2_pose" if authored else "developer_candidate_12_cells",
                  "original" if {"happy","sad","surprised","tired"} <= poses else "procedural",
-                 "original_lying_with_breathing" if "sleep" in poses else "constructed_rest_candidate" if stage=="teen" or (sex=="male" and stage=="young") else "procedural_eyes_only",
+                 "original_lying_with_breathing" if "sleep" in poses else "constructed_rest_candidate" if stage=="teen" or (sex=="male" and stage in ("young","adult")) else "procedural_eyes_only",
                  "original_pose" if "jump" in poses else "missing",
                  "procedural_neutral", "procedural_mouth", "pending"])
 assert len(rows)==40 and len(expected)==30
