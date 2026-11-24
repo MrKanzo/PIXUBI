@@ -131,7 +131,7 @@ internal object ImportedPixuArt {
             val closure=if(key.clip==SpriteClip.SLEEP)4 else key.closure
             Bitmap.createBitmap(frames[ImportedFaceGeometry.frameIndex(expression,closure,key.frame)],
                 NATIVE,NATIVE,Bitmap.Config.ARGB_8888)
-        }else if(ImportedEyeGeometry.applies(key)){
+        }else if(ImportedEyeGeometry.applies(key,name)){
             val frames=blinks.get(form.prefix) ?: run {
                 val px=IntArray(NATIVE*NATIVE)
                 original.getPixels(px,0,NATIVE,0,0,NATIVE,NATIVE)

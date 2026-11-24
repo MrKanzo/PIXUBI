@@ -52,16 +52,16 @@ internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Mod
 }
 
 @Composable
-internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier,species:Species=Species.LISYK,stage:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY){
+internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier,species:Species=Species.LISYK,stage:GrowthStage=GrowthStage.BABY,sex:Sex=Sex.BOY,reviewPose:GaitReviewRoute.Pose?=null){
     val context=LocalContext.current.applicationContext
     val cells=remember(context,species,stage,sex){
         val atlas=context.assets.open(ImportedWalkCandidate.asset(species,stage,sex)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
         List(12){i->Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128).asImageBitmap()}
     }
-    Image(bitmap=cells[ImportedWalkCandidate.sequenceIndex(seconds)],
+    Image(bitmap=cells[reviewPose?.frame?:ImportedWalkCandidate.sequenceIndex(seconds)],
         contentDescription=species.title+": вставання, ходьба, повернення до спокою",
-        modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
+        modifier=modifier.graphicsLayer{scaleX=if(reviewPose?.left?:left)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }
 

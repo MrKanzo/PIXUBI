@@ -75,3 +75,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Female Ultra gait candidates
 - Five additional 12-cell atlases built from each female Ultra's three visible limb regions. All 60 cells pass local binary-alpha, ground-row 115, unchanged upper 94 rows and unique walking-cell checks. Neutral cells retain original pixels. An isolated ten-pixel fragment beneath Iskryk's original paws was removed from generated movement cells, not from original art.
 - All 30 planned candidate sets now exist (360 cells); ten female baby/adult forms retain their original two-pose previews. These are review assets, not completed natural walking: female Ultra torso remains mostly seated and static. Developer-only access, no production movement unlock or save changes. Device visual review and CI remain required.
+
+## Cross-form animation audit
+- Catalog checked: 40 original neutral frames, 25 complete authored emotion sets, 10 authored walk/jump/sleep sets; 30 developer-only gait candidates. All device visual approvals remain pending. New CSV audit records source for each form and verifies all 30 expected gait files and dimensions. It is not a quality certification.
+- Fixed neutral-art blinking during procedural neutral actions, without applying neutral coordinates to separately drawn poses. Fixed 10fps review frame stepping and synchronized the comparison image to the actual scene route. Developer UI now reports the source of the selected action, including missing or procedural-only art. No production gait unlock or release changes.

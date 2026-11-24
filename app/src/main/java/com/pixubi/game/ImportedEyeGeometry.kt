@@ -63,5 +63,6 @@ internal object ImportedEyeGeometry {
             EyeRegion(v[0].toFloat(),v[1].toFloat(),v[2].toFloat(),v[3].toFloat())
         }
     }
-    fun applies(k:PixuFrameKey)=k.clip==SpriteClip.IDLE && k.emotion==PetEmotion.IDLE && k.closure>0
+    // The coordinates describe neutral art only, never a separately drawn action pose.
+    fun applies(k:PixuFrameKey,pose:String="neutral")=pose=="neutral" && k.emotion==PetEmotion.IDLE && k.closure>0
 }

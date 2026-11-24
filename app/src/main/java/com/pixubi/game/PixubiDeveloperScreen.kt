@@ -40,6 +40,8 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     val currentGaitVersion=if(legacyComparison)gaitVersion else 3
     val control=DevScene(action,seconds,left,gaitPreview=currentGaitVersion==3)
     val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
+    val gaitActive=imported!=null&&GaitReviewRoute.enabled(control,spec.species,spec.stage,spec.sex,true)
+    val reviewPose=if(gaitActive)GaitReviewRoute.pose(seconds,left) else null
     Column(Modifier.fillMaxSize().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -56,7 +58,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             Button(onClick={running=!running},modifier=Modifier.weight(1f)){
                 Text(if(running)"⏸ Пауза" else "▶ Старт")
             }
-            OutlinedButton(onClick={running=false;seconds=(seconds+.125f)%48f},
+            OutlinedButton(onClick={running=false;seconds=if(gaitActive)GaitReviewRoute.nextFrame(seconds) else (seconds+.125f)%48f},
                 modifier=Modifier.weight(1f)){Text("+ Кадр")}
             OutlinedButton(onClick={seconds=0f},modifier=Modifier.weight(1f)){Text("↺ Спочатку")}
         }
@@ -89,7 +91,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                         Text("Кадр: ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp",
                             style=MaterialTheme.typography.labelSmall)
                     }
-                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage,sex=spec.sex)
+                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage,sex=spec.sex,reviewPose=reviewPose)
                 }
                 else WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=gaitVersion==2)
                 Text(when(currentGaitVersion){3->if(spec.stage in setOf(GrowthStage.ADULT,GrowthStage.ULTRA))"12 кадрів: підготовка, 8 фаз кроку та зупинка. Тестовий цикл." else "12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
@@ -106,9 +108,12 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     repeat(3-row.size){Spacer(Modifier.weight(1f))}
                 }
             }
-            if(imported!=null)
-                Text("Новий набір • тест. Міміка, рух лап, плавання й політ для відсутніх поз — тестові. Художніх кадрів: "+imported.frames.size+". Не готові: "+imported.missing.joinToString(", "),
+            if(imported!=null){
+                Text("Джерело поточної дії: "+ImportedActionAudit.describe(imported,spec.species,spec.stage,spec.sex,action,gaitActive),
+                    color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
+                Text("Оригінальних кадрів: "+imported.frames.size+". Відсутні художні пози: "+imported.missing.joinToString(", "),
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            }
             else if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: 4 кадри плавання з оригінальної моделі. Дія «Пошук» перевіряє занурення; решта поз ще потребує художніх кадрів.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)

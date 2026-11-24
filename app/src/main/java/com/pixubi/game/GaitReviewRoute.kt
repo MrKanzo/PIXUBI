@@ -22,6 +22,11 @@ internal object GaitReviewRoute {
         return Pose(frame,offset*(if(initialLeft)-1f else 1f),
             if(inbound)!initialLeft else initialLeft,i in 4..19)
     }
+    fun nextFrame(seconds:Float):Float {
+        if(!seconds.isFinite())return .15f
+        val tick=(seconds.coerceIn(0f,47.999f)*10f).toInt()
+        return ((tick+1)%480+.5f)/10f
+    }
     fun enabled(scene:DevScene?,s:Species,g:GrowthStage,sex:Sex,imported:Boolean)=
         imported&&scene?.gaitPreview==true&&scene.action==DevAction.WALK&&
             ImportedWalkCandidate.available(s,g,sex)
