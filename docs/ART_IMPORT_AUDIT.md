@@ -34,3 +34,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 - Thirty forms without drawn walking no longer interrupt autonomous idle with stationary fake walking. Paw previews remain available in developer mode.
 - All ten Ultra effect atlases from the archive are packed losslessly into one PNG (60 cells). Effects are decorative, behind the pet, during happiness, with a developer test button. No combat, resource or save changes. Shadow is suppressed in hidden and imported fly/swim states.
 - CI validates the effect asset and tests motion phase, capability and effect cell mapping. No claim of artist-approved new walking frames for the remaining 30 forms.
+## First identity-locked walk candidate
+- Magnific draft rejected on visual inspection: duplicated/near-identical poses, ground shadows and grid lines, altered details. No generated draft entered game assets.
+- Four individually specified limb poses were made from the original male baby Lisyk raster. Exact upper 94 rows preserved; candidate has transparent background and four 128px cells.
+- Separate developer review panel only; the seated-body appearance still needs a proper standing gait and visual approval. No other models were changed, and the 30 missing authored walk cycles remain open. Added asset identity and distinct-frame tests.

@@ -75,6 +75,12 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     }
                 }
             }
+            if(imported!=null && ImportedWalkCandidate.available(spec.species,spec.stage,spec.sex)){
+                Text("Кандидат ходьби • Лісик, хлопчик, малий",fontWeight=FontWeight.Bold)
+                WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp))
+                Text("4 окремі пози лап на оригінальному спрайті. Це художньо не затверджений тест; у світі гри ходу ще не замінено.",
+                    color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
             DevAction.entries.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
