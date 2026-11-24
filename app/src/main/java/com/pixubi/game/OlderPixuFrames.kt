@@ -109,11 +109,11 @@ internal object OlderPixuFrames {
         val pieces=zones(s,g)
         for(z in pieces.filter{it.part!=P}){
             when(z.part){
-                T -> shiftPart(out,src,z,wave,if(clip==SpriteClip.HAPPY||clip==SpriteClip.HOP)2*wave else wave)
-                F -> shiftPart(out,src,z,if(clip==SpriteClip.SWIM)2*wave else wave,wave)
-                W -> shiftPart(out,src,z,0,if(clip==SpriteClip.FLY)3*wave else wave)
-                C -> shiftPart(out,src,z,0,if(clip==SpriteClip.WALK||clip==SpriteClip.HOP)2*wave else wave)
-                P -> Unit
+                Part.TAIL -> shiftPart(out,src,z,wave,if(clip==SpriteClip.HAPPY||clip==SpriteClip.HOP)2*wave else wave)
+                Part.FIN -> shiftPart(out,src,z,if(clip==SpriteClip.SWIM)2*wave else wave,wave)
+                Part.WING -> shiftPart(out,src,z,0,if(clip==SpriteClip.FLY)3*wave else wave)
+                Part.CAPE -> shiftPart(out,src,z,0,if(clip==SpriteClip.WALK||clip==SpriteClip.HOP)2*wave else wave)
+                Part.PAW -> Unit
             }
         }
         val paws=pieces.filter{it.part==P}
