@@ -36,7 +36,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
         }
     }
     val pet=remember(spec,action){spec.pet(action)}
-    val legacyComparison=spec.species==Species.LISYK&&spec.stage==GrowthStage.BABY
+    val legacyComparison=spec.species==Species.LISYK&&spec.stage==GrowthStage.BABY&&spec.sex==Sex.BOY
     val currentGaitVersion=if(legacyComparison)gaitVersion else 3
     val control=DevScene(action,seconds,left,gaitPreview=currentGaitVersion==3)
     val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
@@ -79,7 +79,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 }
             }
             if(imported!=null && ImportedWalkCandidate.available(spec.species,spec.stage,spec.sex)){
-                Text("Кандидат ходьби • "+spec.species.title+", хлопчик, "+spec.stage.title,fontWeight=FontWeight.Bold)
+                Text("Кандидат ходьби • "+spec.species.title+(if(spec.sex==Sex.BOY)", хлопчик, " else ", дівчинка, ")+spec.stage.title,fontWeight=FontWeight.Bold)
                 if(legacyComparison)DevChoices(listOf(1,2,3),gaitVersion,{gaitVersion=it;seconds=0f}){ "v"+it }
                 if(currentGaitVersion==3){
                     OutlinedButton(onClick={action=DevAction.WALK;seconds=0f;running=true},
@@ -89,7 +89,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                         Text("Кадр: ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp",
                             style=MaterialTheme.typography.labelSmall)
                     }
-                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage)
+                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage,sex=spec.sex)
                 }
                 else WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=gaitVersion==2)
                 Text(when(currentGaitVersion){3->if(spec.stage in setOf(GrowthStage.ADULT,GrowthStage.ULTRA))"12 кадрів: підготовка, 8 фаз кроку та зупинка. Тестовий цикл." else "12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},

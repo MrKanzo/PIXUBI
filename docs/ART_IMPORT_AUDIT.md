@@ -66,3 +66,8 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Ultra male gait review
 - Five more 12-cell atlases constructed by shifting and sampling lower limb regions from each original Ultra raster. Local pixel checks passed: 60 cells, binary alpha, identical upper 94 rows and ground row 115, eight distinct walking frames per species. The neutral cell matches the original. Visual review shows subtle paw movement with a mostly stationary torso; full natural gait is not yet established.
 - All 20 male forms now have developer-only gait candidates (240 cells). Age scaling and existing Ultra effect assets remain unchanged. Female gait work, device visual approval and release integration remain open.
+
+## Female teen gait candidates
+- Original catalog contains ten female baby/adult authored two-pose walking previews. These remain untouched. The missing female teen and Ultra sets are separate work.
+- Five female teen 12-cell candidates (60 cells) now use their own native sprites, three visible limb regions and 3px rise. Exact neutral, upper-body identity after rise, binary alpha, unique walking cells and ground row 115 checked locally. Visual review shows seated-looking body and subtle paw movement; these are review-only, not natural completed gait.
+- Shared loader and developer route select species, age and sex. No change to live gameplay or original female artwork. Female Ultra remains missing.

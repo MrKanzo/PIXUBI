@@ -24,6 +24,7 @@ class GaitReviewRouteTest {
         for(s in Species.entries){
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.BABY,Sex.BOY,true))
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.YOUNG,Sex.BOY,true))
+            assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.YOUNG,Sex.GIRL,true))
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.ADULT,Sex.BOY,true))
             assertTrue(GaitReviewRoute.enabled(d,s,GrowthStage.ULTRA,Sex.BOY,true))
         }
