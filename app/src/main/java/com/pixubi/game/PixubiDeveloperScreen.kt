@@ -92,7 +92,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species,stage=spec.stage)
                 }
                 else WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=gaitVersion==2)
-                Text(when(currentGaitVersion){3->if(spec.stage==GrowthStage.ADULT)"12 кадрів: підготовка, 8 фаз кроку та зупинка. Тестовий цикл." else "12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
+                Text(when(currentGaitVersion){3->if(spec.stage in setOf(GrowthStage.ADULT,GrowthStage.ULTRA))"12 кадрів: підготовка, 8 фаз кроку та зупинка. Тестовий цикл." else "12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)

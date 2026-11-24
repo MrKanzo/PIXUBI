@@ -62,3 +62,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Adult male gait review
 - Five additional 12-cell atlases constructed from existing adult limbs, not duplicated limbs. All 60 cells have unchanged upper 94 rows, binary alpha and identical ground row 115; eight distinct gait poses per species. The neutral cell is pixel-identical to the original. Lower limb masks and overlap remain experimental and require on-device visual review.
 - Shared developer route and age-dependent scaling now cover all 15 male baby, teen and adult forms. No change to normal gameplay, stable release or saved games. Ultra and female forms still require completion.
+
+## Ultra male gait review
+- Five more 12-cell atlases constructed by shifting and sampling lower limb regions from each original Ultra raster. Local pixel checks passed: 60 cells, binary alpha, identical upper 94 rows and ground row 115, eight distinct walking frames per species. The neutral cell matches the original. Visual review shows subtle paw movement with a mostly stationary torso; full natural gait is not yet established.
+- All 20 male forms now have developer-only gait candidates (240 cells). Age scaling and existing Ultra effect assets remain unchanged. Female gait work, device visual approval and release integration remain open.
