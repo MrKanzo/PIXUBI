@@ -33,12 +33,12 @@ for f in forms:
                  "original" if {"happy","sad","surprised","tired"} <= poses else "procedural",
                  "original_lying_with_breathing" if "sleep" in poses else "constructed_rest_candidate",
                  "original_pose" if "jump" in poses else "procedural_four_phase",
-                 "procedural_neutral", "procedural_mouth", "pending"])
+                 "procedural_neutral", "procedural_mouth", "developer_run_preview", "pending"])
 assert len(rows)==40 and len(expected)==30 and len(expected_sleep)==30
 assert set((root/"imported_v2/candidates").glob("*_sleep_v1.png"))==expected_sleep
 assert set((root/"imported_v2/candidates").glob("*_gait_v3.png"))==expected
 with (out/"animation-coverage.csv").open("w",newline="",encoding="utf-8") as fp:
     w=csv.writer(fp)
-    w.writerow(["form","original_cells","walk","emotion","sleep","jump","blink","eat_drink","device_visual_review"])
+    w.writerow(["form","original_cells","walk","emotion","sleep","jump","blink","eat_drink","run","device_visual_review"])
     w.writerows(rows)
 print("40 forms: 10 original walk/sleep sets, 30 gait candidates, 30 constructed rest sets; device review pending")

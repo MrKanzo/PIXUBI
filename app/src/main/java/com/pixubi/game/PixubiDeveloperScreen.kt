@@ -42,6 +42,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
     val gaitActive=imported!=null&&GaitReviewRoute.enabled(control,spec.species,spec.stage,spec.sex,true)
     val reviewPose=if(gaitActive)GaitReviewRoute.pose(seconds,left) else null
+    val runActive=ImportedRunReview.enabled(control,imported!=null)
     Column(Modifier.fillMaxSize().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -58,7 +59,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             Button(onClick={running=!running},modifier=Modifier.weight(1f)){
                 Text(if(running)"⏸ Пауза" else "▶ Старт")
             }
-            OutlinedButton(onClick={running=false;seconds=if(gaitActive)GaitReviewRoute.nextFrame(seconds) else (seconds+.125f)%48f},
+            OutlinedButton(onClick={running=false;seconds=if(runActive)ImportedRunReview.nextFrame(seconds) else if(gaitActive)GaitReviewRoute.nextFrame(seconds) else (seconds+.125f)%48f},
                 modifier=Modifier.weight(1f)){Text("+ Кадр")}
             OutlinedButton(onClick={seconds=0f},modifier=Modifier.weight(1f)){Text("↺ Спочатку")}
         }
@@ -104,6 +105,15 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     modifier=Modifier.fillMaxWidth()){Text("Перевірити сон у світі")}
                 Text("Шість кадрів: опускання голови, закриті очі, дихання. Перехід перевіряється в цьому вікні.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
+            }
+            if(imported!=null){
+                OutlinedButton(onClick={action=DevAction.RUN;seconds=0f;running=true},
+                    modifier=Modifier.fillMaxWidth()){Text("▶ Тест бігу у світі")}
+                if(runActive){
+                    val p=ImportedRunReview.pose(seconds,left)
+                    Text("Біг: кадр ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp • Y: ${p.yDp.toInt()} dp",
+                        style=MaterialTheme.typography.bodySmall)
+                }
             }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
             DevAction.entries.chunked(3).forEach { row ->

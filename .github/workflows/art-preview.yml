@@ -96,3 +96,9 @@ jobs:
           name: PIXUBI-jump-review
           path: app/build/imported-preview/jump-30.png
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PIXUBI-run-review
+          path: app/build/imported-preview/run-40.png
+          if-no-files-found: error

@@ -9,7 +9,7 @@ internal object ImportedActionAudit {
         DevAction.WALK -> if(gait&&ImportedWalkCandidate.available(s,g,sex))"Експериментальні 12 кадрів; тільки тест"
             else if(ImportedPixuArt.movement(f,SpriteClip.WALK))"Дві оригінальні пози ходьби"
             else "Локальні рухи лап без прогулянки"
-        DevAction.RUN -> if(ImportedPixuArt.movement(f,SpriteClip.WALK))"Прискорена ходьба; окремого бігу немає" else "Прискорені рухи лап на місці"
+        DevAction.RUN -> "Тест бігу: кроки + нахил і відрив від землі; не окремі художні кадри"
         DevAction.HOP -> if(ImportedPixuArt.movement(f,SpriteClip.HOP))"Оригінальний стрибок + траєкторія" else "Чотири програмні фази стрибка на місці; не художні кадри"
         DevAction.HAPPY,DevAction.SAD,DevAction.SURPRISE,DevAction.TIRED -> {
             val name=when(action){DevAction.HAPPY->"happy";DevAction.SAD->"sad";DevAction.SURPRISE->"surprised";else->"tired"}

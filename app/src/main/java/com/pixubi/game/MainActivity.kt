@@ -785,13 +785,15 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val previewTravel=imported&&ImportedPawMotion.supportsPreviewTravel(pet.species,clip)
     val gaitReview=if(GaitReviewRoute.enabled(developer,pet.species,stage,pet.sex,imported))
         GaitReviewRoute.pose(developer!!.seconds,developer.left) else null
+    val runReview=if(ImportedRunReview.enabled(developer,imported))
+        ImportedRunReview.pose(developer!!.seconds,developer.left) else null
     val manualWalk=manualWalkDirection&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(gaitReview!=null)gaitReview.xDp else if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
+    val worldX=if(runReview!=null)runReview.xDp else if(gaitReview!=null)gaitReview.xDp else if(imported&&!hasMovementArt&&!previewTravel)0f else if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
         else if(hasMovementArt||previewTravel) (if(searching) searchPose.xDp else wanderX)+
             (if(imported&&clip==SpriteClip.WALK)0f else bodyMotion.xDp) else 0f
-    val worldY=if(gaitReview!=null)0f else if(imported) {
+    val worldY=if(runReview!=null)runReview.yDp else if(gaitReview!=null)0f else if(imported) {
         when {
             homeFlight -> -42f*flightArc
             previewTravel&&searching -> searchPose.yDp+bodyMotion.yDp
@@ -968,7 +970,9 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 Modifier.align(Alignment.Center).offset(x=worldX.dp,y=(17f+worldY).dp).size(210.dp))
         }
         // No sliding a seated portrait; no partial alpha on the character.
-        if(gaitReview!=null) GaitWorldPreview(gaitReview.frame,gaitReview.left,pet.colorIndex,
+        if(runReview!=null&&importedForm!=null)RunWorldPreview(importedForm,pet.species,stage,pet.sex,pet.colorIndex,runReview,
+            Modifier.align(Alignment.Center).offset(x=worldX.dp,y=(17f+worldY).dp).size(194.dp))
+        else if(gaitReview!=null) GaitWorldPreview(gaitReview.frame,gaitReview.left,pet.colorIndex,
             Modifier.align(Alignment.Center).offset(x=worldX.dp,y=17.dp).size(194.dp),species=pet.species,stage=stage,sex=pet.sex)
         else if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
             pet = pet,
