@@ -97,7 +97,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             HorizontalDivider()
             Text("Усі персонажі та форми",fontWeight=FontWeight.Bold)
             DevChoices(Species.entries.toList(),spec.species,{spec=spec.copy(species=it,region=it.native);seconds=0f}){it.icon+" "+it.title}
-            DevChoices(GrowthStage.entries.toList(),spec.stage,{spec=spec.copy(stage=it);seconds=0f}){it.icon+" "+it.title}
+            DevChoices(GrowthStage.playable.toList(),spec.stage,{spec=spec.copy(stage=it);seconds=0f}){it.icon+" "+it.title}
             DevChoices(Sex.entries.toList(),spec.sex,{spec=spec.copy(sex=it)}){it.title}
             Text("Забарвлення",style=MaterialTheme.typography.labelMedium)
             DevChoices((0..5).toList(),spec.color,{spec=spec.copy(color=it)}){"№${it+1}"}

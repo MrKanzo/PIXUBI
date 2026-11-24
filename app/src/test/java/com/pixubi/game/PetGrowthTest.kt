@@ -18,19 +18,21 @@ class PetGrowthTest {
 
     @Test fun newPetStartsAsAnEggAndHasAColorGene() {
         val pet = egg()
-        assertEquals(GrowthStage.EGG, PetGrowth.stage(pet))
+        assertEquals(GrowthStage.BABY, PetGrowth.stage(pet))
         assertEquals(1, PetGrowth.level(pet.xp))
         assertTrue(pet.colorIndex in 0..5)
     }
 
     @Test fun allFiveStagesRequireBothAgeAndXp() {
         val pet = egg()
-        assertEquals(GrowthStage.EGG, PetGrowth.stage(pet.copy(xp = 999)))
-        assertEquals(GrowthStage.EGG, PetGrowth.stage(pet.copy(activeMinutes = 20, xp = 14)))
+        assertEquals(GrowthStage.BABY, PetGrowth.stage(pet.copy(xp = 999)))
+        assertEquals(GrowthStage.BABY, PetGrowth.stage(pet.copy(activeMinutes = 20, xp = 14)))
         assertEquals(GrowthStage.BABY, PetGrowth.stage(pet.copy(activeMinutes = 15, xp = 15)))
         assertEquals(GrowthStage.YOUNG, PetGrowth.stage(pet.copy(activeMinutes = 1440, xp = 40)))
-        assertEquals(GrowthStage.COCOON, PetGrowth.stage(pet.copy(activeMinutes = 4320, xp = 120)))
+        assertEquals(GrowthStage.YOUNG, PetGrowth.stage(pet.copy(activeMinutes = 4320, xp = 120)))
         assertEquals(GrowthStage.ADULT, PetGrowth.stage(pet.copy(activeMinutes = 5760, xp = 175)))
+        assertEquals(GrowthStage.ULTRA, PetGrowth.stage(pet.copy(activeMinutes=20_160, xp=PetGrowth.xpForLevel(12))))
+        assertEquals(GrowthStage.ADULT, PetGrowth.stage(pet.copy(activeMinutes=20_159, xp=PetGrowth.xpForLevel(12))))
     }
 
     @Test fun levelThresholdsAndProgressAreBounded() {
@@ -47,7 +49,7 @@ class PetGrowthTest {
         val first = egg()
         val result = GameEngine.act(first.copy(activeMinutes = 15), Action.FEED, start + 1000)
         assertEquals(3, result.xp)
-        assertEquals(GrowthStage.EGG, PetGrowth.stage(result))
+        assertEquals(GrowthStage.BABY, PetGrowth.stage(result))
         val leveled = result.copy(xp = 14)
         val baby = GameEngine.act(leveled, Action.WATER, start + 2000)
         assertEquals(GrowthStage.BABY, PetGrowth.stage(baby))
@@ -75,7 +77,7 @@ class PetGrowthTest {
         val checked = GameEngine.advance(frozen, start + 20 * 86_400_000L)
         assertEquals(0, checked.xp)
         assertEquals(0L, checked.activeMinutes)
-        assertEquals(GrowthStage.EGG, PetGrowth.stage(checked))
+        assertEquals(GrowthStage.BABY, PetGrowth.stage(checked))
         assertTrue(checked.alive)
         assertEquals(Mode.HIBERNATION, checked.mode)
     }
@@ -94,6 +96,6 @@ class PetGrowthTest {
     @Test fun adultLegacyPetsStayAdult() {
         val old = egg().copy(legacyAdult = true, xp = 400)
         assertEquals(GrowthStage.ADULT, PetGrowth.stage(old))
-        assertEquals(null, PetGrowth.nextStage(old))
+        assertEquals(GrowthStage.ULTRA, PetGrowth.nextStage(old))
     }
 }

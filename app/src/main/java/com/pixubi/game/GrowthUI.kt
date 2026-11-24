@@ -102,7 +102,7 @@ fun GrowthGalleryDialog(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    GrowthStage.entries.forEach { stage ->
+                    GrowthStage.playable.forEach { stage ->
                         val known = CollectionRules.canPreviewCurrent(collection, pet, stage)
                         FilterChip(
                             selected = stage == selected,

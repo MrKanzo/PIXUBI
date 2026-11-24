@@ -5,14 +5,24 @@ import java.time.ZoneId
 
 /**
  * Evolution is earned by both activity and time lived outside hibernation.
- * Sequence: egg -> baby -> youngster -> cocoon -> adult.
+ * Four playable stages; legacy shell enum names remain for saved collections.
  */
 enum class GrowthStage(val title: String, val icon: String, val minMinutes: Long, val minLevel: Int) {
     EGG("Яйце", "🥚", 0, 1),
-    BABY("Малюк", "🐣", 15, 2),
-    YOUNG("Підліток", "🐾", 1_440, 3),
+    BABY("Малюк", "🐣", 0, 1),
+    YOUNG("Юний", "🐾", 1_440, 3),
     COCOON("Кокон", "🪺", 4_320, 5),
-    ADULT("Дорослий", "🦊", 5_760, 6)
+    ADULT("Дорослий", "🦊", 5_760, 6),
+    ULTRA("Ультра", "👑", 20_160, 12);
+
+    companion object {
+        val playable = listOf(BABY, YOUNG, ADULT, ULTRA)
+        fun migrate(stage: GrowthStage): GrowthStage = when(stage) {
+            EGG -> BABY
+            COCOON -> YOUNG
+            else -> stage
+        }
+    }
 }
 
 object PetGrowth {
@@ -33,17 +43,16 @@ object PetGrowth {
     }
 
     fun stage(pet: Pet): GrowthStage {
-        if (pet.legacyAdult) return GrowthStage.ADULT
         val lvl = level(pet.xp)
-        return GrowthStage.entries.lastOrNull {
+        val earned = GrowthStage.playable.lastOrNull {
             pet.activeMinutes >= it.minMinutes && lvl >= it.minLevel
-        } ?: GrowthStage.EGG
+        } ?: GrowthStage.BABY
+        return if(pet.legacyAdult && earned.ordinal < GrowthStage.ADULT.ordinal) GrowthStage.ADULT else earned
     }
 
     fun nextStage(pet: Pet): GrowthStage? {
-        if (pet.legacyAdult) return null
-        val index = stage(pet).ordinal
-        return GrowthStage.entries.getOrNull(index + 1)
+        val index = GrowthStage.playable.indexOf(stage(pet))
+        return GrowthStage.playable.getOrNull(index + 1)
     }
 
     fun xpToNextLevel(pet: Pet): Int {
@@ -101,7 +110,7 @@ object PetGrowth {
     }
 
     fun stageHint(pet: Pet): String {
-        val next = nextStage(pet) ?: return "Дорослий Піксубі — нові форми попереду!"
+        val next = nextStage(pet) ?: return "Ультра Піксубі — найвища відкрита форма!"
         val minutes = (next.minMinutes - pet.activeMinutes).coerceAtLeast(0L)
         val xp = (xpForLevel(next.minLevel) - pet.xp).coerceAtLeast(0)
         val dayText = when {
@@ -109,7 +118,7 @@ object PetGrowth {
             minutes < 60L -> "ще ${minutes} хв активного життя"
             else -> "ще ${(minutes + 1_439L) / 1_440L} дн. активного життя"
         }
-        val label = if (next == GrowthStage.BABY) "До появи малюка" else "До таємної еволюції"
+        val label = "До наступної еволюції"
         return "$label: $dayText • ${xp} XP"
     }
 }

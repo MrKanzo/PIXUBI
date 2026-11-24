@@ -738,9 +738,9 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     val newKhmaryk=KhmarykBabyArtwork.matches(pet.species,stage)
     val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||newYoungLisyk
     val homePhase=scoutCycle%1f
-    val wandering=(illustratedBaby||newKraplyk)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val wandering=(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
-    val homeFlight=newKhmaryk&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
+    val homeFlight=pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in .56f.. .88f
     val flightProgress=((homePhase-.56f)/.32f).coerceIn(0f,1f)
     val flightArc=if(homeFlight)kotlin.math.sin(kotlin.math.PI*flightProgress).toFloat() else 0f
@@ -768,20 +768,14 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING&&pet.species!=Species.KRAPLYK -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
-    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val clip = SpriteTimeline.clip(motion,emotion)
-    val hasMovementArt = remember(pet.species,stage,pet.sex,pet.colorIndex,clip) {
-        posePack?.locomotion(clip)==true ||
-        (stage in listOf(GrowthStage.BABY,GrowthStage.YOUNG,GrowthStage.ADULT) &&
-            clip in listOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.SWIM,SpriteClip.DIG,SpriteClip.FLY) &&
-            PixuArtPack.loadClip(context,pet.species,stage,pet.sex,pet.colorIndex,clip)!=null)
-    }
+    val hasMovementArt = posePack?.locomotion(clip) ?: (stage in GrowthStage.playable && clip in listOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.SWIM,SpriteClip.DIG,SpriteClip.FLY))
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
     val worldX=if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
-        else if(hasMovementArt)searchPose.xDp+bodyMotion.xDp else 0f
+        else if(hasMovementArt) (if(searching) searchPose.xDp else wanderX)+bodyMotion.xDp else 0f
     val worldY=if(homeFlight)-42f*flightArc else if(newKhmaryk&&searchFrame!=null)searchPose.yDp
         else if(newKhmaryk&&clip==SpriteClip.FLY)-35f+bodyMotion.yDp
         else if(newPishchanyk&&searchFrame!=null)67f*searchFrame.concealment

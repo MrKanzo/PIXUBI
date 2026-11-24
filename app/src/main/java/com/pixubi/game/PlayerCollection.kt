@@ -28,7 +28,7 @@ data class PlayerCollection(
 ) {
     val unlockedCount: Int get() = discovered.size
     val totalRaised: Int get() = raised.size
-    val grownAdults: Int get() = raised.count { it.highest == GrowthStage.ADULT }
+    val grownAdults: Int get() = raised.count { it.highest.ordinal >= GrowthStage.ADULT.ordinal }
     val knownSpecies: Int get() = raised.map { it.species }.distinct().size
     val totalMiniGameWins: Int get() = raised.sumOf { it.miniGameWins }
     val accumulatedXp: Int get() = raised.fold(0L) { sum, record -> sum + record.xp }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -37,7 +37,13 @@ data class PlayerCollection(
 }
 
 object CollectionRules {
-    const val ALL_FORMS = 5 * 2 * 6 * 5
+    const val ALL_FORMS = 5 * 2 * 6 * 4
+
+    fun migrateKey(key: String): String = when {
+        key.endsWith(":EGG") -> key.removeSuffix(":EGG") + ":BABY"
+        key.endsWith(":COCOON") -> key.removeSuffix(":COCOON") + ":YOUNG"
+        else -> key
+    }
 
     fun formKey(species: Species, sex: Sex, color: Int, stage: GrowthStage) =
         "${species.name}:${sex.name}:${color.coerceIn(0, 5)}:${stage.name}"
@@ -46,7 +52,7 @@ object CollectionRules {
         formKey(species, sex, color, stage) in collection.discovered
 
     fun babyMayBePreviewed(stage: GrowthStage) =
-        stage == GrowthStage.EGG || stage == GrowthStage.BABY
+        stage == GrowthStage.BABY
 
     fun canPreviewCurrent(collection: PlayerCollection, pet: Pet, stage: GrowthStage): Boolean =
         babyMayBePreviewed(stage) ||
@@ -57,7 +63,7 @@ object CollectionRules {
     /** Idempotent. If a pet jumped several stages while away, unlock all surpassed stages. */
     fun observe(source: PlayerCollection, pet: Pet): PlayerCollection {
         val current = PetGrowth.stage(pet)
-        val ids = GrowthStage.entries
+        val ids = GrowthStage.playable
             .filter { it.ordinal <= current.ordinal }
             .map { formKey(pet.species, pet.sex, pet.colorIndex, it) }
             .toSet()
@@ -77,7 +83,7 @@ object CollectionRules {
             else source.raised.map { if (it.id == record.id) merged else it }
         return source.copy(
             startedAt = source.startedAt.takeIf { it > 0 } ?: pet.bornAt,
-            discovered = source.discovered + ids,
+            discovered = source.discovered.map(::migrateKey).toSet() + ids,
             raised = records,
             bestStreak = maxOf(source.bestStreak, pet.careStreak)
         )
@@ -98,7 +104,7 @@ class PlayerCollectionStore(context: Context) {
             val seen = buildSet {
                 for (i in 0 until forms.length()) {
                     val key = forms.optString(i)
-                    if (key.isNotBlank() && size < CollectionRules.ALL_FORMS) add(key)
+                    if (key.isNotBlank() && size < CollectionRules.ALL_FORMS) add(CollectionRules.migrateKey(key))
                 }
             }
             val entries = json.optJSONArray("raised") ?: JSONArray()
@@ -112,7 +118,7 @@ class PlayerCollectionStore(context: Context) {
                             sex = Sex.valueOf(p.getString("sex")),
                             colorIndex = p.optInt("colorIndex", 0).coerceIn(0,5),
                             name = p.optString("name", "?"),
-                            highest = GrowthStage.valueOf(p.getString("highest")),
+                            highest = GrowthStage.migrate(GrowthStage.valueOf(p.getString("highest"))),
                             activeDays = p.optLong("activeDays", 0).coerceAtLeast(0),
                             xp = p.optInt("xp", 0).coerceAtLeast(0),
                             miniGameWins = p.optInt("miniGameWins", 0).coerceAtLeast(0),

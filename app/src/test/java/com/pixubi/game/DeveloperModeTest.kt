@@ -5,14 +5,14 @@ class DeveloperModeTest {
     @Test fun syntheticPreviewSupportsEveryLockedFormWithoutUnlockingIt() {
         val real=DevSpec().pet(DevAction.IDLE)
         val originalCollection=CollectionRules.observe(PlayerCollection(),real)
-        for(s in Species.entries)for(g in GrowthStage.entries)for(sex in Sex.entries)for(color in 0..5){
+        for(s in Species.entries)for(g in GrowthStage.playable)for(sex in Sex.entries)for(color in 0..5){
             val test=DevSpec.from(real).copy(species=s,stage=g,sex=sex,color=color).pet(DevAction.EXPLORE)
             assertEquals(g,PetGrowth.stage(test))
             assertEquals(color,test.colorIndex)
             assertEquals(1L,test.expeditionStartedAt)
             assertEquals(0L,real.expeditionStartedAt)
         }
-        assertEquals(2,originalCollection.unlockedCount)
+        assertEquals(1,originalCollection.unlockedCount)
         assertFalse(CollectionRules.hasForm(originalCollection,Species.KHMARYK,Sex.BOY,5,GrowthStage.ADULT))
     }
     @Test fun forcedActionsAndClockAreIndependentOfRealPet() {

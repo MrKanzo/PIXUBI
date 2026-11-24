@@ -21,9 +21,19 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     val frame=SpriteTimeline.index(clip,phase)
     val pack=PetPosePack.forPet(species,stage)
     val closed=blink||eyeClosure>.50f
+    if(stage==GrowthStage.ULTRA) {
+        val closure=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
+        val art=remember(species,sex,gene,clip,frame,emotion,closure) {
+            UltraPixuArtwork.bitmap(species,sex,gene,clip,frame,emotion,closure).asImageBitmap()
+        }
+        Image(bitmap=art,contentDescription=species.title+" — "+stage.title,
+            modifier=modifier.graphicsLayer{scaleX=if(facingLeft)-1f else 1f},
+            contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        return
+    }
     if(pack!=null) {
-        val image=remember(pack,clip,emotion,frame,closed) {
-            pack.bitmap(context,clip,emotion,frame,closed).asImageBitmap()
+        val image=remember(pack,sex,gene,species,clip,emotion,frame,closed) {
+            PixuPalette.apply(pack.bitmap(context,clip,emotion,frame,closed),species,sex,gene).asImageBitmap()
         }
         Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
             modifier=modifier.graphicsLayer{scaleX=if(facingLeft&&pack.locomotion(clip))-1f else 1f},
@@ -50,18 +60,22 @@ internal fun FramePetSprite(species:Species,stage:GrowthStage,sex:Sex,gene:Int,
     // the original male/female adult art or the independent juvenile art.
     val source=remember(context,species,stage,sex,gene) {
         if(stage==GrowthStage.ADULT) PixubiSpriteCache.get(context,species,sex,gene)
-        else EvolutionSprites.get(context,species,stage)
+        else PixuPalette.apply(EvolutionSprites.get(context,species,stage),species,sex,gene)
     }
-    val faceEmotion=when(emotion){
-        PetEmotion.EATING,PetEmotion.DRINKING -> emotion
-        else -> PetEmotion.IDLE
-    }
+    val faceEmotion=emotion
     val faces=remember(source,species,stage,faceEmotion) {
-        NativeSpriteEyes.frames(source,species,stage,faceEmotion).map{it.asImageBitmap()}
+        NativeSpriteEyes.frames(source,species,stage,faceEmotion)
     }
     val step=NativeEyeMotion.frameIndex(NativeEyeMotion.closure(emotion,eyeClosure,blink))
     val mouth=FaceExpression.animatedMouth(faceEmotion)
-    val image=faces[step+if(mouth&&frame%2==1)5 else 0]
+    val face=faces[step+if(mouth&&frame%2==1)5 else 0]
+    val image=remember(face,clip,frame,species,stage) {
+        val n=face.width
+        val pixels=IntArray(n*n);face.getPixels(pixels,0,n,0,0,n,n)
+        val moved=IllustratedMotionFrames.frame(pixels,n,species,stage,clip,frame)
+        android.graphics.Bitmap.createBitmap(moved,n,n,android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+    }
+    val directional=clip in listOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.DIG,SpriteClip.SWIM,SpriteClip.FLY)
     Image(bitmap=image,contentDescription=species.title+" — "+stage.title,
-        modifier=modifier,contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        modifier=modifier.graphicsLayer{scaleX=if(stage==GrowthStage.YOUNG&&directional&&!facingLeft)-1f else 1f},contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }

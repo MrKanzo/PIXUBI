@@ -14,8 +14,8 @@ class PlayerCollectionTest {
         val p = pet()
         val c = CollectionRules.observe(PlayerCollection(startedAt=1L), p)
         assertEquals(1,c.unlockedCount)
-        assertTrue(CollectionRules.hasForm(c,p.species,p.sex,p.colorIndex,GrowthStage.EGG))
-        assertFalse(CollectionRules.hasForm(c,p.species,p.sex,p.colorIndex,GrowthStage.BABY))
+        assertFalse(CollectionRules.hasForm(c,p.species,p.sex,p.colorIndex,GrowthStage.EGG))
+        assertTrue(CollectionRules.hasForm(c,p.species,p.sex,p.colorIndex,GrowthStage.BABY))
         assertTrue(CollectionRules.canPreviewCurrent(c,p,GrowthStage.BABY))
         assertFalse(CollectionRules.canPreviewCurrent(c,p,GrowthStage.YOUNG))
         assertFalse(CollectionRules.canPreviewCurrent(c,p,GrowthStage.ADULT))
@@ -32,7 +32,7 @@ class PlayerCollectionTest {
     @Test fun reachingAdultUnlocksAllPreviousForms() {
         val p = pet()
         val c = CollectionRules.observe(PlayerCollection(),p.copy(xp=175,activeMinutes=5_760L))
-        assertEquals(5,c.unlockedCount)
+        assertEquals(3,c.unlockedCount)
         assertEquals(1,c.grownAdults)
         assertEquals(1,c.totalRaised)
     }
