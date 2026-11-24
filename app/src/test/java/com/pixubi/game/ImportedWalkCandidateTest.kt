@@ -6,6 +6,27 @@ import java.io.File
 import javax.imageio.ImageIO
 
 class ImportedWalkCandidateTest {
+    @Test fun fullGaitSequenceHasEightUniqueGroundedSteps(){
+        val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
+        val original=ImageIO.read(File(root,"imported_v2/pixubi_lisyk_male_young.png"))
+        val atlas=ImageIO.read(File(root,ImportedWalkCandidate.GAIT_ASSET))
+        assertEquals(512,atlas.width)
+        assertEquals(384,atlas.height)
+        val frames=(0..11).map{atlas.getRGB((it%4)*128,(it/4)*128,128,128,null,0,128)}
+        assertArrayEquals(original.getRGB(0,0,128,128,null,0,128),frames[0])
+        for(i in frames.indices){
+            assertTrue(frames[i].all{(it ushr 24) in listOf(0,255)})
+            assertEquals(115,frames[i].indices.last{frames[i][it] ushr 24!=0}/128)
+            if(i>=4){
+                assertArrayEquals(original.getRGB(0,7,128,80,null,0,128),frames[i].copyOfRange(0,80*128))
+                for(j in 4 until i)assertFalse(frames[i].contentEquals(frames[j]))
+            }
+        }
+        assertEquals(0,ImportedWalkCandidate.sequenceIndex(0f))
+        assertEquals(0,ImportedWalkCandidate.sequenceIndex(Float.NaN))
+        assertEquals((0..11).toSet(),(0..259).map{ImportedWalkCandidate.sequenceIndex(it/100f)}.toSet())
+    }
+
     @Test fun standingCandidatePreservesLiftedHeadAndGroundLine(){
         val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
         val original=ImageIO.read(File(root,"imported_v2/pixubi_lisyk_male_young.png"))

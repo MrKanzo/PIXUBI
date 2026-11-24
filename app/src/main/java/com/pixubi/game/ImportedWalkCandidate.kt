@@ -17,7 +17,15 @@ import androidx.compose.ui.platform.LocalContext
 internal object ImportedWalkCandidate {
     const val ASSET="imported_v2/candidates/lisyk_male_young_walk.png"
     const val STANDING_ASSET="imported_v2/candidates/lisyk_male_young_standing_walk.png"
+    const val GAIT_ASSET="imported_v2/candidates/lisyk_male_young_gait_v3.png"
     const val CELL=128
+    // 0..3: sit/rise/stand; 4..11: eight distinct walking poses.
+    private val sequence=intArrayOf(0,0,1,2,3,4,5,6,7,8,9,10,11,4,5,6,7,8,9,10,11,3,2,1,0,0)
+    fun sequenceIndex(seconds:Float):Int {
+        if(!seconds.isFinite())return 0
+        val tick=(seconds.coerceAtLeast(0f)*10f).toInt()
+        return sequence[tick.mod(sequence.size)]
+    }
     fun available(s:Species,g:GrowthStage,sex:Sex)=
         s==Species.LISYK && g==GrowthStage.BABY && sex==Sex.BOY
     fun index(phase:Float)=ImportedMotionTiming.frame(SpriteClip.WALK,phase)
@@ -35,6 +43,20 @@ internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Mod
     }
     Image(bitmap=cells[ImportedWalkCandidate.index(phase)],
         contentDescription="Тестові кроки хлопчика Лісика",
+        modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
+        contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+}
+
+@Composable
+internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier){
+    val context=LocalContext.current.applicationContext
+    val cells=remember(context){
+        val atlas=context.assets.open(ImportedWalkCandidate.GAIT_ASSET).use{BitmapFactory.decodeStream(it)}
+            ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
+        List(12){i->Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128).asImageBitmap()}
+    }
+    Image(bitmap=cells[ImportedWalkCandidate.sequenceIndex(seconds)],
+        contentDescription="Лісик: вставання, ходьба, повернення до спокою",
         modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }

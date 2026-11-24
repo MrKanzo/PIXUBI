@@ -43,3 +43,7 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 - The previous four-frame candidate passed CI (45498514159) but retained a seated trunk.
 - New candidate shifts the original trunk/head/tail seven pixels upward, extends individually traced limbs, adds a shaded fourth limb derived from the original rear leg, and alternates diagonal support. All four cells retain the native palette and identical upper 80 rows after the vertical offset, with ground contact at row 115. Local validation passed.
 - Both candidates remain in the developer review panel with an explicit comparison toggle. The new pose is still a constructed pixel-rig candidate, not approved hand-illustrated locomotion. Joint overlap and gait quality require visual device review. No changes to the world locomotion or saved game.
+
+## Gait v3
+- Added a separate 12-cell experimental atlas for male baby Lisyk: native seated pose, two rise intermediates, standing pose, and eight distinct step samples. All cells maintain binary alpha and ground row 115. Walking frames preserve the original raised head/upper body exactly.
+- Developer comparison supports v1/v2/v3, with a 10fps sit-rise-walk-sit sequence. This constructed candidate remains review-only. Real gait anatomy and other 29 missing forms are not complete; no release or save changes.
