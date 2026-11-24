@@ -16,16 +16,17 @@ import androidx.compose.ui.platform.LocalContext
  * Lisyk raster. Never substitutes for an approved walking clip in the world. */
 internal object ImportedWalkCandidate {
     const val ASSET="imported_v2/candidates/lisyk_male_young_walk.png"
+    const val STANDING_ASSET="imported_v2/candidates/lisyk_male_young_standing_walk.png"
     const val CELL=128
     fun available(s:Species,g:GrowthStage,sex:Sex)=
         s==Species.LISYK && g==GrowthStage.BABY && sex==Sex.BOY
     fun index(phase:Float)=ImportedMotionTiming.frame(SpriteClip.WALK,phase)
 }
 @Composable
-internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Modifier){
+internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Modifier,standing:Boolean=false){
     val context=LocalContext.current.applicationContext
-    val atlas=remember(context){
-        context.assets.open(ImportedWalkCandidate.ASSET).use{BitmapFactory.decodeStream(it)}
+    val atlas=remember(context,standing){
+        context.assets.open(if(standing)ImportedWalkCandidate.STANDING_ASSET else ImportedWalkCandidate.ASSET).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==128)}
             ?:error("Invalid walk candidate")
     }

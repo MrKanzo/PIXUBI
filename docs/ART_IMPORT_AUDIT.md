@@ -38,3 +38,8 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 - Magnific draft rejected on visual inspection: duplicated/near-identical poses, ground shadows and grid lines, altered details. No generated draft entered game assets.
 - Four individually specified limb poses were made from the original male baby Lisyk raster. Exact upper 94 rows preserved; candidate has transparent background and four 128px cells.
 - Separate developer review panel only; the seated-body appearance still needs a proper standing gait and visual approval. No other models were changed, and the 30 missing authored walk cycles remain open. Added asset identity and distinct-frame tests.
+
+## Standing gait candidate v2
+- The previous four-frame candidate passed CI (45498514159) but retained a seated trunk.
+- New candidate shifts the original trunk/head/tail seven pixels upward, extends individually traced limbs, adds a shaded fourth limb derived from the original rear leg, and alternates diagonal support. All four cells retain the native palette and identical upper 80 rows after the vertical offset, with ground contact at row 115. Local validation passed.
+- Both candidates remain in the developer review panel with an explicit comparison toggle. The new pose is still a constructed pixel-rig candidate, not approved hand-illustrated locomotion. Joint overlap and gait quality require visual device review. No changes to the world locomotion or saved game.

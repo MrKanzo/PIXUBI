@@ -24,6 +24,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     var speed by remember { mutableFloatStateOf(1f) }
     var seconds by remember { mutableFloatStateOf(0f) }
     var left by remember { mutableStateOf(false) }
+    var standingPreview by remember { mutableStateOf(true) }
     LaunchedEffect(running,speed) {
         if(running) {
             var last=withFrameNanos{it}
@@ -77,8 +78,9 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             }
             if(imported!=null && ImportedWalkCandidate.available(spec.species,spec.stage,spec.sex)){
                 Text("Кандидат ходьби • Лісик, хлопчик, малий",fontWeight=FontWeight.Bold)
-                WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp))
-                Text("4 окремі пози лап на оригінальному спрайті. Це художньо не затверджений тест; у світі гри ходу ще не замінено.",
+                DevChoices(listOf(false,true),standingPreview,{standingPreview=it;seconds=0f}){if(it)"Стійка v2" else "Лапи v1"}
+                WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=standingPreview)
+                Text(if(standingPreview)"Стійка v2: корпус піднято, чотири лапи, спільна лінія опори. Тестова анімація без заміни ходи у світі." else "Лапи v1: корпус залишається сидячим. Попередній варіант для порівняння.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
