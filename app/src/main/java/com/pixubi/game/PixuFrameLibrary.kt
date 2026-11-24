@@ -29,6 +29,7 @@ internal object PixuFrameLibrary {
     }
     fun mirror(k:PixuFrameKey,left:Boolean):Boolean {
         if(!directional(k.clip))return false
+        if(LisykStandardArtwork.matches(k.species,k.stage))return left
         val pack=PetPosePack.forPet(k.species,k.stage)
         if(pack!=null)return left&&pack.locomotion(k.clip)
         // The old juvenile illustration faces left; all ten new older sprites face right.
@@ -40,6 +41,7 @@ internal object PixuFrameLibrary {
         val pack=PetPosePack.forPet(k.species,k.stage)
         val raw=when {
             pack!=null -> pack.bitmap(context,k.clip,k.emotion,k.frame,k.closure>=3)
+            LisykStandardArtwork.matches(k.species,k.stage) -> LisykStandardArtwork.bitmap(context,k.species,k.stage,k.clip,k.emotion,k.frame,k.closure>=3)
             k.stage==GrowthStage.ADULT||k.stage==GrowthStage.ULTRA -> {
                 val src=nativeOlder.getOrPut(k.species to k.stage){ReferenceOlderArtwork.pixels(context,k.species,k.stage)}
                 val pixels=ReferenceOlderFrames.frame(src,k.species,k.stage,k.clip,k.frame,k.emotion,k.closure)

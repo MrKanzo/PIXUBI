@@ -87,7 +87,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: 4 кадри плавання з оригінальної моделі. Дія «Пошук» перевіряє занурення; решта поз ще потребує художніх кадрів.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
-            else if(!LisykBabyArtwork.matches(spec.species,spec.stage)&&!IskrykBabyArtwork.matches(spec.species,spec.stage))
+            else if(LisykStandardArtwork.matches(spec.species,spec.stage))
+                Text("Новий піксельний набір: 16 поз • художня перевірка v0.33.",
+                    color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
+            else if(PetPosePack.forPet(spec.species,spec.stage)==null)
                 Text("Для цієї форми деякі рухи ще не мають готових художніх кадрів. Режим покаже поточну реалізацію, а не вигадану анімацію.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             Row(verticalAlignment=Alignment.CenterVertically) {
