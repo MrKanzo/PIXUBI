@@ -30,7 +30,8 @@ internal object ImportedWalkCandidate {
         return sequence[tick.mod(sequence.size)]
     }
     fun available(s:Species,g:GrowthStage,sex:Sex)=
-        s==Species.LISYK && g==GrowthStage.BABY && sex==Sex.BOY
+        g==GrowthStage.BABY && sex==Sex.BOY
+    fun asset(s:Species):String="imported_v2/candidates/"+s.name.lowercase(java.util.Locale.ROOT)+"_male_young_gait_v3.png"
     fun index(phase:Float)=ImportedMotionTiming.frame(SpriteClip.WALK,phase)
 }
 @Composable
@@ -51,36 +52,36 @@ internal fun WalkCandidatePreview(phase:Float,left:Boolean,modifier:Modifier=Mod
 }
 
 @Composable
-internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier){
+internal fun GaitSequencePreview(seconds:Float,left:Boolean,modifier:Modifier=Modifier,species:Species=Species.LISYK){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context){
-        val atlas=context.assets.open(ImportedWalkCandidate.GAIT_ASSET).use{BitmapFactory.decodeStream(it)}
+    val cells=remember(context,species){
+        val atlas=context.assets.open(ImportedWalkCandidate.asset(species)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
         List(12){i->Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128).asImageBitmap()}
     }
     Image(bitmap=cells[ImportedWalkCandidate.sequenceIndex(seconds)],
-        contentDescription="Лісик: вставання, ходьба, повернення до спокою",
+        contentDescription=species.title+": вставання, ходьба, повернення до спокою",
         modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }
 
 /** Same native cell size, scale and pivot as the imported world sprite. */
 @Composable
-internal fun GaitWorldPreview(frame:Int,left:Boolean,gene:Int,modifier:Modifier=Modifier){
+internal fun GaitWorldPreview(frame:Int,left:Boolean,gene:Int,modifier:Modifier=Modifier,species:Species=Species.LISYK){
     val context=LocalContext.current.applicationContext
-    val cells=remember(context,gene){
-        val atlas=context.assets.open(ImportedWalkCandidate.GAIT_ASSET).use{BitmapFactory.decodeStream(it)}
+    val cells=remember(context,gene,species){
+        val atlas=context.assets.open(ImportedWalkCandidate.asset(species)).use{BitmapFactory.decodeStream(it)}
             ?.also{require(it.width==512&&it.height==384)}?:error("Invalid gait atlas")
         List(12){i->
             val raw=Bitmap.createBitmap(atlas,(i%4)*128,(i/4)*128,128,128)
-            val colored=PixuPalette.apply(raw,Species.LISYK,Sex.BOY,gene)
+            val colored=PixuPalette.apply(raw,species,Sex.BOY,gene)
             val cell=Bitmap.createBitmap(192,192,Bitmap.Config.ARGB_8888)
             Canvas(cell).drawBitmap(colored,null,Rect(32,58,160,186),Paint().apply{isFilterBitmap=false})
             cell.asImageBitmap()
         }
     }
     Image(bitmap=cells[frame.coerceIn(0,11)],
-        contentDescription="Лісик — експериментальна ходьба v3",
+        contentDescription=species.title+" — експериментальна ходьба v3",
         modifier=modifier.graphicsLayer{scaleX=if(left)-1f else 1f},
         contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
 }

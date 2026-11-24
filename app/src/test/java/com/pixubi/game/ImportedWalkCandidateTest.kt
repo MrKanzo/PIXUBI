@@ -6,6 +6,31 @@ import java.io.File
 import javax.imageio.ImageIO
 
 class ImportedWalkCandidateTest {
+    @Test fun allFiveMaleBabyGaitAssetsPreserveTheirOwnIdentity(){
+        val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
+        for(s in Species.entries){
+            val original=ImageIO.read(File(root,"imported_v2/pixubi_${s.name.lowercase(java.util.Locale.ROOT)}_male_young.png"))
+            val atlas=ImageIO.read(File(root,ImportedWalkCandidate.asset(s)))
+            assertEquals(512,atlas.width);assertEquals(384,atlas.height)
+            val native=original.getRGB(0,0,128,128,null,0,128)
+            val ground=native.indices.last{native[it] ushr 24!=0}/128
+            val frames=(0..11).map{atlas.getRGB((it%4)*128,(it/4)*128,128,128,null,0,128)}
+            assertArrayEquals(native,frames[0])
+            for(i in frames.indices){
+                val f=frames[i]
+                assertTrue(f.all{(it ushr 24) in listOf(0,255)})
+                assertTrue(kotlin.math.abs(ground-f.indices.last{f[it] ushr 24!=0}/128)<=1)
+                if(i>=4){
+                    assertArrayEquals(native.copyOfRange(7*128,87*128),f.copyOfRange(0,80*128))
+                    for(j in 4 until i)assertFalse(f.contentEquals(frames[j]))
+                }
+            }
+            assertTrue(ImportedWalkCandidate.available(s,GrowthStage.BABY,Sex.BOY))
+            assertFalse(ImportedWalkCandidate.available(s,GrowthStage.BABY,Sex.GIRL))
+            assertFalse(ImportedWalkCandidate.available(s,GrowthStage.ADULT,Sex.BOY))
+        }
+    }
+
     @Test fun fullGaitSequenceHasEightUniqueGroundedSteps(){
         val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
         val original=ImageIO.read(File(root,"imported_v2/pixubi_lisyk_male_young.png"))
@@ -60,6 +85,6 @@ class ImportedWalkCandidateTest {
         }
         assertTrue(ImportedWalkCandidate.available(Species.LISYK,GrowthStage.BABY,Sex.BOY))
         assertFalse(ImportedWalkCandidate.available(Species.LISYK,GrowthStage.BABY,Sex.GIRL))
-        assertFalse(ImportedWalkCandidate.available(Species.ISKRYK,GrowthStage.BABY,Sex.BOY))
+        assertTrue(ImportedWalkCandidate.available(Species.ISKRYK,GrowthStage.BABY,Sex.BOY))
     }
 }

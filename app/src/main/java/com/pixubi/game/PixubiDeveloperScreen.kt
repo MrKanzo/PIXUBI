@@ -36,7 +36,8 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
         }
     }
     val pet=remember(spec,action){spec.pet(action)}
-    val control=DevScene(action,seconds,left,gaitPreview=gaitVersion==3)
+    val currentGaitVersion=if(spec.species==Species.LISYK)gaitVersion else 3
+    val control=DevScene(action,seconds,left,gaitPreview=currentGaitVersion==3)
     val imported=ImportedPixuArt.form(LocalContext.current.applicationContext,spec.species,spec.stage,spec.sex)
     Column(Modifier.fillMaxSize().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -77,9 +78,9 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 }
             }
             if(imported!=null && ImportedWalkCandidate.available(spec.species,spec.stage,spec.sex)){
-                Text("Кандидат ходьби • Лісик, хлопчик, малий",fontWeight=FontWeight.Bold)
-                DevChoices(listOf(1,2,3),gaitVersion,{gaitVersion=it;seconds=0f}){ "v"+it }
-                if(gaitVersion==3){
+                Text("Кандидат ходьби • "+spec.species.title+", хлопчик, малий",fontWeight=FontWeight.Bold)
+                if(spec.species==Species.LISYK)DevChoices(listOf(1,2,3),gaitVersion,{gaitVersion=it;seconds=0f}){ "v"+it }
+                if(currentGaitVersion==3){
                     OutlinedButton(onClick={action=DevAction.WALK;seconds=0f;running=true},
                         modifier=Modifier.fillMaxWidth()){Text("▶ Тест прогулянки у світі")}
                     if(action==DevAction.WALK){
@@ -87,10 +88,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                         Text("Кадр: ${p.frame+1}/12 • X: ${p.xDp.toInt()} dp",
                             style=MaterialTheme.typography.labelSmall)
                     }
-                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp))
+                    GaitSequencePreview(seconds,left,Modifier.fillMaxWidth().height(128.dp),species=spec.species)
                 }
                 else WalkCandidatePreview(control.movementCycle,left,Modifier.fillMaxWidth().height(128.dp),standing=gaitVersion==2)
-                Text(when(gaitVersion){3->"12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
+                Text(when(currentGaitVersion){3->"12 кадрів: вставання, 8 фаз кроку і повернення до сидіння. Тестовий цикл.";2->"Стійка v2: чотири пози, спільна лінія опори.";else->"Лапи v1: корпус залишається сидячим."},
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             }
             Text("Дії та емоції",fontWeight=FontWeight.Bold)

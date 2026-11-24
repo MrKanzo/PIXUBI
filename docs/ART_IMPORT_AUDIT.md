@@ -51,3 +51,6 @@ Base: 84ad961fcef0fed2cd0d1ce49adc031ef36eafe5; previous CI succeeded (run 45455
 ## Gait v3 scene review
 - Explicit developer WALK action with v3 selected renders the candidate on the normal scene, normalized to the same 192px cell and ground pivot. Route moves only on eight walking phases, with seated reversals at endpoints and a return to origin. Gene accents are applied as for the original male sprite. No changes to normal gameplay, art catalog completeness, progression, storage or stable release.
 - Added route continuity and developer isolation tests. Candidate is still not a completed artist-approved gait; test on Android before expanding to other forms.
+
+## Shared male baby gait review
+- Four more 12-cell constructed gait candidates, using each species' own original raster and individually traced limbs. All five male baby forms now share the same explicit developer-only route and image loader. Female and older forms are not changed. The new 48 cells retain the native upper-body pixels during gait and binary alpha. Pishchanyk and Khmaryk each have one frame with a one-pixel ground discrepancy; tolerance is explicit in the test. These are experimental seated-to-standing pixel rigs, not artist-approved walk cycles; no production movement is unlocked. Added species-specific identity and isolation tests.
