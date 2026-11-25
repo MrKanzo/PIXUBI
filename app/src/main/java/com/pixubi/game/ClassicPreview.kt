@@ -64,9 +64,12 @@ private fun DrawScope.classicFace(a:Color,g:Int,side:Boolean,f:RobotFace,blink:B
             glowLine(a,x-4f,-5f,x+4f,-5f,1.8f)
         }
     }
-    if(!side&&!blink&&f!=RobotFace.SLEEP){
-        if(f==RobotFace.HAPPY){glowLine(a,-4f,7f,0f,10f,1.4f);glowLine(a,0f,10f,4f,7f,1.4f)}
-        else glowLine(a,-3f,9f,3f,9f,1.3f)
+    val mx=if(side)19f else 0f
+    val my=if(side&&g>=2)5f else 9f
+    if(f==RobotFace.SURPRISE)drawCircle(a,2.6f,Offset(mx,my),style=Stroke(1.3f))
+    else if(f!=RobotFace.SLEEP){
+        val p=Path().apply{moveTo(mx-3.5f,my);quadraticBezierTo(mx,my+when(f){RobotFace.HAPPY->5f;RobotFace.SAD->-4f;RobotFace.ANGRY->-2f;else->0f},mx+3.5f,my)}
+        drawPath(p,a,style=Stroke(1.4f,cap=StrokeCap.Round))
     }
 }
 private fun DrawScope.classicHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Boolean,gear:RobotGear?){

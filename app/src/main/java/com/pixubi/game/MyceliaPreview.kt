@@ -135,6 +135,29 @@ private fun DrawScope.body(f:MyceliaForm,a:Color,side:Boolean,phase:Float,bloom:
     else drawCircle(cyan,5f,Offset(if(side)l*.67f else 0f,7f))
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(cyan,13f,Offset(0f,0f),style=Stroke(1.5f))
 }
+private fun DrawScope.myceliaEye(a:Color,x:Float,y:Float,face:RobotFace){
+    if(face==RobotFace.HAPPY){
+        val p=Path().apply{moveTo(x-7f,y+2f);quadraticBezierTo(x,y-9f,x+7f,y+2f)}
+        drawPath(p,ink,style=Stroke(2.2f,cap=StrokeCap.Round));return
+    }
+    val w=8f
+    val top=when(face){RobotFace.ANGRY->-2f;RobotFace.SAD->-5f;RobotFace.SURPRISE->-9f;else->-7f}
+    val p=Path().apply{
+        moveTo(x-w,y+if(face==RobotFace.ANGRY)1f else 0f)
+        quadraticBezierTo(x,y+top*2f,x+w,y+if(face==RobotFace.SAD)3f else if(face==RobotFace.ANGRY)-4f else 0f)
+        quadraticBezierTo(x,y+14f,x-w,y+if(face==RobotFace.ANGRY)1f else 0f);close()
+    }
+    drawPath(p,a);clipPath(p){
+        val pw=if(face==RobotFace.SURPRISE)4f else 6f
+        drawOval(ink,Offset(x-pw*.5f,y-5f),Size(pw,12f))
+        drawCircle(Color.White,1.8f,Offset(x-3f,y-3f))
+    }
+}
+private fun DrawScope.myceliaMouth(x:Float,y:Float,face:RobotFace){
+    if(face==RobotFace.SURPRISE){drawOval(ink,Offset(x-2.8f,y-2f),Size(5.6f,6f));return}
+    val p=Path().apply{moveTo(x-4f,y);quadraticBezierTo(x,y+when(face){RobotFace.HAPPY->6f;RobotFace.SAD->-5f;RobotFace.ANGRY->-2f;else->0f},x+4f,y)}
+    drawPath(p,ink,style=Stroke(1.4f,cap=StrokeCap.Round))
+}
 private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,phase:Float,action:RobotAction,gear:RobotGear?){
     val g=f.grade;val blink=face==RobotFace.SLEEP||action==RobotAction.SLEEP||(action==RobotAction.IDLE&&phase>.94f)
     val ear=if(g==0)37f else 32f+g*2f
@@ -151,25 +174,21 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
         plate(if(g==0)"M -23 -12 Q -25 -32 1 -34 Q 27 -32 31 -10 L 35 1 Q 27 20 5 24 Q -25 19 -23 -12 Z" else "M -25 -9 Q -22 -35 4 -34 Q 22 -30 28 -15 L 44 -3 L 38 9 L 17 19 L -9 21 Q -27 8 -25 -9 Z")
         drawOval(shade,Offset(6f,-18f),Size(22f,17f))
         if(blink)line(ink,9f,-10f,25f,-10f,1.8f)else{
-            val y=if(face==RobotFace.ANGRY)-15f else -17f
-            drawOval(a,Offset(8f,y),Size(18f,15f));drawOval(ink,Offset(15f,y+1f),Size(6f,12f));drawCircle(Color.White,2.7f,Offset(12f,y+4f))
+            myceliaEye(a,17f,-10f,face)
         }
         drawCircle(ink,2.8f,Offset(if(g==0)30f else 39f,0f))
-        val mouth=Path().apply{moveTo(19f,10f);quadraticBezierTo(26f,if(face==RobotFace.HAPPY)15f else 10f,31f,7f)}
-        drawPath(mouth,ink,style=Stroke(1.4f,cap=StrokeCap.Round))
+        myceliaMouth(25f,10f,face)
     }else{
         plate(if(g==0)"M 0 -35 Q 34 -34 35 -6 Q 31 24 0 28 Q -31 24 -35 -6 Q -34 -34 0 -35 Z" else "M 0 -36 Q 27 -34 34 -13 Q 37 12 18 23 L 0 28 L -18 23 Q -37 12 -34 -13 Q -27 -34 0 -36 Z")
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
             if(blink)line(ink,6f,-8f,24f,-8f,1.7f)else{
-                val y=if(face==RobotFace.ANGRY)-13f else -17f
-                drawOval(shade,Offset(5f,y-2f),Size(21f,20f));drawOval(a,Offset(7f,y),Size(17f,17f));drawOval(ink,Offset(13f,y+2f),Size(7f,13f));drawCircle(Color.White,2.7f,Offset(11f,y+4f))
-                line(ink,22f,y+3f,27f,y,1.2f)
+                drawOval(shade,Offset(5f,-19f),Size(21f,20f))
+                myceliaEye(a,15.5f,-10f,face)
             }
             drawOval(a.copy(alpha=.25f),Offset(17f,4f),Size(9f,4f))
         }
         drawOval(ink,Offset(-4f,7f),Size(8f,5f))
-        val p=Path().apply{moveTo(-5f,15f);quadraticBezierTo(0f,if(face==RobotFace.SAD)9f else if(face==RobotFace.HAPPY)21f else 16f,5f,15f)}
-        drawPath(p,ink,style=Stroke(1.4f,cap=StrokeCap.Round))
+        myceliaMouth(0f,15f,face)
     }
     if(g>=2)translate(if(side)-7f else 0f,-28f){flower(a,9f+g*1.5f,phase)}
     if(g==4)translate(0f,-65f){drawOval(cyan,Offset(-24f,-6f),Size(48f,12f),style=Stroke(1.6f))}

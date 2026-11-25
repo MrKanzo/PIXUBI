@@ -121,10 +121,26 @@ private fun DrawScope.body(f:SymbiontForm,a:Color,side:Boolean,phase:Float,grow:
     drawCircle(a,8f,core,style=Stroke(2f));drawCircle(a,4f+sin(phase*6.28f),core)
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(Color.White,12f,core,style=Stroke(1.5f))
 }
+private fun DrawScope.symbiontEye(a:Color,x:Float,y:Float,face:RobotFace){
+    if(face==RobotFace.HAPPY){
+        val p=Path().apply{moveTo(x-7f,y+2f);quadraticBezierTo(x,y-8f,x+7f,y+2f)}
+        drawPath(p,a,style=Stroke(2.2f,cap=StrokeCap.Round));return
+    }
+    val inner=if(face==RobotFace.ANGRY)1f else if(face==RobotFace.SAD)-5f else -3f
+    val outer=if(face==RobotFace.ANGRY)-6f else if(face==RobotFace.SAD)2f else -3f
+    val p=Path().apply{
+        moveTo(x-7f,y+inner);quadraticBezierTo(x,y+if(face==RobotFace.SURPRISE)-13f else -6f,x+7f,y+outer)
+        quadraticBezierTo(x,y+if(face==RobotFace.SURPRISE)13f else 7f,x-7f,y+inner);close()
+    }
+    drawPath(p,a);clipPath(p){
+        drawOval(ink,Offset(x-1.7f,y-5f),Size(3.4f,11f))
+        drawCircle(Color.White,1.4f,Offset(x-3f,y-2f))
+    }
+}
 private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,phase:Float,action:RobotAction,gear:RobotGear?){
     val g=f.grade;val sleepy=face==RobotFace.SLEEP||action==RobotAction.SLEEP
     val blink=sleepy||(action==RobotAction.IDLE&&phase>.94f)
-    val jaw=if(action==RobotAction.ATTACK)12f*sin(phase*PI.toFloat()).coerceAtLeast(0f) else if(face==RobotFace.HAPPY)3f else 0f
+    val jaw=if(action==RobotAction.ATTACK)12f*sin(phase*PI.toFloat()).coerceAtLeast(0f) else when(face){RobotFace.HAPPY->4f;RobotFace.SURPRISE->9f;RobotFace.ANGRY->2f;else->0f}
     if(side){
         val shape=when(g){
             0->"M -25 -11 Q -30 -34 0 -36 Q 28 -36 34 -12 L 39 2 Q 32 22 8 23 L -17 17 Z"
@@ -138,8 +154,7 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
         plate("M 0 -25 L 23 -25 L 37 -13 L 28 0 L 6 7 L -5 -6 Z",ink)
         if(blink)line(a,9f,-12f,26f,-12f,2f)
         else{
-            val y=if(face==RobotFace.ANGRY)-15f else -13f
-            drawOval(a,Offset(10f,y),Size(14f,9f));drawOval(ink,Offset(17f,y+1f),Size(3f,7f));drawCircle(Color.White,1.6f,Offset(13f,y+2f))
+            symbiontEye(a,17f,-10f,face)
         }
         translate(12f,10f){rotate(jaw,Offset.Zero){plate("M -7 -2 L ${if(g>=2)40 else 23} -2 L ${if(g>=2)28 else 17} 9 L 2 12 L -8 6 Z",shade)
             if(g>=2)for(i in 0..2)translate(12f+i*8f,0f){plate("M -2 -2 L 3 -2 L 1 5 Z",pearl)}
@@ -155,14 +170,18 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
             plate("M 5 -20 L 29 -18 L 33 -7 L 22 4 L 6 0 Z",ink)
             if(blink)line(a,10f,-10f,27f,-10f)else{
-                val dy=if(face==RobotFace.ANGRY)-4f else if(face==RobotFace.SAD)3f else 0f
-                drawOval(a,Offset(11f,-15f+dy),Size(15f,10f));drawOval(ink,Offset(18f,-14f+dy),Size(3f,8f));drawCircle(Color.White,1.6f,Offset(14f,-12f+dy))
+                symbiontEye(a,18.5f,-10f,face)
             }
         }
         if(g>=2)translate(0f,-30f){crystal(a,6f,15f+g*3f)}
         plate("M -13 5 L 13 5 L 18 17 L 0 25 L -18 17 Z",shade)
         drawOval(ink,Offset(-6f,8f),Size(12f,5f))
-        drawArc(a,if(face==RobotFace.SAD)200f else 15f,150f,false,Offset(-9f,13f),Size(18f,5f+jaw),style=Stroke(1.5f))
+        if(face==RobotFace.SURPRISE)drawOval(ink,Offset(-4f,13f),Size(8f,9f))
+        else if(action==RobotAction.ATTACK)drawOval(ink,Offset(-8f,13f),Size(16f,3f+jaw*.5f))
+        else {
+            val mouth=Path().apply{moveTo(-7f,17f);quadraticBezierTo(0f,17f+when(face){RobotFace.HAPPY->7f;RobotFace.SAD->-5f;RobotFace.ANGRY->-2f;else->0f},7f,17f)}
+            drawPath(mouth,a,style=Stroke(1.5f,cap=StrokeCap.Round))
+        }
     }
     if(gear==RobotGear.SCANNER)translate(0f,-36f){plate("M -9 -6 L 9 -6 L 14 2 L -14 2 Z");line(a,-7f,-2f,7f,-2f)}
     if(gear==RobotGear.HELMET)plate("M -23 -26 Q 0 -47 23 -26 L 17 -21 Q 0 -36 -17 -21 Z")

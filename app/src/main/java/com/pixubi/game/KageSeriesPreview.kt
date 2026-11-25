@@ -72,8 +72,9 @@ private fun DrawScope.kageMask(side:Boolean,f:RobotFace,blink:Boolean,a:Color) {
             f==RobotFace.HAPPY->{val p=Path().apply{moveTo(x-5f,-1f);quadraticTo(x,-9f,x+5f,-1f)};drawPath(p,a,style=Stroke(2.5f,cap=StrokeCap.Round))}
             f==RobotFace.SURPRISE->drawOval(a,Offset(x-3.5f,-8f),Size(7f,10f),style=Stroke(2f))
             else->{
-                val rise=if(f==RobotFace.SAD)1f else if(f==RobotFace.ANGRY)8f else 6f
-                val p=Path().apply{moveTo(x-7f*sign,-3f);lineTo(x+8f*sign,-3f-rise);quadraticTo(x+5f*sign,5f,x-7f*sign,-3f);close()}
+                val inner=when(f){RobotFace.SAD->-8f;RobotFace.ANGRY->-2f;else->-5f}
+                val outer=when(f){RobotFace.SAD->-2f;RobotFace.ANGRY->-10f;else->-6f}
+                val p=Path().apply{moveTo(x-6f*sign,inner);lineTo(x+6f*sign,outer);quadraticTo(x+4f*sign,3f,x-6f*sign,inner);close()}
                 drawPath(p,a.copy(alpha=.25f),style=Stroke(3f));drawPath(p,a)
                 line(x-2f,-2f,x+2f,-2f,Color.White.copy(alpha=.7f),.8f)
             }
@@ -137,15 +138,18 @@ private fun DrawScope.hood(side:Boolean,g:Int,a:Color,f:RobotFace,blink:Boolean,
         for(x in if(side)listOf(18f)else listOf(-13f,13f)){
             if(blink||f==RobotFace.SLEEP)line(x-5f,-3f,x+5f,-3f,a,2f)
             else if(f==RobotFace.HAPPY||f==RobotFace.SAD||f==RobotFace.ANGRY) {
-                val k=if(f==RobotFace.HAPPY)-9f else if(f==RobotFace.SAD)4f else -5f
-                val eye=Path().apply{moveTo(x-5f,0f);quadraticTo(x,k,x+5f,0f)}
+                val sign=if(side||x>0f)1f else -1f
+                val eye=Path().apply{
+                    if(f==RobotFace.HAPPY){moveTo(x-5f,0f);quadraticTo(x,-9f,x+5f,0f)}
+                    else {moveTo(x-5f*sign,if(f==RobotFace.SAD)-7f else -1f);lineTo(x+5f*sign,if(f==RobotFace.SAD)0f else -8f)}
+                }
                 drawPath(eye,a,style=Stroke(3f,cap=StrokeCap.Round))
             }else{
                 drawRoundRect(a,Offset(x-5f,-11f),Size(10f,if(f==RobotFace.SURPRISE)17f else 13f),CornerRadius(5f))
                 drawCircle(Color.White,1.5f,Offset(x-2f,-7f))
             }
         }
-        if(!side&&!blink&&f!=RobotFace.SLEEP)line(-3f,10f,3f,10f,a,1.5f)
+        if(f!=RobotFace.SLEEP){val mx=if(side)18f else 0f;line(mx-3f,10f,mx+3f,10f,a,1.5f)}
     } else if(g==1) {
         if(side){
             metal("M -34 -11 L -29 -33 L -9 -44 L 13 -40 L 37 -19 L 29 11 L 10 23 L -23 19 Z",cloth,black)

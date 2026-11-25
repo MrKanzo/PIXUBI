@@ -80,15 +80,17 @@ private fun DrawScope.valkyrieFace(a:Color,g:Int,side:Boolean,f:RobotFace,blink:
             drawOval(a.copy(alpha=.24f),Offset(x+sign*3f-3f,8f),Size(6f,3f))
         }
     }
-    if(!side&&!blink&&f!=RobotFace.SLEEP){
+    if(f!=RobotFace.SLEEP){
+        val mx=if(side)18f else 0f
         val mouth=Path().apply{
             when(f){
-                RobotFace.HAPPY->{moveTo(-4f,11f);quadraticBezierTo(0f,18f,4f,11f)}
-                RobotFace.SAD->{moveTo(-3f,14f);quadraticBezierTo(0f,8f,3f,14f)}
-                else->{moveTo(-3f,12f);quadraticBezierTo(0f,13f,3f,12f)}
+                RobotFace.HAPPY->{moveTo(mx-4f,11f);quadraticBezierTo(mx,16f,mx+4f,11f)}
+                RobotFace.SAD->{moveTo(mx-3f,14f);quadraticBezierTo(mx,8f,mx+3f,14f)}
+                RobotFace.ANGRY->{moveTo(mx-3f,12f);quadraticBezierTo(mx,9f,mx+3f,12f)}
+                else->{moveTo(mx-3f,12f);quadraticBezierTo(mx,13f,mx+3f,12f)}
             }
         }
-        if(f==RobotFace.SURPRISE)drawCircle(a,2.5f,Offset(0f,12f),style=Stroke(1.3f))
+        if(f==RobotFace.SURPRISE)drawCircle(a,2.5f,Offset(mx,12f),style=Stroke(1.3f))
         else drawPath(mouth,a,style=Stroke(1.7f,cap=StrokeCap.Round))
     }
 }

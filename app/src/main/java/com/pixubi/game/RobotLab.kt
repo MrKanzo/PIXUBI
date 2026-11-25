@@ -166,8 +166,12 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
         when {
             blink || face==RobotFace.SLEEP -> drawLine(light,Offset(ex-4,y),Offset(ex+4,y),2.8f,StrokeCap.Round)
             face==RobotFace.ANGRY -> {
-                val d=if(i==0) 3f else -3f
+                val d=if(side||i==1) 3f else -3f
                 drawLine(light,Offset(ex-5,y-d),Offset(ex+5,y+d),4f,StrokeCap.Round)
+            }
+            face==RobotFace.SAD -> {
+                val sign=if(side||i==1)1f else -1f
+                drawLine(light,Offset(ex-4f*sign,y-4f),Offset(ex+4f*sign,y+2f),3f,StrokeCap.Round)
             }
             face==RobotFace.HAPPY -> {
                 val p=Path().apply { moveTo(ex-5,y+2); quadraticTo(ex,y-9,ex+5,y+2) }
@@ -181,7 +185,7 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
         RobotFace.SURPRISE -> drawCircle(light,3f,Offset(mx,y+14),style=Stroke(2f))
         RobotFace.SLEEP -> Unit
         else -> {
-            val p=Path().apply { moveTo(mx-5,y+12);quadraticTo(mx,y+if(face==RobotFace.SAD) 6f else 19f,mx+5,y+12) }
+            val p=Path().apply { moveTo(mx-5,y+12);quadraticTo(mx,y+when(face){RobotFace.SAD->6f;RobotFace.HAPPY->19f;RobotFace.ANGRY->9f;else->12f},mx+5,y+12) }
             drawPath(p,light,style=Stroke(2f,cap=StrokeCap.Round))
         }
     }

@@ -55,16 +55,20 @@ private fun DrawScope.core(a:Color,g:Int){
 private fun DrawScope.facePixels(a:Color,g:Int,side:Boolean,f:RobotFace,blink:Boolean){
     for(x in if(side)listOf(15f) else listOf(-12f,12f)){
         if(blink||f==RobotFace.SLEEP)glowLine(a,x-5f,-2f,x+5f,-2f)
-        else if(f==RobotFace.HAPPY||g==0&&f==RobotFace.NEUTRAL){
+        else if(f==RobotFace.HAPPY){
             glowLine(a,x-5f,1f,x,-5f);glowLine(a,x,-5f,x+5f,1f)
         }else if(f==RobotFace.SURPRISE){drawRect(a,Offset(x-3f,-7f),Size(6f,10f),style=Stroke(2f))}
         else if(g<=1){
-            for(i in 0..2)drawRect(a,Offset(x-4f+i*3f,-8f+i*(if(f==RobotFace.SAD)1f else 0f)),Size(2f,12f-i))
+            val sign=if(side||x>0f)1f else -1f
+            for(i in -1..1){
+                val dy=when(f){RobotFace.SAD->i*sign*2f;RobotFace.ANGRY->-i*sign*2f;else->0f}
+                drawRect(a,Offset(x+i*3f-1f,-7f+dy),Size(2f,if(f==RobotFace.ANGRY)7f else 11f))
+            }
         }else{
             val sign=if(side)1f else if(x<0)-1f else 1f
             val outer=x+7f*sign
             val inner=x-6f*sign
-            val oy=if(f==RobotFace.SAD)1f else if(f==RobotFace.ANGRY)-9f else -5f
+            val oy=if(f==RobotFace.SAD)0f else if(f==RobotFace.ANGRY)-9f else -5f
             val iy=if(f==RobotFace.SAD)-7f else if(f==RobotFace.ANGRY)-1f else -3f
             poly("M $outer $oy L $inner $iy L ${inner+sign*2f} ${iy+5f} L ${outer-sign*3f} ${oy+5f} Z",a,.55f)
             glowLine(a,outer,oy,inner,iy,1.8f)

@@ -57,9 +57,10 @@ private fun DrawScope.nexusFace(a:Color,face:RobotFace,blink:Boolean,g:Int,phase
     val pupil=if(face==RobotFace.SURPRISE)3f else 5f
     drawCircle(visor,r+4f,Offset.Zero)
     drawCircle(a.copy(alpha=.16f),r+3f,Offset.Zero)
-    if(blink||face==RobotFace.SLEEP){glowLine(a,-r,0f,r,0f,2.2f);return}
-    val upper=when(face){RobotFace.ANGRY->-3f;RobotFace.SAD->-10f;RobotFace.HAPPY->-14f;else->-r}
-    val lower=if(face==RobotFace.HAPPY)2f else r
+    if(blink||face==RobotFace.SLEEP){glowLine(a,-r,0f,r,0f,2.2f)}
+    else {
+    val upper=when(face){RobotFace.ANGRY->-2f;RobotFace.SAD->-8f;RobotFace.HAPPY->-20f;RobotFace.SURPRISE->-r*1.6f;else->-r}
+    val lower=when(face){RobotFace.HAPPY->-3f;RobotFace.SAD->r*1.2f;RobotFace.ANGRY->7f;RobotFace.SURPRISE->r*1.6f;else->r}
     val lens=Path().apply{
         moveTo(-r,0f);quadraticBezierTo(0f,upper,r,0f)
         quadraticBezierTo(0f,lower,-r,0f);close()
@@ -69,6 +70,7 @@ private fun DrawScope.nexusFace(a:Color,face:RobotFace,blink:Boolean,g:Int,phase
         drawCircle(visor,pupil+2f,Offset(0f,if(face==RobotFace.SAD)2f else -1f))
         drawCircle(a,pupil,Offset(0f,-1f),style=Stroke(1.5f))
         drawCircle(Color.White,2f,Offset(-2f,-3f))
+    }
     }
     if(g>=1)rotate(phase*360f,Offset.Zero){
         for(i in 0..2)rotate(i*120f,Offset.Zero){
