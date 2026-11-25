@@ -8,8 +8,10 @@ class PixuArtRoutingTest {
         assertEquals(20,sources.size)
         assertEquals(6,sources.count{it==PixuArtSource.POSE_PACK})
         assertEquals(4,sources.count{it==PixuArtSource.YOUNG_ATLAS})
-        assertEquals(8,sources.count{it==PixuArtSource.OLDER_ATLAS})
-        assertEquals(2,sources.count{it==PixuArtSource.LISYK_MATURE_PACK})
+        assertEquals(10,sources.count{it==PixuArtSource.OLDER_ATLAS})
+        assertEquals(0,sources.count{it==PixuArtSource.LISYK_MATURE_PACK})
+        for(s in Species.entries)for(g in GrowthStage.playable)
+            assertEquals(PixuArtSource.ORIGINAL_FEMALE,PixuArtRouting.source(s,g,Sex.GIRL))
         for(s in Species.entries)for(g in GrowthStage.playable)
             assertEquals(PetPosePack.forPet(s,g)!=null,PixuArtRouting.source(s,g)==PixuArtSource.POSE_PACK)
     }

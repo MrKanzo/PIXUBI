@@ -33,7 +33,6 @@ internal object PixuAnimationPolicy {
     /** The airborne Iskryk and standard atlas hop poses already include lift.
      * Keep a modest shared external arc, except for those authored poses. */
     fun hopOffset(species:Species,stage:GrowthStage,phase:Float):Float =
-        if((species==Species.ISKRYK&&GrowthStage.migrate(stage)==GrowthStage.BABY)||
-            LisykMatureArtwork.matches(species,GrowthStage.migrate(stage)))0f
+        if(species==Species.ISKRYK&&GrowthStage.migrate(stage)==GrowthStage.BABY)0f
         else MotionResolver.pose(PetMotion.HOP,phase).yDp*.65f
 }

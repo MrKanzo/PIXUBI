@@ -64,8 +64,10 @@ internal object PixuFrameLibrary {
 
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
         cache.get(k)?.let{return it}
-        val source=PixuArtRouting.source(k.species,k.stage)
-        val raw=if(source==PixuArtSource.LISYK_MATURE_PACK){
+        val source=PixuArtRouting.source(k.species,k.stage,k.sex)
+        val raw=if(source==PixuArtSource.ORIGINAL_FEMALE){
+            OriginalFemaleArtwork.bitmap(context,k)
+        }else if(source==PixuArtSource.LISYK_MATURE_PACK){
             LisykMatureArtwork.bitmap(context,k.stage,k.sex,k.clip,k.frame,k.closure)
         }else if(source==PixuArtSource.POSE_PACK){
             val pack=requireNotNull(PetPosePack.forPet(k.species,k.stage))
@@ -76,7 +78,7 @@ internal object PixuFrameLibrary {
                 Bitmap.createBitmap(PixuSilhouette.female(px,w,h,k.species),w,h,Bitmap.Config.ARGB_8888)
             }else original
         }else nativeFrame(context,k,source)
-        val colored=PixuPalette.apply(raw,k.species,k.sex,k.gene)
+        val colored=PixuPalette.apply(raw,k.species,if(source==PixuArtSource.ORIGINAL_FEMALE)Sex.BOY else k.sex,k.gene)
         val final=if(colored.width==CELL&&colored.height==CELL)colored
             else Bitmap.createScaledBitmap(colored,CELL,CELL,false)
         cache.put(k,final)

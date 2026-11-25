@@ -26,8 +26,8 @@ class NativeSpriteLayoutTest {
         val older=ImageIO.read(File("src/main/assets/pixubi_older_v032.png"))
         val cases=GrowthStage.playable.flatMap{g->Species.entries.map{s->s to g}}
             .filter{(s,g)->PixuArtRouting.source(s,g) in listOf(PixuArtSource.YOUNG_ATLAS,PixuArtSource.OLDER_ATLAS)}
-        assertEquals(12,cases.size)
-        val sheet=BufferedImage(n*10,n*cases.size*2,BufferedImage.TYPE_INT_ARGB)
+        assertEquals(14,cases.size)
+        val sheet=BufferedImage(n*10,n*cases.size,BufferedImage.TYPE_INT_ARGB)
         val graphics=sheet.createGraphics()
         for((i,entry) in cases.withIndex()){
             val (s,g)=entry
@@ -40,7 +40,7 @@ class NativeSpriteLayoutTest {
                 Species.KHMARYK->SpriteClip.FLY
                 else->SpriteClip.DIG
             }
-            for((j,sex) in Sex.entries.withIndex()){
+            for((j,sex) in listOf(Sex.BOY).withIndex()){
                 val src=if(sex==Sex.GIRL)PixuSilhouette.female(original,n,n,s) else original
                 val fit=NativeSpriteLayout.fit(src,g)
                 val frames=(0..3).map{f->NativeSpriteLayout.nativeMotion(src,s,g,SpriteClip.WALK,f)}+
@@ -57,7 +57,7 @@ class NativeSpriteLayoutTest {
                     assertTrue("Empty or damaged creature "+s.name+" "+g.name,out.count{it ushr 24>=128}>3000)
                     val img=BufferedImage(n,n,BufferedImage.TYPE_INT_ARGB)
                     img.setRGB(0,0,n,n,out,0,n)
-                    graphics.drawImage(img,col*n,(i*2+j)*n,null)
+                    graphics.drawImage(img,col*n,(i+j)*n,null)
                 }
             }
         }

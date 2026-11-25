@@ -15,7 +15,7 @@ class LisykMatureArtworkTest {
         assertEquals(21,LisykMatureArtwork.index(SpriteClip.SLEEP,0,4))
         assertEquals(listOf(19,22),(0..1).map{LisykMatureArtwork.index(SpriteClip.EAT,it,0)})
         assertEquals(listOf(20,23),(0..1).map{LisykMatureArtwork.index(SpriteClip.DRINK,it,0)})
-        assertEquals(0f,PixuAnimationPolicy.hopOffset(Species.LISYK,GrowthStage.ADULT,.5f),0f)
+        assertTrue(PixuAnimationPolicy.hopOffset(Species.LISYK,GrowthStage.ADULT,.5f)<0f)
     }
 
     @Test fun allFourAtlasesAreCompleteAndUnclipped(){
