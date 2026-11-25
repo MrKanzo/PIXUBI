@@ -13,12 +13,12 @@ internal object OriginalFemaleArtwork {
     enum class Quality { AUTHORED, DERIVED }
     internal data class Choice(val index:Int,val quality:Quality)
     private data class FaceKey(val s:Species,val g:GrowthStage,val e:PetEmotion)
-    private val atlasCache=object:LruCache<String,Bitmap>(12*1024*1024){
+    private val atlasCache by lazy { object:LruCache<String,Bitmap>(12*1024*1024){
         override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount
-    }
-    private val faceCache=object:LruCache<FaceKey,List<IntArray>>(8*1024*1024){
+    } }
+    private val faceCache by lazy { object:LruCache<FaceKey,List<IntArray>>(8*1024*1024){
         override fun sizeOf(key:FaceKey,value:List<IntArray>)=value.sumOf{it.size*4}
-    }
+    } }
     fun stageName(g:GrowthStage)=when(GrowthStage.migrate(g)){
         GrowthStage.BABY->"young";GrowthStage.YOUNG->"teen"
         GrowthStage.ADULT->"adult";GrowthStage.ULTRA->"ultra"
@@ -33,7 +33,7 @@ internal object OriginalFemaleArtwork {
             SpriteClip.WALK->if(body)intArrayOf(5,5,6,6)[f.mod(4)] else null
             SpriteClip.HOP->if(body&&f.mod(4) in 1..2)7 else null
             SpriteClip.SLEEP->if(body)8 else null
-            SpriteClip.IDLE->if(closure==0)0 else null
+            SpriteClip.IDLE->if(closure==0&&f.mod(4)==0)0 else null
             else->null
         }
         return if(authored!=null)Choice(authored,Quality.AUTHORED) else Choice(0,Quality.DERIVED)
