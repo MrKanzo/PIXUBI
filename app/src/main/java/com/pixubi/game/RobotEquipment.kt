@@ -36,9 +36,16 @@ internal data class RobotEquipment(val items:Map<RobotSlot,RobotGear> = emptyMap
 internal enum class RobotSkin(val title:String,val accent:Color) {
     BLUE("Синій",Color(0xFF268ED2)), GREEN("Зелений",Color(0xFF29AB83)),
     RED("Червоний",Color(0xFFC94A5C)), GOLD("Золотий",Color(0xFFE0A634)),
-    PURPLE("Фіолетовий",Color(0xFF9B74D8)), GRAPHITE("Графіт",Color(0xFF708398))
+    PURPLE("Фіолетовий",Color(0xFF9B74D8)), GRAPHITE("Графіт",Color(0xFF708398)), PINK("Рожевий",Color(0xFFDF64AB))
 }
 internal object RobotLabStorage {
+    fun loadCompanionSkin(context:Context):RobotSkin {
+        val id=context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE).getString("companion_skin","PINK")
+        return RobotSkin.entries.firstOrNull{it.name==id}?:RobotSkin.PINK
+    }
+    fun saveCompanionSkin(context:Context,skin:RobotSkin) {
+        context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE).edit().putString("companion_skin",skin.name).apply()
+    }
     fun load(context:Context):Pair<RobotEquipment,RobotSkin> {
         val prefs=context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE)
         return RobotEquipment.decode(prefs.getString("gear","").orEmpty()) to

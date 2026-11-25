@@ -18,3 +18,6 @@ MK-1 remains visually unchanged. MK-2 Wanderer, MK-3 Maker and MK-4 Ultra have d
 
 ## 0.37.1 Secret OMEGA chassis
 A fifth, concept-inspired procedural 2D chassis, with articulated faceted limb armor, crown, reactor and animated rear crystal wings, front and mirrored profile views. Existing shared pivots and equipment slots preserved. Lab preview unrestricted. Level XP alone never unlocks OMEGA; actual achievement requirements, transformation animation, flying and main game integration are deferred. Provisional stats and visual review needed. Earlier four chassis unchanged.
+
+## 0.37.2 Companion series
+Five new female companion chassis rendered procedurally from the approved concept: rounded face, heart reactor, ear tips at MK1, growing articulated energy hair, progressive armor, and pink OMEGA wings and halo. Shared limb rotation, gear sockets, animations, stats and lab XP; both series have equal gameplay stats at each tier. Preview series switch and independent saved accent colors; lab inventory/XP remain shared for testing. No main pet screen integration yet. Device visual checks required; generated concept art is not an exact runtime sprite.

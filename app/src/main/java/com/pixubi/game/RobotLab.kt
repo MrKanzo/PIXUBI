@@ -31,7 +31,7 @@ internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
 }
 internal enum class RobotSlot(val title:String) { HEAD("Голова"), CHEST("Корпус"), LEFT_HAND("Ліва рука"), RIGHT_HAND("Права рука"), BACK("Спина"), FEET("Ноги") }
-internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment(), val tier:RobotTier=RobotTier.MK1)
+internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment(), val tier:RobotTier=RobotTier.MK1, val series:RobotSeries=RobotSeries.CLASSIC)
 internal data class RobotPose(val nearLeg:Float, val farLeg:Float, val nearArm:Float, val farArm:Float, val lift:Float)
 internal object RobotMotion {
     fun pose(action:RobotAction, phase:Float):RobotPose {
@@ -159,29 +159,29 @@ private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,g
         }
     }
 }
-private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boolean) {
+private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boolean,light:Color=glow) {
     val eyes=if(side) listOf(x+3) else listOf(x-12,x+12)
     eyes.forEachIndexed { i,ex ->
         when {
-            blink || face==RobotFace.SLEEP -> drawLine(glow,Offset(ex-4,y),Offset(ex+4,y),2.8f,StrokeCap.Round)
+            blink || face==RobotFace.SLEEP -> drawLine(light,Offset(ex-4,y),Offset(ex+4,y),2.8f,StrokeCap.Round)
             face==RobotFace.ANGRY -> {
                 val d=if(i==0) 3f else -3f
-                drawLine(glow,Offset(ex-5,y-d),Offset(ex+5,y+d),4f,StrokeCap.Round)
+                drawLine(light,Offset(ex-5,y-d),Offset(ex+5,y+d),4f,StrokeCap.Round)
             }
             face==RobotFace.HAPPY -> {
                 val p=Path().apply { moveTo(ex-5,y+2); quadraticTo(ex,y-9,ex+5,y+2) }
-                drawPath(p,glow,style=Stroke(3f,cap=StrokeCap.Round))
+                drawPath(p,light,style=Stroke(3f,cap=StrokeCap.Round))
             }
-            else -> drawRoundRect(glow,Offset(ex-4,y-6),Size(8f,if(face==RobotFace.SURPRISE) 14f else 11f),CornerRadius(4f))
+            else -> drawRoundRect(light,Offset(ex-4,y-6),Size(8f,if(face==RobotFace.SURPRISE) 14f else 11f),CornerRadius(4f))
         }
     }
     val mx=if(side) x+5 else x
     when(face) {
-        RobotFace.SURPRISE -> drawCircle(glow,3f,Offset(mx,y+14),style=Stroke(2f))
+        RobotFace.SURPRISE -> drawCircle(light,3f,Offset(mx,y+14),style=Stroke(2f))
         RobotFace.SLEEP -> Unit
         else -> {
             val p=Path().apply { moveTo(mx-5,y+12);quadraticTo(mx,y+if(face==RobotFace.SAD) 6f else 19f,mx+5,y+12) }
-            drawPath(p,glow,style=Stroke(2f,cap=StrokeCap.Round))
+            drawPath(p,light,style=Stroke(2f,cap=StrokeCap.Round))
         }
     }
 }
@@ -277,32 +277,32 @@ private fun DrawScope.omegaCrown(side:Boolean,a:Color) {
         omegaPlate(amber,listOf(Offset(93f,31f),Offset(107f,31f),Offset(104f,40f),Offset(100f,43f),Offset(96f,40f)))
     }
 }
-private fun DrawScope.omegaWings(side:Boolean,a:Color,phase:Float,action:RobotAction) {
+private fun DrawScope.omegaWings(side:Boolean,a:Color,phase:Float,action:RobotAction,light:Color=glow) {
     val pulse=(0.5f+0.5f*sin(phase*2f*PI.toFloat())).coerceIn(0f,1f)
     val power=if(action==RobotAction.SLEEP).22f else .52f+.28f*pulse
     if(side) {
         drawCircle(ink,24f,Offset(69f,86f))
         drawCircle(joint,21f,Offset(69f,86f))
         drawCircle(a,18f,Offset(69f,86f),style=Stroke(5f))
-        drawCircle(glow.copy(alpha=power),18f,Offset(69f,86f),style=Stroke(2f))
+        drawCircle(light.copy(alpha=power),18f,Offset(69f,86f),style=Stroke(2f))
         for(i in 0..2) {
             rotate((-12f+i*34f)+(pulse-0.5f)*6f,Offset(66f,86f)) {
                 omegaPlate(joint,listOf(Offset(68f,76f),Offset(37f,47f),Offset(11f,40f),Offset(27f,68f),Offset(66f,91f)))
-                omegaPlate(glow.copy(alpha=power),listOf(Offset(61f,79f),Offset(19f,45f),Offset(31f,66f),Offset(62f,87f)))
-                drawLine(glow.copy(alpha=power),Offset(24f,48f),Offset(61f,83f),1.4f)
+                omegaPlate(light.copy(alpha=power),listOf(Offset(61f,79f),Offset(19f,45f),Offset(31f,66f),Offset(62f,87f)))
+                drawLine(light.copy(alpha=power),Offset(24f,48f),Offset(61f,83f),1.4f)
             }
         }
     } else {
         drawCircle(joint,37f,Offset(100f,83f))
         drawCircle(a,33f,Offset(100f,83f),style=Stroke(5f))
-        drawCircle(glow.copy(alpha=power),33f,Offset(100f,83f),style=Stroke(2f))
+        drawCircle(light.copy(alpha=power),33f,Offset(100f,83f),style=Stroke(2f))
         for(sign in listOf(-1f,1f)) {
             val root=Offset(100f+26f*sign,87f)
             for(i in 0..2) {
                 rotate(sign*(i*29f+(pulse-.5f)*6f),root) {
                     omegaPlate(joint,listOf(Offset(root.x,root.y-8f),Offset(100f+63f*sign,47f),Offset(100f+88f*sign,35f),Offset(100f+74f*sign,65f),Offset(root.x,root.y+8f)))
-                    omegaPlate(glow.copy(alpha=power),listOf(Offset(root.x+5f*sign,root.y),Offset(100f+81f*sign,42f),Offset(100f+67f*sign,64f)))
-                    drawLine(glow.copy(alpha=power),Offset(100f+76f*sign,46f),Offset(root.x+7f*sign,root.y-2f),1.5f)
+                    omegaPlate(light.copy(alpha=power),listOf(Offset(root.x+5f*sign,root.y),Offset(100f+81f*sign,42f),Offset(100f+67f*sign,64f)))
+                    drawLine(light.copy(alpha=power),Offset(100f+76f*sign,46f),Offset(root.x+7f*sign,root.y-2f),1.5f)
                 }
             }
         }
@@ -418,23 +418,201 @@ private fun DrawScope.backGear(g:RobotGear?,side:Boolean,a:Color) {
         }
     }
 }
+private val companionShell=Color(0xFFF5F0FA)
+private val companionShade=Color(0xFF9C8FAF)
+private val companionLight=Color(0xFFFFA9E6)
+
+private fun DrawScope.companionShape(fill:Color,path:Path) {
+    drawPath(path,fill)
+    drawPath(path,ink,style=Stroke(2.1f,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+}
+private fun DrawScope.companionHeart(x:Float,y:Float,r:Float,a:Color,upgraded:Boolean) {
+    val heart=Path().apply {
+        moveTo(x,y+r)
+        cubicTo(x-r*1.5f,y-r*.05f,x-r*1.2f,y-r*1.15f,x,y-r*.48f)
+        cubicTo(x+r*1.2f,y-r*1.15f,x+r*1.5f,y-r*.05f,x,y+r)
+        close()
+    }
+    companionShape(if(upgraded)companionLight else a,heart)
+    drawPath(heart,companionLight,style=Stroke(1.4f))
+}
+private fun DrawScope.companionHair(tier:RobotTier,side:Boolean,a:Color,phase:Float,action:RobotAction) {
+    val d=CompanionCatalog.of(tier)
+    if(d.hairLength==0f)return
+    val sway=sin(phase*2f*PI.toFloat())*(if(action==RobotAction.RUN)9f else if(action==RobotAction.SLEEP)0f else 3f)
+    for(sign in if(side)listOf(-1f) else listOf(-1f,1f)) {
+        val x=if(side)76f else 100f+31f*sign
+        val y=39f
+        rotate(sign*sway,Offset(x,y)) {
+            val len=d.hairLength
+            val hair=Path().apply {
+                moveTo(x,y)
+                cubicTo(x+sign*22f,y-8f,x+sign*(if(side)38f else 26f),y+len*.6f,x+sign*24f,y+len)
+                quadraticTo(x+sign*10f,y+len*.78f,x+sign*9f,y+len*.42f)
+                quadraticTo(x+sign*4f,y+8f,x,y)
+                close()
+            }
+            companionShape(companionShell,hair)
+            val stripe=Path().apply {
+                moveTo(x+sign*9f,y+7f)
+                quadraticTo(x+sign*23f,y+len*.45f,x+sign*24f,y+len-4f)
+            }
+            drawPath(stripe,a,style=Stroke(4f,cap=StrokeCap.Round))
+            if(tier>=RobotTier.MK4)drawPath(stripe,companionLight,style=Stroke(1.7f,cap=StrokeCap.Round))
+            drawCircle(ink,9f,Offset(x,y))
+            drawCircle(a,7f,Offset(x,y))
+            drawCircle(companionShell,4f,Offset(x,y))
+        }
+    }
+}
+private fun DrawScope.companionHead(tier:RobotTier,side:Boolean,a:Color,f:RobotFace,blink:Boolean,e:RobotEquipment) {
+    val small=tier==RobotTier.MK1
+    if(side) {
+        panel(67f,28f,65f,53f,24f,companionShell)
+        panel(111f,39f,24f,33f,10f,screen)
+        face(121f,50f,true,f,blink,companionLight)
+        drawCircle(ink,13f,Offset(87f,54f))
+        drawCircle(a,11f,Offset(87f,54f))
+        drawCircle(companionShade,7f,Offset(87f,54f))
+        drawCircle(companionLight,5f,Offset(87f,54f),style=Stroke(2f))
+        if(small)omegaPlate(companionShell,listOf(Offset(73f,38f),Offset(65f,15f),Offset(92f,32f)))
+        else omegaPlate(companionShell,listOf(Offset(69f,35f),Offset(55f,19f),Offset(90f,28f),Offset(105f,37f)))
+        drawLine(a,Offset(77f,32f),Offset(100f,34f),3f,StrokeCap.Round)
+    } else {
+        for(sign in listOf(-1f,1f)) {
+            val x=100f+31f*sign
+            if(small) {
+                omegaPlate(companionShell,listOf(Offset(x-10f,34f),Offset(x+sign*5f,15f),Offset(x+10f,36f)))
+                drawLine(a,Offset(x,22f),Offset(x+sign*4f,30f),3f,StrokeCap.Round)
+            }
+            drawCircle(ink,12f,Offset(x,55f))
+            drawCircle(a,10f,Offset(x,55f))
+        }
+        panel(65f,28f,70f,53f,25f,companionShell)
+        panel(72f,40f,56f,33f,15f,screen)
+        face(100f,51f,false,f,blink,companionLight)
+        if(!blink && f!=RobotFace.SLEEP && f!=RobotFace.ANGRY) {
+            drawLine(a.copy(alpha=.8f),Offset(78f,62f),Offset(83f,62f),2f,StrokeCap.Round)
+            drawLine(a.copy(alpha=.8f),Offset(117f,62f),Offset(122f,62f),2f,StrokeCap.Round)
+        }
+        val fringe=Path().apply {
+            moveTo(73f,40f);quadraticTo(78f,25f,93f,29f)
+            quadraticTo(104f,40f,125f,33f);lineTo(127f,40f)
+            quadraticTo(108f,45f,96f,38f);quadraticTo(82f,36f,73f,40f);close()
+        }
+        companionShape(companionShell,fringe)
+        panel(94f,29f,12f,4f,2f,a)
+    }
+    if(tier==RobotTier.OMEGA) {
+        drawOval(a.copy(alpha=.85f),Offset(if(side)68f else 67f,11f),Size(if(side)57f else 66f,13f),style=Stroke(3f))
+        drawOval(companionLight,Offset(if(side)68f else 67f,11f),Size(if(side)57f else 66f,13f),style=Stroke(1.2f))
+    }
+    headGear(e.equipped(RobotSlot.HEAD),side,a)
+}
+private fun DrawScope.companionBody(tier:RobotTier,side:Boolean,a:Color,e:RobotEquipment) {
+    val d=CompanionCatalog.of(tier)
+    if(side) {
+        val body=Path().apply {
+            moveTo(82f,81f);quadraticTo(113f,77f,122f,90f)
+            quadraticTo(128f,104f,111f,113f);lineTo(119f,130f)
+            quadraticTo(98f,142f,79f,132f);lineTo(86f,112f)
+            quadraticTo(72f,95f,82f,81f);close()
+        }
+        companionShape(companionShell,body)
+        panel(88f,109f,22f,14f,5f,joint)
+        panel(117f,92f,9f,20f,4f,a)
+        drawLine(companionLight,Offset(122f,96f),Offset(122f,108f),2f)
+        if(d.armor>=1f)omegaPlate(companionShade,listOf(Offset(80f,123f),Offset(96f,121f),Offset(106f,132f),Offset(76f,141f)))
+        chestGear(e.equipped(RobotSlot.CHEST),true,a)
+    } else {
+        panel(63f,87f,22f,13f,5f,joint)
+        panel(115f,87f,22f,13f,5f,joint)
+        val body=Path().apply {
+            moveTo(79f,81f);quadraticTo(100f,75f,121f,81f)
+            quadraticTo(132f,94f,118f,109f);lineTo(114f,117f)
+            quadraticTo(124f,126f,122f,135f);lineTo(78f,135f)
+            quadraticTo(76f,126f,86f,117f);lineTo(82f,109f)
+            quadraticTo(68f,94f,79f,81f);close()
+        }
+        companionShape(companionShell,body)
+        panel(89f,111f,22f,14f,6f,joint)
+        if(d.armor>=1f)for(sign in listOf(-1f,1f)) {
+            omegaPlate(companionShade,listOf(Offset(100f+12f*sign,121f),Offset(100f+23f*sign,119f),Offset(100f+26f*sign,134f),Offset(100f+16f*sign,139f)))
+            drawLine(a,Offset(100f+18f*sign,124f),Offset(100f+20f*sign,133f),2.5f)
+        }
+        chestGear(e.equipped(RobotSlot.CHEST),false,a)
+        companionHeart(100f,98f,if(tier==RobotTier.OMEGA)13f else 10f,a,e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)
+        if(d.armor>=3f) {
+            drawLine(companionLight,Offset(92f,115f),Offset(92f,121f),2f)
+            drawLine(companionLight,Offset(108f,115f),Offset(108f,121f),2f)
+        }
+    }
+}
+private fun DrawScope.companionRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean,tier:RobotTier,phase:Float,action:RobotAction) {
+    val side=view!=RobotView.FRONT
+    val d=CompanionCatalog.of(tier)
+    // Same equipment anchors as classic; local scale narrows the silhouette at fixed pivots.
+    fun DrawScope.limbArm(x:Float,y:Float,angle:Float,far:Boolean,gear:RobotGear?) {
+        rotate(angle,Offset(x,y)) {
+            scale(.83f+d.armor*.025f,1f,Offset(x,y)) {
+                arm(x,y,0f,far,a,gear,tier)
+            }
+        }
+    }
+    fun DrawScope.limbLeg(x:Float,y:Float,angle:Float,far:Boolean) {
+        rotate(angle,Offset(x,y)) {
+            scale(.84f+d.armor*.025f,1f,Offset(x,y)) {
+                leg(x,y,0f,side,far,a,e.equipped(RobotSlot.FEET),tier)
+            }
+        }
+    }
+    companionHair(tier,side,a,phase,action)
+    backGear(e.equipped(RobotSlot.BACK),side,a)
+    if(side) {
+        limbLeg(94f,132f,p.farLeg,true)
+        limbArm(94f,91f,p.farArm,true,e.equipped(view.farHand()))
+        limbLeg(102f,133f,p.nearLeg,false)
+        companionBody(tier,true,a,e)
+        panel(92f,72f,13f,13f,4f,joint)
+        companionHead(tier,true,a,f,blink,e)
+        limbArm(99f,92f,p.nearArm,false,e.equipped(view.nearHand()))
+        drawCircle(ink,8f,Offset(99f,92f));drawCircle(a,6f,Offset(99f,92f))
+        drawCircle(companionShade,3f,Offset(99f,92f))
+    } else {
+        limbLeg(85f,133f,p.farLeg*.12f,false)
+        limbLeg(115f,133f,p.nearLeg*.12f,false)
+        companionBody(tier,false,a,e)
+        limbArm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,e.equipped(RobotSlot.RIGHT_HAND))
+        limbArm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,e.equipped(RobotSlot.LEFT_HAND))
+        for(x in listOf(65f,135f)) {
+            drawCircle(ink,9f,Offset(x,94f));drawCircle(companionShell,7.5f,Offset(x,94f))
+            drawCircle(a,5f,Offset(x,94f));drawCircle(joint,2.5f,Offset(x,94f))
+        }
+        panel(94f,70f,12f,13f,4f,joint)
+        companionHead(tier,false,a,f,blink,e)
+    }
+}
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
     val p=RobotMotion.pose(action,phase)
     Canvas(modifier) {
         val omega=loadout.tier==RobotTier.OMEGA
+        val companion=loadout.series==RobotSeries.COMPANION
+        val growth=if(companion)CompanionCatalog.of(loadout.tier).scale else 1f
         val s=min(size.width/(if(omega)236f else 200f),size.height/(if(omega)270f else 215f))
         val dx=(size.width-200*s)/2; val dy=(size.height-215*s)/2+(if(omega)18*s else 0f)
         translate(dx,dy) {
             scale(s,s,Offset.Zero) {
                 drawOval(ink.copy(alpha=.35f),Offset(63f,181f),Size(74f,8f))
                 translate(top=p.lift) {
+                    scale(growth,growth,Offset(100f,180f)) {
                     scale(if(view==RobotView.LEFT) -1f else 1f,1f,Offset(100f,100f)) {
                         val actualFace=if(action==RobotAction.SLEEP) RobotFace.SLEEP else face
                         val blink=phase>.94f && action==RobotAction.IDLE
-                        if(loadout.tier==RobotTier.OMEGA) omegaWings(view!=RobotView.FRONT,loadout.accent,phase,action)
-                        if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier)
+                        if(loadout.tier==RobotTier.OMEGA) omegaWings(view!=RobotView.FRONT,loadout.accent,phase,action,if(companion)companionLight else glow)
+                        if(companion) companionRobot(p,view,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier,phase,action)
+                        else if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier)
                         else robotSide(p,loadout.accent,loadout.equipment,view,actualFace,blink,loadout.tier)
                         if(action==RobotAction.SCAN) {
                             val x=if(view==RobotView.FRONT) 100f else 134f
@@ -444,6 +622,7 @@ internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, lo
                     }
                     if(showSockets) RobotMotion.sockets(view).values.forEach {
                         drawCircle(amber,3f,it,style=Stroke(1.5f))
+                    }
                     }
                 }
             }
@@ -459,7 +638,10 @@ internal fun RobotLab(onBack:()->Unit) {
     val context=LocalContext.current
     val initial=remember(context){RobotLabStorage.load(context)}
     var equipment by remember { mutableStateOf(initial.first) }
-    var skin by remember { mutableStateOf(initial.second) }
+    var classicSkin by remember { mutableStateOf(initial.second) }
+    var companionSkin by remember(context) { mutableStateOf(RobotLabStorage.loadCompanionSkin(context)) }
+    var series by remember { mutableStateOf(RobotSeries.CLASSIC) }
+    val skin=if(series==RobotSeries.COMPANION)companionSkin else classicSkin
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
     var progress by remember(context) { mutableStateOf(RobotProgressStorage.load(context)) }
     LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
@@ -468,7 +650,8 @@ internal fun RobotLab(onBack:()->Unit) {
     var tier by remember { mutableStateOf(RobotTier.MK1) }
     val stats=remember(equipment,progress.level,skills,tier){RobotBalance.total(tier,equipment,progress.level,skills.bonuses())}
     val baseStats=remember(progress.level,tier){RobotBalance.total(tier,RobotEquipment(),progress.level)}
-    LaunchedEffect(equipment,skin){RobotLabStorage.save(context,equipment,skin)}
+    LaunchedEffect(equipment,classicSkin){RobotLabStorage.save(context,equipment,classicSkin)}
+    LaunchedEffect(companionSkin){RobotLabStorage.saveCompanionSkin(context,companionSkin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
     var phase by remember { mutableFloatStateOf(0f) }
@@ -491,6 +674,12 @@ internal fun RobotLab(onBack:()->Unit) {
             OutlinedButton(onClick=onBack){Text("Назад")}
         }
         Text("Незалежний тестовий стенд. Не змінює збереження гри.")
+        Text("Серія робота")
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            RobotSeries.entries.forEach { item ->
+                FilterChip(selected=series==item,onClick={series=item},label={Text(item.title)})
+            }
+        }
         Text("Еволюції · вільний перегляд")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotTier.entries.forEach { t ->
@@ -498,13 +687,13 @@ internal fun RobotLab(onBack:()->Unit) {
             }
         }
         val chassis=RobotChassisCatalog.of(tier)
-        Text(chassis.title+" · "+chassis.description,style=MaterialTheme.typography.bodyMedium)
+        Text(if(series==RobotSeries.COMPANION)CompanionCatalog.of(tier).title+" · Companion" else chassis.title+" · "+chassis.description,style=MaterialTheme.typography.bodyMedium)
         Text(when {
             tier==RobotTier.OMEGA -> "Секретна форма · лише особливі досягнення (умови ще не визначені)"
             RobotChassisCatalog.unlocked(tier,progress.level)->"Доступний за рівнем"
             else->"Тестовий перегляд · відкриття з рівня ${tier.requiredLevel}"
         },style=MaterialTheme.typography.bodySmall)
-        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier),phase,sockets,
+        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,
             Modifier.fillMaxWidth().height(300.dp)) }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v},label={Text(v.title)}) }
@@ -553,7 +742,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Скін · колір акцентів")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSkin.entries.forEach { s ->
-                FilterChip(selected=skin==s,onClick={skin=s},label={Text(s.title)})
+                FilterChip(selected=skin==s,onClick={if(series==RobotSeries.COMPANION)companionSkin=s else classicSkin=s},label={Text(s.title)})
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {
