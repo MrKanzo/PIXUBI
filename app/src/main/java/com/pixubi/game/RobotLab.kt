@@ -31,7 +31,7 @@ internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
 }
 internal enum class RobotSlot(val title:String) { HEAD("Голова"), CHEST("Корпус"), LEFT_HAND("Ліва рука"), RIGHT_HAND("Права рука"), BACK("Спина"), FEET("Ноги") }
-internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment())
+internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment(), val tier:RobotTier=RobotTier.MK1)
 internal data class RobotPose(val nearLeg:Float, val farLeg:Float, val nearArm:Float, val farArm:Float, val lift:Float)
 internal object RobotMotion {
     fun pose(action:RobotAction, phase:Float):RobotPose {
@@ -82,17 +82,22 @@ private fun DrawScope.panel(x:Float,y:Float,w:Float,h:Float,r:Float,fill:Color) 
 private fun DrawScope.bolt(x:Float,y:Float,r:Float=4f) {
     drawCircle(ink,r+1,Offset(x,y));drawCircle(amber,r,Offset(x,y));drawCircle(joint,r*0.45f,Offset(x,y))
 }
-private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,accent:Color,gear:RobotGear?=null) {
-    val c=if(far) shade else shell
+private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,accent:Color,gear:RobotGear?=null,tier:RobotTier=RobotTier.MK1) {
+    val style=RobotChassisCatalog.of(tier)
+    val c=if(far) style.shade else style.shell
     rotate(angle,Offset(x,y)) {
         panel(x-6,y,12f,19f,5f,joint)
         bolt(x,y+16,4f)
-        panel(x-8,y+19,16f,19f,5f,c)
+        panel(x-8-style.limbWidth,y+19,16f+2*style.limbWidth,19f,if(tier==RobotTier.MK1)5f else 3f,c)
+        if(tier!=RobotTier.MK1) {
+            panel(x-5,y+22,10f,10f,2f,style.shade)
+            drawLine(accent,Offset(x-3,y+24),Offset(x+3,y+30),2f,StrokeCap.Round)
+        }
         if(side) {
-            panel(x-10,y+35,29f,12f,5f,c)
+            panel(x-10-style.limbWidth/2,y+35,29f+style.limbWidth,12f,if(tier==RobotTier.MK1)5f else 3f,c)
             drawRoundRect(accent,Offset(x+5,y+37),Size(12f,6f),CornerRadius(2f))
         } else {
-            panel(x-12,y+35,24f,12f,5f,c)
+            panel(x-12-style.limbWidth/2,y+35,24f+style.limbWidth,12f,if(tier==RobotTier.MK1)5f else 3f,c)
             drawRoundRect(accent,Offset(x-9,y+37),Size(18f,6f),CornerRadius(2f))
         }
         if(gear==RobotGear.BOOTS || gear==RobotGear.SPEED_BOOTS) {
@@ -103,13 +108,18 @@ private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a
         }
     }
 }
-private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,gear:RobotGear?) {
-    val c=if(far) shade else shell
+private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,gear:RobotGear?,tier:RobotTier=RobotTier.MK1) {
+    val style=RobotChassisCatalog.of(tier)
+    val c=if(far) style.shade else style.shell
     rotate(angle,Offset(x,y)) {
         bolt(x,y,7f)
         panel(x-7,y+5,14f,17f,5f,joint)
         bolt(x,y+20,4f)
-        panel(x-9,y+23,18f,17f,6f,c)
+        panel(x-9-style.limbWidth,y+23,18f+2*style.limbWidth,17f,if(tier==RobotTier.MK1)6f else 3f,c)
+        if(tier!=RobotTier.MK1) {
+            panel(x-7,y+8,14f,8f,3f,style.shade)
+            drawLine(accent,Offset(x-4,y+10),Offset(x+4,y+10),2f,StrokeCap.Round)
+        }
         drawRoundRect(accent,Offset(x-6,y+26),Size(12f,5f),CornerRadius(2f))
         panel(x-7,y+39,14f,10f,4f,joint)
         if(gear==RobotGear.SHIELD_L || gear==RobotGear.SHIELD_R) {
@@ -153,18 +163,20 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
         }
     }
 }
-private fun DrawScope.robotFront(p:RobotPose,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean) {
+private fun DrawScope.robotFront(p:RobotPose,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean,tier:RobotTier) {
+    val style=RobotChassisCatalog.of(tier)
     backGear(e.equipped(RobotSlot.BACK),false,a)
     val boots=e.equipped(RobotSlot.FEET)
-    leg(85f,133f,p.farLeg*0.12f,false,false,a,boots)
-    leg(115f,133f,p.nearLeg*0.12f,false,false,a,boots)
+    leg(85f,133f,p.farLeg*0.12f,false,false,a,boots,tier)
+    leg(115f,133f,p.nearLeg*0.12f,false,false,a,boots,tier)
     // Fixed shoulder mounts overlap the torso shell; the arm pivots stay at their centers.
     panel(63f,87f,22f,13f,5f,joint)
     panel(115f,87f,22f,13f,5f,joint)
-    panel(74f,78f,52f,60f,14f,shell)
+    panel(74f,78f,52f,60f,style.bodyRadius,style.shell)
+    chassisBody(tier,false,a)
     panel(80f,126f,40f,9f,4f,shade)
-    arm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND))
-    arm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND))
+    arm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND),tier)
+    arm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND),tier)
     // Stationary bearing caps sit over the rotating arm roots.
     drawCircle(ink,9f,Offset(65f,94f));drawCircle(shade,7.5f,Offset(65f,94f))
     drawCircle(ink,9f,Offset(135f,94f));drawCircle(shade,7.5f,Offset(135f,94f))
@@ -173,36 +185,95 @@ private fun DrawScope.robotFront(p:RobotPose,a:Color,e:RobotEquipment,f:RobotFac
     chestGear(e.equipped(RobotSlot.CHEST),false,a)
     panel(94f,70f,12f,13f,4f,joint)
     panel(56f,42f,12f,27f,5f,amber);panel(132f,42f,12f,27f,5f,amber)
-    panel(65f,30f,70f,49f,18f,shell)
-    panel(72f,39f,56f,33f,12f,screen)
+    panel(65f,30f,70f,49f,style.headRadius,style.shell)
+    panel(72f,39f,56f,33f,if(tier==RobotTier.MK1)12f else style.headRadius.coerceAtLeast(4f),screen)
+    chassisHead(tier,false,a)
     face(100f,50f,false,f,blink)
     panel(92f,29f,16f,5f,2f,a)
     drawLine(joint,Offset(100f,29f),Offset(104f,16f),4f,StrokeCap.Round)
     drawCircle(ink,5f,Offset(104f,14f));drawCircle(glow,3.5f,Offset(104f,14f))
     headGear(e.equipped(RobotSlot.HEAD),false,a)
 }
-private fun DrawScope.robotSide(p:RobotPose,a:Color,e:RobotEquipment,view:RobotView,f:RobotFace,blink:Boolean) {
+private fun DrawScope.robotSide(p:RobotPose,a:Color,e:RobotEquipment,view:RobotView,f:RobotFace,blink:Boolean,tier:RobotTier) {
+    val style=RobotChassisCatalog.of(tier)
     backGear(e.equipped(RobotSlot.BACK),true,a)
     val boots=e.equipped(RobotSlot.FEET)
     // True right profile: far limbs first, then depth-specific torso and near limbs.
-    leg(94f,132f,p.farLeg,true,true,a,boots)
-    arm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()))
-    leg(102f,133f,p.nearLeg,true,false,a,boots)
-    panel(76f,82f,46f,54f,13f,shell)
+    leg(94f,132f,p.farLeg,true,true,a,boots,tier)
+    arm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()),tier)
+    leg(102f,133f,p.nearLeg,true,false,a,boots,tier)
+    panel(76f,82f,46f,54f,if(tier==RobotTier.MK1)13f else style.bodyRadius,style.shell)
+    chassisBody(tier,true,a)
     panel(70f,91f,10f,34f,4f,shade)
     panel(117f,95f,8f,22f,3f,a)
     drawRoundRect(glow,Offset(121f,100f),Size(3f,12f),CornerRadius(1.5f))
     chestGear(e.equipped(RobotSlot.CHEST),true,a)
     panel(92f,72f,13f,13f,4f,joint)
-    panel(67f,30f,65f,49f,18f,shell)
-    panel(112f,39f,23f,33f,9f,screen)
+    panel(67f,30f,65f,49f,style.headRadius,style.shell)
+    panel(112f,39f,23f,33f,if(tier==RobotTier.MK1)9f else style.headRadius.coerceAtMost(9f),screen)
+    chassisHead(tier,true,a)
     face(121f,50f,true,f,blink)
     drawCircle(ink,12f,Offset(87f,54f));drawCircle(amber,10f,Offset(87f,54f));drawCircle(a,5f,Offset(87f,54f))
     panel(89f,29f,13f,5f,2f,a)
     drawLine(joint,Offset(95f,29f),Offset(92f,16f),4f,StrokeCap.Round)
     drawCircle(ink,5f,Offset(92f,14f));drawCircle(glow,3.5f,Offset(92f,14f))
-    arm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()))
+    arm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()),tier)
     headGear(e.equipped(RobotSlot.HEAD),true,a)
+}
+private fun DrawScope.chassisBody(tier:RobotTier,side:Boolean,a:Color) {
+    if(tier==RobotTier.MK1)return
+    val style=RobotChassisCatalog.of(tier)
+    if(side) {
+        panel(80f,85f,18f,8f,2f,style.shade)
+        panel(80f,122f,32f,10f,3f,style.shade)
+        if(tier>=RobotTier.MK3) {
+            panel(72f,87f,12f,38f,3f,style.shade)
+            for(y in listOf(94f,104f,114f))drawLine(a,Offset(76f,y),Offset(80f,y),2f)
+        }
+        if(tier==RobotTier.MK4) panel(102f,83f,16f,9f,2f,a)
+    } else {
+        panel(80f,80f,40f,9f,3f,style.shade)
+        panel(84f,122f,32f,10f,3f,style.shade)
+        if(tier>=RobotTier.MK3) {
+            for(x in listOf(77f,117f)) {
+                panel(x,94f,6f,29f,2f,style.shade)
+                drawLine(a,Offset(x+3,98f),Offset(x+3,118f),2f)
+            }
+        }
+        if(tier==RobotTier.MK4) {
+            panel(79f,82f,14f,9f,2f,a)
+            panel(107f,82f,14f,9f,2f,a)
+            drawLine(glow,Offset(90f,118f),Offset(110f,118f),2f)
+        }
+    }
+}
+private fun DrawScope.chassisHead(tier:RobotTier,side:Boolean,a:Color) {
+    if(tier==RobotTier.MK1)return
+    val style=RobotChassisCatalog.of(tier)
+    if(side) {
+        panel(70f,32f,35f,7f,2f,style.shade)
+        if(tier>=RobotTier.MK3) {
+            panel(65f,41f,12f,25f,3f,style.shade)
+            drawLine(a,Offset(69f,46f),Offset(69f,61f),2f)
+        }
+        if(tier==RobotTier.MK4) {
+            panel(65f,69f,43f,8f,2f,style.shade)
+            drawLine(glow,Offset(74f,73f),Offset(99f,73f),2f)
+        }
+    } else {
+        panel(69f,31f,20f,7f,2f,style.shade)
+        panel(111f,31f,20f,7f,2f,style.shade)
+        if(tier>=RobotTier.MK3) {
+            panel(61f,46f,10f,25f,3f,style.shade)
+            panel(129f,46f,10f,25f,3f,style.shade)
+            drawLine(a,Offset(66f,50f),Offset(66f,65f),2f)
+            drawLine(a,Offset(134f,50f),Offset(134f,65f),2f)
+        }
+        if(tier==RobotTier.MK4) {
+            panel(72f,73f,56f,6f,2f,style.shade)
+            drawLine(glow,Offset(84f,75f),Offset(116f,75f),2f)
+        }
+    }
 }
 private fun DrawScope.headGear(g:RobotGear?,side:Boolean,a:Color) {
     when(g) {
@@ -273,8 +344,8 @@ internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, lo
                     scale(if(view==RobotView.LEFT) -1f else 1f,1f,Offset(100f,100f)) {
                         val actualFace=if(action==RobotAction.SLEEP) RobotFace.SLEEP else face
                         val blink=phase>.94f && action==RobotAction.IDLE
-                        if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink)
-                        else robotSide(p,loadout.accent,loadout.equipment,view,actualFace,blink)
+                        if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier)
+                        else robotSide(p,loadout.accent,loadout.equipment,view,actualFace,blink,loadout.tier)
                         if(action==RobotAction.SCAN) {
                             val x=if(view==RobotView.FRONT) 100f else 134f
                             drawLine(glow.copy(alpha=.6f),Offset(x,48f),Offset(x+if(view==RobotView.FRONT) 0f else 40f,30f+phase*50),1.5f)
@@ -304,8 +375,9 @@ internal fun RobotLab(onBack:()->Unit) {
     LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
     var skills by remember(context){mutableStateOf(RobotSkillsStorage.load(context))}
     LaunchedEffect(skills){RobotSkillsStorage.save(context,skills)}
-    val stats=remember(equipment,progress.level,skills){RobotBalance.total(RobotTier.MK1,equipment,progress.level,skills.bonuses())}
-    val baseStats=remember(progress.level){RobotBalance.total(RobotTier.MK1,RobotEquipment(),progress.level)}
+    var tier by remember { mutableStateOf(RobotTier.MK1) }
+    val stats=remember(equipment,progress.level,skills,tier){RobotBalance.total(tier,equipment,progress.level,skills.bonuses())}
+    val baseStats=remember(progress.level,tier){RobotBalance.total(tier,RobotEquipment(),progress.level)}
     LaunchedEffect(equipment,skin){RobotLabStorage.save(context,equipment,skin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
@@ -325,11 +397,20 @@ internal fun RobotLab(onBack:()->Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
-            Text("Robot Lab · MK-1",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+            Text("Robot Lab · ${tier.title}",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
             OutlinedButton(onClick=onBack){Text("Назад")}
         }
         Text("Незалежний тестовий стенд. Не змінює збереження гри.")
-        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment),phase,sockets,
+        Text("Еволюції · вільний перегляд")
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            RobotTier.entries.forEach { t ->
+                FilterChip(selected=tier==t,onClick={tier=t},label={Text(t.title)})
+            }
+        }
+        val chassis=RobotChassisCatalog.of(tier)
+        Text(chassis.title+" · "+chassis.description,style=MaterialTheme.typography.bodyMedium)
+        Text(if(RobotChassisCatalog.unlocked(tier,progress.level))"Доступний за рівнем" else "Тестовий перегляд · відкриття з рівня ${tier.requiredLevel}",style=MaterialTheme.typography.bodySmall)
+        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier),phase,sockets,
             Modifier.fillMaxWidth().height(300.dp)) }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v},label={Text(v.title)}) }
@@ -348,7 +429,7 @@ internal fun RobotLab(onBack:()->Unit) {
             RobotFace.entries.forEach { f -> FilterChip(selected=face==f,onClick={face=f},label={Text(f.title)}) }
         }
         HorizontalDivider()
-        RobotStatsPanel(stats,baseStats,progress,onTrain={progress=progress.gain(25)},onReset={progress=RobotProgress()})
+        RobotStatsPanel(tier,stats,baseStats,progress,onTrain={progress=progress.gain(25)},onReset={progress=RobotProgress()})
         HorizontalDivider()
         RobotSkillsPanel(skills,onActivity={ event ->
             skills=skills.record(event)
@@ -368,7 +449,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             FilterChip(selected=equipment.equipped(selectedSlot)==null,onClick={equipment=equipment.remove(selectedSlot)},label={Text("Зняти")})
             RobotGear.forSlot(selectedSlot).forEach { g ->
-                FilterChip(selected=equipment.equipped(selectedSlot)==g,enabled=RobotBalance.compatible(g,RobotTier.MK1),onClick={equipment=equipment.equip(g)},label={Text(g.title)})
+                FilterChip(selected=equipment.equipped(selectedSlot)==g,enabled=RobotBalance.compatible(g,tier),onClick={equipment=equipment.equip(g)},label={Text(g.title)})
             }
         }
         equipment.equipped(selectedSlot)?.let { gear ->
@@ -385,16 +466,16 @@ internal fun RobotLab(onBack:()->Unit) {
             Text("Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
             Switch(checked=sockets,onCheckedChange={sockets=it})
         }
-        Text("MK-2–MK-4, справжні мініігри та автономний пошук ще не підключені.",style=MaterialTheme.typography.bodySmall)
+        Text("Еволюції доступні для тестового перегляду. Справжні мініігри та автономний пошук ще не підключені.",style=MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
-private fun RobotStatsPanel(stats:RobotStats,base:RobotStats,progress:RobotProgress,onTrain:()->Unit,onReset:()->Unit) {
+private fun RobotStatsPanel(tier:RobotTier,stats:RobotStats,base:RobotStats,progress:RobotProgress,onTrain:()->Unit,onReset:()->Unit) {
     var confirmReset by remember { mutableStateOf(false) }
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-            Text("Характеристики · MK-1",style=MaterialTheme.typography.titleMedium)
+            Text("Характеристики · ${tier.title}",style=MaterialTheme.typography.titleMedium)
             RobotStat.entries.forEach { stat ->
                 val change=stats[stat]-base[stat]
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -407,7 +488,7 @@ private fun RobotStatsPanel(stats:RobotStats,base:RobotStats,progress:RobotProgr
             Text("Рівень ${progress.level} · ${progress.safeXp} XP",style=MaterialTheme.typography.titleMedium)
             LinearProgressIndicator(progress={progress.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(progress.remaining==0)"Максимальний рівень" else "До нового рівня: ${progress.remaining} XP")
-            Text("Доступний за рівнем ранг: ${progress.nextTier.title}. Модель залишається MK-1; еволюції ще не реалізовано.",style=MaterialTheme.typography.bodySmall)
+            Text("Доступний за рівнем ранг: ${progress.nextTier.title}. У лабораторії всі корпуси доступні для перегляду незалежно від рівня.",style=MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Button(onClick=onTrain,enabled=progress.remaining>0){Text("Тест +25 XP")}
                 OutlinedButton(onClick={confirmReset=true}){Text("Скинути XP")}

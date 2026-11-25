@@ -12,3 +12,6 @@ Seven derived stats, gear trade-offs, independent cosmetic skins, data-driven ti
 
 ## 0.36.0 Tamagotchi-first adaptive skills
 PIXUBI LAB is an offline virtual robot pet, not primarily a combat RPG. Future minigames live in its pet screen; autonomous offline gathering and optional multiplayer arenas are future systems. Seven independent skill tracks, levels 0–10 and additive stat bonuses. Six explicit test activity events grant skill XP and general XP; battle track remains reserved. Rendering and frame loops never award XP. Separate lab-only skill persistence; no real gameplay event integration, resource spending, offline gathering or multiplayer in this version. All balance values provisional.
+
+## 0.37.0 Chassis evolution preview
+MK-1 remains visually unchanged. MK-2 Wanderer, MK-3 Maker and MK-4 Ultra have distinct shell materials, head/body contours, articulated limb plating and tier-specific trim in front and profile. All use the existing rig, equipment transforms and expressions; no new animation poses. Lab tier selection is unrestricted and transient; level requirements are informational, not actual game evolution. Stats follow the previewed chassis. Device visual review is required, especially layered gear and running poses. Main pet screen remains unchanged.
