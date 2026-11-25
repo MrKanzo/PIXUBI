@@ -25,18 +25,19 @@ import androidx.compose.ui.unit.sp
 
 /** Screen recording stand: all cells use the same selected synthetic identity and clock. */
 @Composable
-internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()->Unit){
+internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()->Unit,recordingFirst:Boolean=false){
     val view=LocalView.current
     DisposableEffect(view){
         val previous=view.keepScreenOn
         view.keepScreenOn=true
         onDispose{view.keepScreenOn=previous}
     }
-    var running by remember{mutableStateOf(true)}
+    var running by remember{mutableStateOf(!recordingFirst)}
     var speed by remember{mutableFloatStateOf(1f)}
     var seconds by remember{mutableFloatStateOf(0f)}
-    var focused by remember{mutableIntStateOf(-1)}
-    var automatic by remember{mutableStateOf(false)}
+    var focused by remember{mutableIntStateOf(if(recordingFirst)0 else -1)}
+    var automatic by remember{mutableStateOf(recordingFirst)}
+    var finished by remember{mutableStateOf(false)}
     var left by remember{mutableStateOf(false)}
     val items=AnimationStandPlan.items
     BackHandler {
@@ -50,8 +51,12 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
             val fps=if(focused>=0||automatic)32f else 16f
             while(true){
                 val now=withFrameNanos{it}
-                accumulated=(accumulated+((now-previous)/1_000_000_000f).coerceIn(0f,.1f)*speed)%
-                    (if(automatic)AnimationStandPlan.duration else 48f)
+                accumulated+=((now-previous)/1_000_000_000f).coerceIn(0f,.1f)*speed
+                if(automatic&&accumulated>=AnimationStandPlan.duration){
+                    seconds=AnimationStandPlan.duration-1f/32f
+                    finished=true;running=false;break
+                }
+                if(!automatic)accumulated%=48f
                 seconds=kotlin.math.floor(accumulated*fps)/fps
                 previous=now
             }
@@ -63,7 +68,7 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
         ImportedPixuArt.form(context,spec.species,spec.stage,spec.sex)
     }
     val sceneSpec=spec.copy(bowl=true,cup=true,charger=true)
-    val reset:()->Unit={seconds=0f;running=true}
+    val reset:()->Unit={seconds=0f;finished=false;running=!recordingFirst||!automatic}
     Column(Modifier.fillMaxSize().background(Color(0xFF101A2E)).padding(5.dp),
         verticalArrangement=Arrangement.spacedBy(3.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
@@ -78,8 +83,8 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
             StandChoice((0..5).toList(),spec.color,{"№${it+1}"},{onSpec(spec.copy(color=it));reset()},Modifier.weight(.65f))
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(3.dp)){
-            StandButton(if(running)"Ⅱ" else "▶",{running=!running},Modifier.weight(.6f))
-            StandButton("↺",{running=false;seconds=0f},Modifier.weight(.6f))
+            StandButton(if(running)"Ⅱ" else "▶",{if(finished){seconds=0f;finished=false};running=!running},Modifier.weight(.6f))
+            StandButton("↺",{running=false;finished=false;seconds=0f},Modifier.weight(.6f))
             StandButton("+1/16",{running=false;seconds=(seconds+1f/16f)%(if(automatic)AnimationStandPlan.duration else 48f)},Modifier.weight(1f))
             StandButton("${speed}×",{speed=when(speed){1f->.5f;.5f->.25f;.25f->2f;else->1f}},Modifier.weight(.9f))
             StandButton(if(left)"←" else "→",{left=!left},Modifier.weight(.6f))
@@ -88,6 +93,15 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
                 else {automatic=true;focused=0}
                 reset()
             },Modifier.weight(1.4f))
+        }
+        if(automatic){
+            Button(onClick={seconds=0f;finished=false;running=true},modifier=Modifier.fillMaxWidth()){
+                Text(if(finished)"↺ Повторити всі рухи" else "▶ ПОЧАТИ ПОКАЗ УСІХ РУХІВ")
+            }
+            Text(if(finished)"Готово: усі 20 сцен показано. Можна зупинити запис."
+                else if(!running)"Увімкни запис екрана, потім натисни «Почати показ»."
+                else "Записуй екран • дії змінюються автоматично",
+                color=Color(0xFF98E6CD),fontSize=12.sp)
         }
         Text("${spec.species.title} • ${spec.sex.title} • ${spec.stage.title} • колір ${spec.color+1} • ${if(form!=null)"новий арт" else "старий арт"}",
             color=Color(0xFFBFD0E7),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -104,7 +118,7 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
                 else if(form!=null)ImportedActionAudit.describe(form,spec.species,spec.stage,spec.sex,item.action,item.action==DevAction.WALK)
                 else "Старий графічний набір"
             Text(note,color=Color(0xFFFFD58A),fontSize=12.sp)
-            if(automatic)LinearProgressIndicator(progress={seconds/AnimationStandPlan.duration},modifier=Modifier.fillMaxWidth())
+            if(automatic)LinearProgressIndicator(progress={if(finished)1f else seconds/AnimationStandPlan.duration},modifier=Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
                 StandButton("‹ Попередня",{
                     focused=(chosen.index-1+items.size)%items.size;automatic=false;reset()

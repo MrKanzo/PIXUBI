@@ -22,7 +22,10 @@ android {
         }
     }
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".mystery" }
+        getByName("debug") {
+            applicationIdSuffix = ".mystery"
+            versionNameSuffix = "-animation-test2"
+        }
         getByName("release") {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("production")

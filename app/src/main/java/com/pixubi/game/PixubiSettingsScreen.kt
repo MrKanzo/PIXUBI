@@ -50,7 +50,8 @@ fun PixubiSettingsScreen(
     isStableInstall: Boolean,
     checkingForUpdates: Boolean,
     onBack: () -> Unit,
-    developerPet: Pet? = null
+    developerPet: Pet? = null,
+    onAnimationTest:(()->Unit)?=null
 ) {
     val context=LocalContext.current
     val version=remember(context){context.packageManager.getPackageInfo(context.packageName,0).versionName ?: "?"}
@@ -77,6 +78,9 @@ fun PixubiSettingsScreen(
                 Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
+        }
+        if(onAnimationTest!=null)Button(onClick=onAnimationTest,modifier=Modifier.fillMaxWidth()){
+            Text("🎬 ТЕСТ АНІМАЦІЙ • запис відео")
         }
         OutlinedButton(onClick={showDeveloper=true},modifier=Modifier.fillMaxWidth()) {
             Text("🛠 Режим розробника")

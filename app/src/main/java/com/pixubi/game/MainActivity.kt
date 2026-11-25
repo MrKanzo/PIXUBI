@@ -92,6 +92,8 @@ class MainActivity : ComponentActivity() {
             val audio = remember { PixubiAudio(applicationContext) }
             var soundSettings by remember { mutableStateOf(audioStore.load()) }
             var showSettings by remember { mutableStateOf(false) }
+            var animationTestSpec by remember { mutableStateOf<DevSpec?>(null) }
+            val animationTestEnabled=(applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0
             var auditionRegion by remember { mutableStateOf<Region?>(null) }
             var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.restoreAfterAbsence(it, System.currentTimeMillis()) }) }
             val collectionStore = remember { PlayerCollectionStore(applicationContext) }
@@ -230,6 +232,7 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize(), color = night) {
                     val current = pet
                     when {
+                        animationTestSpec!=null -> PixubiAnimationStand(animationTestSpec!!,onSpec={animationTestSpec=it},onExit={animationTestSpec=null},recordingFirst=true)
                         showCollection -> PixuCollectionScreen(
                             library = collection,
                             current = current,
@@ -259,6 +262,7 @@ class MainActivity : ComponentActivity() {
                             },
                             currentRegion = current?.region ?: Region.FOREST,
                             developerPet = current,
+                            onAnimationTest=if(animationTestEnabled)({animationTestSpec=DevSpec.from(current)}) else null,
                             previewRegion = auditionRegion,
                             onSettingsChange = { saveSound(it) },
                             onPreviewRegion = {
@@ -278,7 +282,8 @@ class MainActivity : ComponentActivity() {
                                 audio.effect(PixubiSound.HAPPY)
                             },
                             onSettings = { goSettings() },
-                            onProfile = { showProfile = true }
+                            onProfile = { showProfile = true },
+                            onAnimationTest=if(animationTestEnabled)({animationTestSpec=DevSpec.from(null)}) else null
                         )
                         !current.alive -> FarewellScreen(current, onProfile = { showProfile = true }) {
                             storage.erase()
@@ -387,7 +392,8 @@ class MainActivity : ComponentActivity() {
                                 audio.effect(PixubiSound.TAP)
                             },
                             onSettings = { goSettings() },
-                            onProfile = { showProfile = true }
+                            onProfile = { showProfile = true },
+                            onAnimationTest=if(animationTestEnabled)({animationTestSpec=DevSpec.from(current)}) else null
                         )
                     }
                 }
@@ -453,7 +459,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
-                        onProfile: () -> Unit) {
+                        onProfile: () -> Unit,onAnimationTest:(()->Unit)?=null) {
     var species by remember { mutableStateOf(Species.LISYK) }
     var sex by remember { mutableStateOf(Sex.GIRL) }
     var region by remember { mutableStateOf(Region.FOREST) }
@@ -469,6 +475,7 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
             Spacer(Modifier.width(5.dp))
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
+        if(onAnimationTest!=null)Button(onClick=onAnimationTest,modifier=Modifier.fillMaxWidth()){Text("🎬 ТЕСТ АНІМАЦІЙ • усі 40 моделей")}
         Text("Знайди свого першого цифрового друга", color = Color(0xFFC5D2E9))
         Text("1. Обери різновид", style = MaterialTheme.typography.titleMedium)
         Species.entries.forEach { choice ->
@@ -541,7 +548,8 @@ private fun HomeScreen(
     onPetTap: () -> Unit,
     onPlay: () -> Unit,
     onSettings: () -> Unit,
-    onProfile: () -> Unit
+    onProfile: () -> Unit,
+    onAnimationTest:(()->Unit)?=null
 ) {
     val emotion = EmotionResolver.resolve(pet, reaction)
     var showGrowthGallery by remember { mutableStateOf(false) }
@@ -561,6 +569,7 @@ private fun HomeScreen(
             Spacer(Modifier.width(5.dp))
             OutlinedButton(onClick = onSettings) { Text("⚙️") }
         }
+        if(onAnimationTest!=null)Button(onClick=onAnimationTest,modifier=Modifier.fillMaxWidth()){Text("🎬 ТЕСТ АНІМАЦІЙ • запис відео")}
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("🪙 ${pet.coins}  •  🎒 Запаси",
