@@ -54,3 +54,6 @@ Walk/run automatically use a side view; selecting front returns to idle. Separat
 
 ## 0.37.13 OMEGA head and articulated wings
 KAGE OMEGA alone receives a new dark hood with an inset visor, separate profile geometry and no mirrored front horns in profile. Two wing assemblies with six independent overlapping metal/energy feathers per wing and mechanical hubs; wing spread responds to actions, folds at rest and after dash, and expands in jump/attack/dash. Dedicated canvas width for the wing span. Robot Lab respects safe drawing insets. Flight and back view are not added. On-device visual checks pending.
+
+## 0.37.14 OMEGA side silhouette polish
+Dedicated side torso, neck, shoulder, forearm, thigh and knee/shin armor replaces compressed frontal plating in OMEGA profile. Slightly smaller, rearward head, closer-to-spine shoulders, more compact hip armor, offset wing anchors and reduced profile scarf overlap. Shared joint transforms, dash and front artwork retained. Other forms unchanged. Device visual inspection pending.

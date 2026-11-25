@@ -211,8 +211,32 @@ private fun DrawScope.sword(a:Color,drawn:Boolean) {
     metal("M -3 3 L 5 3 Q 8 38 -4 66 L -6 57 Z",if(drawn)a else graphite,if(drawn)a else black)
     if(drawn)led(1f,6f,-3f,59f,a,2f)
 }
+private fun DrawScope.omegaProfileBody(a:Color,e:RobotEquipment) {
+    // Profile armor is drawn from scratch, not compressed front-facing plates.
+    joint(-2f,-12f,8f,a)
+    shape("M -19 -10 Q -1 -15 15 -9 L 26 5 L 23 21 L 10 33 L 9 45 L 17 56 L 12 69 L -16 70 L -22 59 L -12 44 L -15 30 L -23 11 Z",graphite)
+    metal("M -18 -9 L 5 -10 L 22 0 L 27 10 L 17 25 L 4 31 L -8 25 L -21 11 Z",carbon,black)
+    metal("M 12 -5 L 24 3 L 26 11 L 19 20 L 14 15 Z",silver,graphite)
+    led(23f,4f,24f,14f,a,2.7f)
+    metal("M -21 3 L -13 1 L -10 24 L -16 28 L -22 16 Z",steel,graphite)
+    for(y in listOf(31f,37f,43f)){
+        shape("M -12 ${y-2} L 8 ${y-3} L 11 ${y+3} L -10 ${y+4} Z",carbon)
+        line(-8f,y,5f,y-1f,steel,.7f)
+    }
+    metal("M -19 49 L 17 48 L 19 57 L -20 58 Z",steel,graphite)
+    metal("M 10 48 L 19 48 L 21 57 L 11 57 Z",silver,graphite)
+    metal("M -15 58 L 4 55 L 14 65 L 5 77 L -13 72 L -21 64 Z",carbon,black)
+    metal("M -16 56 L -4 55 L 3 69 L -9 81 L -20 69 Z",steel,graphite)
+    led(-14f,62f,-10f,70f,a,1.8f)
+    if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR)
+        metal("M 6 -8 L 24 -2 L 30 10 L 20 27 L 12 29 L 9 17 Z",silver,graphite)
+    if(e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)led(25f,3f,26f,15f,a,4f)
+    shape("M -23 -15 Q -3 -7 17 -13 L 24 -7 L 11 2 L -14 -1 L -24 -7 Z",cloth)
+    line(-18f,-10f,10f,-3f,steel,1f)
+}
 private fun DrawScope.torso(form:KageForm,side:Boolean,a:Color,e:RobotEquipment) {
     val g=form.grade
+    if(side&&g==4){omegaProfileBody(a,e);return}
     if(g<2){
         scale(if(side).78f else form.torso,1f,Offset.Zero){
             if(g==0){
@@ -280,26 +304,39 @@ private fun DrawScope.torso(form:KageForm,side:Boolean,a:Color,e:RobotEquipment)
     line(-17f,-6f,0f,2f,steel,1f)
 }
 private fun DrawScope.pivotDot(enabled:Boolean) { if(enabled){drawCircle(Color(0xFFFFB64D),3.1f,Offset.Zero,style=Stroke(1.5f));drawCircle(Color.White,1.1f,Offset.Zero)} }
-private fun DrawScope.arm(form:KageForm,x:Float,y:Float,angle:Float,far:Boolean,a:Color,gear:RobotGear?,drawSword:Boolean,elbow:Float,wrist:Float,debug:Boolean) {
+private fun DrawScope.arm(form:KageForm,x:Float,y:Float,angle:Float,far:Boolean,a:Color,gear:RobotGear?,drawSword:Boolean,elbow:Float,wrist:Float,debug:Boolean,profile:Boolean=false) {
     val g=form.grade
     val u=form.upperArm;val v=form.forearm
     translate(x,y){rotate(angle,Offset.Zero){
         joint(0f,0f,6.4f,a)
         scale(1f,u/30f,Offset.Zero){
             metal("M -7 2 L 7 2 L 8 14 L 4 29 L -4 29 L -8 13 Z",carbon,black)
-            metal(KageShells.of(g).shoulder,if(g==1&&x>0f)carbon else if(far)steel else silver,graphite)
-            shape("M -10 7 L 10 7 L 8 12 L -8 12 Z",graphite)
-            led(-8f,7f,7f,7f,a,1.7f)
-            if(g>=3){shape("M -10 -5 L -5 -8 L 3 -7 L 1 -4 Z",steel);drawCircle(outline,1.4f,Offset(7f,0f))}
+            if(profile&&g==4){
+                metal("M -10 -8 Q 1 -14 11 -6 L 13 4 L 8 13 L -8 11 L -13 2 Z",if(far)steel else silver,graphite)
+                shape("M -8 6 L 8 7 L 5 12 L -7 11 Z",graphite)
+                led(-6f,8f,6f,8f,a,2f)
+                drawCircle(carbon,2.2f,Offset(2f,-3f))
+            }else{
+                metal(KageShells.of(g).shoulder,if(g==1&&x>0f)carbon else if(far)steel else silver,graphite)
+                shape("M -10 7 L 10 7 L 8 12 L -8 12 Z",graphite)
+                led(-8f,7f,7f,7f,a,1.7f)
+                if(g>=3){shape("M -10 -5 L -5 -8 L 3 -7 L 1 -4 Z",steel);drawCircle(outline,1.4f,Offset(7f,0f))}
+            }
         }
         pivotDot(debug)
         translate(0f,u){rotate(elbow,Offset.Zero){
             joint(0f,0f,5.2f,a)
             scale(1f,v/33f,Offset.Zero){
-                metal(KageShells.of(g).forearm,if(far)steel else silver,graphite)
-                shape("M -4 4 L 4 3 L 7 13 L 4 26 L -4 26 L -7 13 Z",carbon)
-                led(-5f,26f,5f,26f,a,2.2f)
-                if(g>=2)led(3f,6f,5f,11f,a,1.7f)
+                if(profile&&g==4){
+                    metal("M -7 0 L 5 0 L 11 9 L 10 22 L 5 33 L -7 33 L -12 19 L -11 8 Z",if(far)steel else silver,graphite)
+                    shape("M -6 5 L 3 4 L 6 12 L 1 26 L -5 25 L -8 13 Z",carbon)
+                    led(3f,8f,2f,21f,a,2f);led(-6f,27f,3f,27f,a,2.3f)
+                }else{
+                    metal(KageShells.of(g).forearm,if(far)steel else silver,graphite)
+                    shape("M -4 4 L 4 3 L 7 13 L 4 26 L -4 26 L -7 13 Z",carbon)
+                    led(-5f,26f,5f,26f,a,2.2f)
+                    if(g>=2)led(3f,6f,5f,11f,a,1.7f)
+                }
             }
             pivotDot(debug)
             translate(0f,v){rotate(wrist,Offset.Zero){
@@ -326,13 +363,25 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
     val knee=rotatePoint(0f,u,thigh)+Offset(x,y)
     translate(x,y){rotate(thigh,Offset.Zero){scale(1f,u/42f,Offset.Zero){
         joint(0f,0f,7f,a)
-        metal(KageShells.of(g).thigh,carbon,black)
-        shape("M -9 6 L -2 3 L 3 17 L 0 32 L -5 35 L -10 21 Z",graphite)
-        if(g>=2)metal("M 5 8 L 10 11 L 8 25 L 4 31 L 1 26 Z",steel,graphite)
+        if(side&&g==4){
+            metal("M -11 0 L 9 0 L 13 11 L 9 24 L 6 41 L -6 42 L -12 26 L -14 12 Z",carbon,black)
+            shape("M -10 6 L -3 3 L 2 17 L -2 31 L -7 35 L -11 21 Z",graphite)
+            metal("M 5 7 L 10 10 L 9 24 L 4 30 L 2 25 Z",steel,graphite)
+        }else{
+            metal(KageShells.of(g).thigh,carbon,black)
+            shape("M -9 6 L -2 3 L 3 17 L 0 32 L -5 35 L -10 21 Z",graphite)
+            if(g>=2)metal("M 5 8 L 10 11 L 8 25 L 4 31 L 1 26 Z",steel,graphite)
+        }
     };pivotDot(debug)}}
     translate(knee.x,knee.y){rotate(shin,Offset.Zero){
         joint(0f,0f,6.7f,a)
         scale(1f,v/47f,Offset.Zero){
+            if(side&&g==4){
+                metal("M -11 8 L -2 8 L 9 14 L 12 24 L 6 36 L 5 47 L -7 47 L -9 34 L -13 20 Z",carbon,black)
+                metal("M 0 -7 L 9 -6 L 15 1 L 10 13 L 3 17 L -2 10 Z",if(far)steel else silver,graphite)
+                drawCircle(steel,4.7f,Offset(-3f,2f));drawCircle(graphite,3.1f,Offset(-3f,2f))
+                led(7f,16f,4f,27f,a,2.7f);led(4f,27f,1f,38f,a,2.5f)
+            }else{
             metal(KageShells.of(g).knee,if(far)steel else silver,graphite)
             metal(KageShells.of(g).shin,carbon,black)
             if(g==0){
@@ -342,6 +391,7 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
             }else{
                 shape("M -8 19 L 0 25 L 8 19 L 4 34 L 0 43 L -4 34 Z",graphite)
                 led(-7f,19f,0f,25f,a,2.5f);led(7f,19f,0f,25f,a,2.5f);led(0f,25f,0f,36f,a,2.5f)
+            }
             }
         }
         pivotDot(debug)
@@ -394,8 +444,8 @@ private fun DrawScope.omegaWings(a:Color,side:Boolean,action:RobotAction,phase:F
     val p=OmegaWingMotion.pose(action,phase)
     if(side){
         // Profile: far wing is mostly occluded; both anchors are behind the torso.
-        translate(-21f,-3f){scale(-.67f,.90f,Offset.Zero){omegaWing(a.copy(alpha=.65f),p,side=true,far=true)}}
-        translate(-30f,5f){
+        translate(-24f,-5f){scale(-.57f,.84f,Offset.Zero){omegaWing(a.copy(alpha=.65f),p,side=true,far=true)}}
+        translate(-34f,2f){
             metal("M 2 -9 L 24 -6 L 28 7 L 3 14 L -8 7 Z",steel,graphite)
             scale(-.82f,1f,Offset.Zero){omegaWing(a,p,side=true,far=false)}
         }
@@ -445,25 +495,26 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                 translate(0f,-base+drop+if(gait==null)pose.lift else 0f){
                     if(dash!=null&&dash.trail>0f&&side)for(i in 0..4)led(-110f-i*4f,30f+i*20f,-65f-i*4f,30f+i*20f,a.copy(alpha=dash.trail*.6f),1.5f)
                     val boots=e.equipped(RobotSlot.FEET)
-                    val nearX=if(side)5f else 16f
-                    val farX=if(side)-5f else -16f
+                    val nearX=if(side&&g==4)3f else if(side)5f else 16f
+                    val farX=if(side&&g==4)-7f else if(side)-5f else -16f
                     val nearA=gait?.nearArm?:dash?.nearArm?:pose.nearArm
                     val farA=gait?.farArm?:dash?.farArm?:pose.farArm
                     val swordReady=action==RobotAction.ATTACK&&g>=1&&e.equipped(RobotSlot.LEFT_HAND)==null
                     fun DrawScope.rear(){
-                        scarfTail(form,side,a,phase,action,dash?.trail?:0f)
+                        if(g==4&&side)translate(-9f,7f){scale(.78f,.86f,Offset.Zero){scarfTail(form,side,a,phase,action,dash?.trail?:0f)}}
+                        else scarfTail(form,side,a,phase,action,dash?.trail?:0f)
                         if(g>=1&&!swordReady&&e.equipped(RobotSlot.BACK)==null)translate(if(side)-19f else 22f,1f){rotate(if(side)-15f else 30f,Offset.Zero){sword(a,false)}}
                         translate(if(side)-19f else 0f,8f){backPack(a,e.equipped(RobotSlot.BACK))}
                         if(g==4)omegaWings(a,side,action,phase)
                     }
                     if(side){
                         leg(form,farX,hips,ft,fs,true,true,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
-                        rotate(lean,Offset(0f,hips)){rear();arm(form,-4f,4f,farA,true,a,e.equipped(view.farHand()),swordReady&&view.farHand()==RobotSlot.LEFT_HAND,bends.farElbow,bends.wrist,showSockets)}
+                        rotate(lean,Offset(0f,hips)){rear();arm(form,if(g==4)-5f else -4f,4f,farA,true,a,e.equipped(view.farHand()),swordReady&&view.farHand()==RobotSlot.LEFT_HAND,bends.farElbow,bends.wrist,showSockets,profile=true)}
                         leg(form,nearX,hips,nt,ns,true,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
                         rotate(lean,Offset(0f,hips)){
                             torso(form,true,a,e)
-                            arm(form,0f,4f,nearA,false,a,e.equipped(view.nearHand()),swordReady&&view.nearHand()==RobotSlot.LEFT_HAND,bends.nearElbow,bends.wrist,showSockets)
-                            translate(0f,-32f){scale(form.head,form.head,Offset(0f,22f)){hood(true,g,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,phase>.95f&&action==RobotAction.IDLE,e.equipped(RobotSlot.HEAD))}}
+                            arm(form,if(g==4)-3f else 0f,4f,nearA,false,a,e.equipped(view.nearHand()),swordReady&&view.nearHand()==RobotSlot.LEFT_HAND,bends.nearElbow,bends.wrist,showSockets,profile=true)
+                            translate(if(g==4)-4f else 0f,if(g==4)-36f else -32f){scale(if(g==4)form.head*.94f else form.head,if(g==4)form.head*.94f else form.head,Offset(0f,22f)){hood(true,g,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,phase>.95f&&action==RobotAction.IDLE,e.equipped(RobotSlot.HEAD))}}
                         }
                     }else{
                         leg(form,farX,hips,ft,fs,false,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
