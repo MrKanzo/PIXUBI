@@ -80,8 +80,43 @@ private fun DrawScope.kageMask(side:Boolean,f:RobotFace,blink:Boolean,a:Color) {
         }
     }
 }
+private fun DrawScope.omegaHood(side:Boolean,a:Color,f:RobotFace,blink:Boolean) {
+    val silhouette=if(side)
+        "M -34 -12 C -37 -33 -18 -46 2 -46 Q 24 -44 37 -18 L 40 -8 L 28 15 Q 16 24 2 24 L -22 15 Q -34 9 -34 -12 Z"
+    else "M 0 -49 C 17 -48 29 -34 38 -10 L 41 2 Q 27 21 0 25 Q -27 21 -41 2 L -38 -10 C -29 -34 -17 -48 0 -49 Z"
+    val hood=PathParser().parsePathString(silhouette).toPath()
+    drawPath(hood,Brush.linearGradient(listOf(Color(0xFF656173),Color(0xFF454357),Color(0xFF242633)),Offset(-28f,-44f),Offset(29f,24f)))
+    drawPath(hood,outline,style=Stroke(1.6f,join=StrokeJoin.Round))
+    if(side){
+        // One visible visor and cheek plate, recessed under the forward rim.
+        shape("M 11 -29 L 36 -12 L 28 6 L 16 19 L 5 8 L 1 -7 Z",black)
+        metal("M 9 -24 L 28 -14 L 20 -7 L 8 -7 Z",carbon,black)
+        shape("M 9 1 L 27 -1 L 24 10 L 16 18 L 7 9 Z",graphite)
+        metal("M 19 3 L 29 -1 L 24 12 L 16 18 Z",steel,graphite)
+        kageMask(true,f,blink,a)
+        line(-22f,-29f,3f,-43f,steel,.9f)
+        line(-24f,-8f,-11f,13f,carbon,1.4f)
+        led(17f,-30f,27f,-22f,a,3f)
+        metal("M -17 -19 L -10 -23 L -4 -17 L -8 -11 L -16 -12 Z",steel,graphite)
+        drawCircle(a,1.7f,Offset(-11f,-17f))
+        shape("M 1 19 L 16 22 L 9 27 L -12 23 Z",cloth,.8f)
+    }else{
+        shape("M 0 -28 Q 23 -20 32 -1 Q 25 17 0 22 Q -25 17 -32 -1 Q -23 -20 0 -28 Z",black)
+        metal("M -22 -8 L -12 -19 L 0 -25 L 12 -19 L 22 -8 L 0 3 Z",carbon,black)
+        shape("M -23 1 L -12 5 L 0 10 L 12 5 L 23 1 L 15 15 L 0 22 L -15 15 Z",graphite)
+        for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
+            metal("M 23 1 L 13 6 L 8 16 L 15 14 Z",steel,graphite)
+            led(21f,-22f,30f,-11f,a,3.8f)
+            line(13f,-39f,28f,-17f,steel,.8f)
+            led(30f,2f,26f,8f,a,1.3f)
+        }
+        kageMask(false,f,blink,a)
+        line(0f,-47f,0f,-30f,steel,.9f)
+    }
+}
 private fun DrawScope.hood(side:Boolean,g:Int,a:Color,f:RobotFace,blink:Boolean,gear:RobotGear?) {
-    if(g==0) {
+    if(g==4) omegaHood(side,a,f,blink)
+    else if(g==0) {
         if(side) {
             metal("M -36 -9 Q -38 -41 -10 -45 Q 20 -47 35 -25 Q 40 -7 29 16 Q -10 35 -31 16 Z",cloth,black)
             shape("M 8 -23 Q 34 -26 35 -7 Q 34 14 12 17 L 6 5 Z",black)
@@ -139,12 +174,6 @@ private fun DrawScope.hood(side:Boolean,g:Int,a:Color,f:RobotFace,blink:Boolean,
             line(s*14f,-37f,s*31f,-10f,steel,.8f)
             led(s*19f,-20f,s*28f,-8f,a,3.7f)
             line(s*35f,2f,s*24f,15f,carbon,1f)
-        }
-    }
-    if(g==4){
-        for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
-            metal("M 24 -22 L 40 -37 L 35 -10 L 28 -4 Z",steel,black)
-            led(29f,-19f,35f,-29f,a,2f)
         }
     }
     when(gear) {
@@ -337,6 +366,48 @@ private fun DrawScope.backPack(a:Color,gear:RobotGear?) {
         if(gear==RobotGear.BOOSTER){shape("M -18 26 L -5 26 L -8 33 L -15 33 Z",a);shape("M 5 26 L 18 26 L 15 33 L 8 33 Z",a)}
     }
 }
+private fun DrawScope.omegaWing(a:Color,pose:OmegaWingPose,side:Boolean,far:Boolean) {
+    // Six independent articulated feather blades, with the longest feathers below.
+    val lengths=listOf(116f,105f,94f,83f,72f,62f)
+    val glow=a.copy(alpha=pose.pulse)
+    for(i in 0..5){
+        val len=lengths[i]
+        translate(i*2.2f,i*(-1.6f)){
+            rotate(OmegaWingMotion.featherAngle(i,pose.spread,side),Offset.Zero){
+                scale(1f,len/100f,Offset.Zero){
+                    shape("M -9 5 L 0 -6 L 13 9 L 15 34 L 10 62 L 1 100 L -8 72 L -12 27 Z",black)
+                    metal("M -7 4 L 1 -5 L 12 9 L 12 33 L 4 67 L -6 50 L -9 22 Z",if(far)steel else silver,graphite)
+                    shape("M 2 31 L 11 21 L 9 60 L 1 100 L -5 74 Z",glow,.8f)
+                    shape("M -5 17 L 4 9 L 7 29 L 0 54 L -5 43 Z",carbon)
+                    led(4f,40f,1f,83f,glow,1.8f)
+                    line(-6f,5f,-4f,23f,steel,.8f)
+                }
+            }
+        }
+    }
+    metal("M -16 -6 L -6 -17 L 12 -17 L 23 -3 L 16 16 L -3 18 L -16 9 Z",if(far)steel else silver,black)
+    drawCircle(black,12f,Offset(0f,0f));drawCircle(steel,9.5f,Offset.Zero)
+    drawCircle(glow,7f,Offset.Zero,style=Stroke(2.4f))
+    drawCircle(graphite,4.6f,Offset.Zero);drawCircle(glow,2.5f,Offset.Zero)
+}
+private fun DrawScope.omegaWings(a:Color,side:Boolean,action:RobotAction,phase:Float) {
+    val p=OmegaWingMotion.pose(action,phase)
+    if(side){
+        // Profile: far wing is mostly occluded; both anchors are behind the torso.
+        translate(-21f,-3f){scale(-.67f,.90f,Offset.Zero){omegaWing(a.copy(alpha=.65f),p,side=true,far=true)}}
+        translate(-30f,5f){
+            metal("M 2 -9 L 24 -6 L 28 7 L 3 14 L -8 7 Z",steel,graphite)
+            scale(-.82f,1f,Offset.Zero){omegaWing(a,p,side=true,far=false)}
+        }
+    }else{
+        for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
+            translate(31f,-4f){
+                metal("M -20 -3 L -2 -12 L 13 -4 L 8 12 L -17 12 Z",steel,graphite)
+                omegaWing(a,p,side=false,far=false)
+            }
+        }
+    }
+}
 @Composable
 internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,showSockets:Boolean,modifier:Modifier=Modifier) {
     val form=KageForms.of(loadout.tier)
@@ -348,7 +419,8 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
     val side=view!=RobotView.FRONT
     val a=loadout.accent;val e=loadout.equipment
     Canvas(modifier){
-        val fit=min(size.width/(if(dash!=null)340f else 230f),size.height/325f)
+        val wide=if(form.grade==4) { if(dash!=null)420f else if(side)275f else 338f } else if(dash!=null)340f else 230f
+        val fit=min(size.width/wide,size.height/325f)
         val dir=if(view==RobotView.LEFT)-1f else 1f
         val travel=if(side&&dash!=null)(dash.travel-44f)*.9f*dir else 0f
         val ground=size.height*.90f
@@ -382,15 +454,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                         scarfTail(form,side,a,phase,action,dash?.trail?:0f)
                         if(g>=1&&!swordReady&&e.equipped(RobotSlot.BACK)==null)translate(if(side)-19f else 22f,1f){rotate(if(side)-15f else 30f,Offset.Zero){sword(a,false)}}
                         translate(if(side)-19f else 0f,8f){backPack(a,e.equipped(RobotSlot.BACK))}
-                        if(g==4){
-                            for(s in if(side)listOf(-1f) else listOf(-1f,1f))scale(s,1f,Offset.Zero){
-                                val pulse=sin(phase*2f*PI.toFloat())*5f
-                                rotate(pulse,Offset(20f,10f)){
-                                    metal("M 18 7 L 73 -20 L 54 20 L 85 5 L 48 44 L 20 36 Z",cloth,black)
-                                    shape("M 27 12 L 66 -14 L 47 21 L 76 10 L 43 36 Z",a.copy(alpha=.65f),.5f)
-                                }
-                            }
-                        }
+                        if(g==4)omegaWings(a,side,action,phase)
                     }
                     if(side){
                         leg(form,farX,hips,ft,fs,true,true,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)

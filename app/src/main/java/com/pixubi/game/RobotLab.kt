@@ -1100,7 +1100,7 @@ internal fun RobotLab(onBack:()->Unit) {
             }
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Text("Robot Lab · ${tier.title}",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)

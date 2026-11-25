@@ -51,3 +51,6 @@ MK1 has rounded capsule chest, circular core, round visor eyes, short scarf and 
 
 ## 0.37.12 KAGE gait fix
 Walk/run automatically use a side view; selecting front returns to idle. Separate cyclical foot stance/swing targets drive two-link leg inverse kinematics, with opposite arm swing, level feet and forward torso lean. Lab locomotion is an in-place gait preview, not world traversal. Applies to all five KAGE forms. Other series and ninja dash rendering retained. Tests cover foot target reconstruction and view selection; on-device review pending.
+
+## 0.37.13 OMEGA head and articulated wings
+KAGE OMEGA alone receives a new dark hood with an inset visor, separate profile geometry and no mirrored front horns in profile. Two wing assemblies with six independent overlapping metal/energy feathers per wing and mechanical hubs; wing spread responds to actions, folds at rest and after dash, and expands in jump/attack/dash. Dedicated canvas width for the wing span. Robot Lab respects safe drawing insets. Flight and back view are not added. On-device visual checks pending.
