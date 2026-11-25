@@ -81,8 +81,44 @@ private fun DrawScope.kageMask(side:Boolean,f:RobotFace,blink:Boolean,a:Color) {
     }
 }
 private fun DrawScope.hood(side:Boolean,g:Int,a:Color,f:RobotFace,blink:Boolean,gear:RobotGear?) {
-    // Layered textile hood, recessed visor and separate cheek plates, traced in the reference style.
-    if(side) {
+    if(g==0) {
+        if(side) {
+            metal("M -36 -9 Q -38 -41 -10 -45 Q 20 -47 35 -25 Q 40 -7 29 16 Q -10 35 -31 16 Z",cloth,black)
+            shape("M 8 -23 Q 34 -26 35 -7 Q 34 14 12 17 L 6 5 Z",black)
+            drawCircle(steel,11f,Offset(-10f,-2f));drawCircle(graphite,8f,Offset(-10f,-2f))
+            drawCircle(a,4f,Offset(-10f,-2f))
+        } else {
+            metal("M -39 -8 Q -40 -45 0 -45 Q 40 -45 39 -8 Q 38 26 0 26 Q -38 26 -39 -8 Z",cloth,black)
+            shape("M -29 -9 Q -29 -29 0 -29 Q 29 -29 29 -9 L 26 12 Q 0 22 -26 12 Z",black)
+            for(s in listOf(-1f,1f))led(s*28f,-31f,s*34f,-20f,a,2f)
+        }
+        for(x in if(side)listOf(18f)else listOf(-13f,13f)){
+            if(blink||f==RobotFace.SLEEP)line(x-5f,-3f,x+5f,-3f,a,2f)
+            else if(f==RobotFace.HAPPY||f==RobotFace.SAD||f==RobotFace.ANGRY) {
+                val k=if(f==RobotFace.HAPPY)-9f else if(f==RobotFace.SAD)4f else -5f
+                val eye=Path().apply{moveTo(x-5f,0f);quadraticTo(x,k,x+5f,0f)}
+                drawPath(eye,a,style=Stroke(3f,cap=StrokeCap.Round))
+            }else{
+                drawRoundRect(a,Offset(x-5f,-11f),Size(10f,if(f==RobotFace.SURPRISE)17f else 13f),CornerRadius(5f))
+                drawCircle(Color.White,1.5f,Offset(x-2f,-7f))
+            }
+        }
+        if(!side&&!blink&&f!=RobotFace.SLEEP)line(-3f,10f,3f,10f,a,1.5f)
+    } else if(g==1) {
+        if(side){
+            metal("M -34 -11 L -29 -33 L -9 -44 L 13 -40 L 37 -19 L 29 11 L 10 23 L -23 19 Z",cloth,black)
+            shape("M 5 -20 L 34 -17 L 28 2 L 8 6 Z",black)
+            metal("M 6 7 L 28 0 L 21 15 L 9 22 Z",steel,black)
+            metal("M -20 -15 L -7 -17 L -2 -5 L -8 5 L -21 2 Z",silver,graphite)
+        }else{
+            metal("M 0 -45 L 20 -38 L 40 -8 L 34 15 L 14 25 L -14 25 L -34 15 L -40 -8 L -20 -38 Z",cloth,black)
+            shape("M -32 -16 L 32 -16 L 29 5 L 0 11 L -29 5 Z",black)
+            metal("M -29 5 L 0 14 L 29 5 L 19 20 L 0 25 L -19 20 Z",carbon,black)
+            led(-28f,-20f,-18f,-20f,a,2.7f);led(18f,-20f,28f,-20f,a,2.7f)
+        }
+        if(blink||f!=RobotFace.NEUTRAL)kageMask(side,f,blink,a)
+        else for(x in if(side)listOf(18f)else listOf(-13f,13f))drawRoundRect(a,Offset(x-7f,-7f),Size(14f,6f),CornerRadius(2f))
+    } else if(side) {
         metal(KageShells.of(g).hoodSide,cloth,black)
         shape("M 9 -27 L 34 -13 L 26 9 L 12 16 L 3 1 Z",black)
         metal("M 7 0 L 29 -2 L 25 11 L 12 18 L 4 9 Z",carbon,black)
@@ -126,9 +162,14 @@ private fun DrawScope.scarfTail(form:KageForm,side:Boolean,a:Color,phase:Float,a
         translate(root.x,root.y) {
             rotate(-12f-trail*35f+swing+i*17f,Offset.Zero) {
                 scale(length/80f,length/80f,Offset.Zero) {
-                    metal("M 4 -6 C -20 -9 -47 -7 -65 15 C -83 35 -52 51 -71 77 Q -52 66 -54 49 C -55 30 -45 17 3 5 Z",cloth,black)
-                    shape("M -59 14 L -74 31 L -61 26 L -45 12 Z",a,.4f)
-                    line(-11f,-2f,-49f,12f,steel,1f)
+                    if(form.grade<2){
+                        metal(if(form.grade==0)"M 5 -8 Q -38 -17 -72 6 L -58 30 L -78 39 Q -31 28 5 6 Z" else "M 4 -5 Q -43 -16 -79 5 L -67 17 L -82 29 Q -40 12 4 6 Z",cloth,black)
+                        led(-50f,4f,-69f,10f,a,2.5f)
+                    }else{
+                        metal("M 4 -6 C -20 -9 -47 -7 -65 15 C -83 35 -52 51 -71 77 Q -52 66 -54 49 C -55 30 -45 17 3 5 Z",cloth,black)
+                        shape("M -59 14 L -74 31 L -61 26 L -45 12 Z",a,.4f)
+                        line(-11f,-2f,-49f,12f,steel,1f)
+                    }
                 }
             }
         }
@@ -143,6 +184,35 @@ private fun DrawScope.sword(a:Color,drawn:Boolean) {
 }
 private fun DrawScope.torso(form:KageForm,side:Boolean,a:Color,e:RobotEquipment) {
     val g=form.grade
+    if(g<2){
+        scale(if(side).78f else form.torso,1f,Offset.Zero){
+            if(g==0){
+                metal("M -24 -10 Q 0 -18 24 -10 Q 33 4 29 28 Q 25 43 0 46 Q -25 43 -29 28 Q -33 4 -24 -10 Z",silver,graphite)
+                shape("M -21 5 Q 0 -5 21 5 L 20 27 Q 0 38 -20 27 Z",carbon)
+                val cx=if(side)12f else 0f
+                drawCircle(outline,12f,Offset(cx,16f));drawCircle(a,9f,Offset(cx,16f),style=Stroke(3f))
+                drawCircle(a,5f,Offset(cx,16f));drawCircle(Color.White,if(e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)4f else 2.5f,Offset(cx,16f))
+                metal("M -19 43 Q 0 39 19 43 L 18 55 L -18 55 Z",carbon,black)
+                metal("M -22 54 Q 0 48 22 54 L 17 70 Q 0 76 -17 70 Z",silver,graphite)
+            }else{
+                shape(if(side)KageShells.of(g).torsoSide else KageShells.of(g).torsoFront,graphite)
+                metal("M -24 -8 L 19 -8 L 27 5 L 17 22 L 0 30 L -23 19 L -29 5 Z",carbon,black)
+                metal("M -24 -8 L -6 -10 L 18 20 L 8 29 L -22 6 Z",silver,graphite)
+                translate(10f,8f){kageCore(a,1,e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)}
+                led(-19f,7f,-8f,18f,a,2f)
+                for(y in listOf(34f,43f))shape("M -13 ${y-3} L 13 ${y-3} L 10 ${y+5} L -10 ${y+5} Z",carbon)
+                metal("M -23 49 L 23 49 L 23 58 L -23 58 Z",steel,graphite)
+                metal("M -25 55 L -13 55 L -10 70 L -29 76 Z",carbon,black)
+                metal("M 15 55 L 26 57 L 28 74 L 15 70 Z",steel,graphite)
+            }
+            if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR){
+                metal("M -29 -5 L -23 -12 L -17 -4 L -17 29 L -28 25 Z",silver,graphite)
+                if(!side)metal("M 29 -5 L 23 -12 L 17 -4 L 17 29 L 28 25 Z",silver,graphite)
+            }
+        }
+        shape("M -25 -13 Q 0 -7 25 -13 L 24 -3 Q 0 8 -24 -3 Z",cloth)
+        return
+    }
     scale(if(side).70f else form.torso,1f,Offset.Zero) {
         shape(if(side)KageShells.of(g).torsoSide else KageShells.of(g).torsoFront,graphite)
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
@@ -188,7 +258,7 @@ private fun DrawScope.arm(form:KageForm,x:Float,y:Float,angle:Float,far:Boolean,
         joint(0f,0f,6.4f,a)
         scale(1f,u/30f,Offset.Zero){
             metal("M -7 2 L 7 2 L 8 14 L 4 29 L -4 29 L -8 13 Z",carbon,black)
-            metal(KageShells.of(g).shoulder,if(far)steel else silver,graphite)
+            metal(KageShells.of(g).shoulder,if(g==1&&x>0f)carbon else if(far)steel else silver,graphite)
             shape("M -10 7 L 10 7 L 8 12 L -8 12 Z",graphite)
             led(-8f,7f,7f,7f,a,1.7f)
             if(g>=3){shape("M -10 -5 L -5 -8 L 3 -7 L 1 -4 Z",steel);drawCircle(outline,1.4f,Offset(7f,0f))}
@@ -236,8 +306,14 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
         scale(1f,v/47f,Offset.Zero){
             metal(KageShells.of(g).knee,if(far)steel else silver,graphite)
             metal(KageShells.of(g).shin,carbon,black)
-            shape("M -8 19 L 0 25 L 8 19 L 4 34 L 0 43 L -4 34 Z",graphite)
-            led(-7f,19f,0f,25f,a,2.5f);led(7f,19f,0f,25f,a,2.5f);led(0f,25f,0f,36f,a,2.5f)
+            if(g==0){
+                drawRoundRect(silver,Offset(-7f,19f),Size(14f,22f),CornerRadius(5f));led(-5f,32f,5f,32f,a,3f)
+            }else if(g==1){
+                shape("M -6 18 L 6 18 L 5 38 L -5 38 Z",carbon);led(0f,20f,0f,35f,a,2.5f)
+            }else{
+                shape("M -8 19 L 0 25 L 8 19 L 4 34 L 0 43 L -4 34 Z",graphite)
+                led(-7f,19f,0f,25f,a,2.5f);led(7f,19f,0f,25f,a,2.5f);led(0f,25f,0f,36f,a,2.5f)
+            }
         }
         pivotDot(debug)
         translate(0f,v){rotate(if(plant)-shin else ankle,Offset.Zero){

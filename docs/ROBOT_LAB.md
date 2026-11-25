@@ -45,3 +45,6 @@ All five KAGE forms now use a single new layered vector rig, with distinct stage
 
 ## 0.37.10 KAGE adult-led forms and articulation
 MK4 reference-style adult is the base for five separately authored shell designs (hood, torso, shoulders, forearms and leg armor), including compact rounded MK1, light MK2, armored MK3 and angular OMEGA. Independent elbow, wrist, knee and ankle rotations with equipment carried by the corresponding limb. Live debug markers at moving joint pivots. Existing dash timeline retained. Vector interpretation; on-device visual and animation review needed. No changes to other series or pet gameplay.
+
+## 0.37.11 Early KAGE visual identities
+MK1 has rounded capsule chest, circular core, round visor eyes, short scarf and rounded shin guards. MK2 uses angular hood, horizontal visor eyes, diagonal chest armor and offset core, straight shin lights and shorter angular scarf. Grades 2–4 retain their existing graphics. Shared articulated joints and equipment remain. Device visual review required.
