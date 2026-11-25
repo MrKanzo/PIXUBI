@@ -166,7 +166,7 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
         when {
             blink || face==RobotFace.SLEEP -> drawLine(light,Offset(ex-4,y),Offset(ex+4,y),2.8f,StrokeCap.Round)
             face==RobotFace.ANGRY -> {
-                val d=if(side||i==1) 3f else -3f
+                val d=if(!side&&i==0) 3f else -3f
                 drawLine(light,Offset(ex-5,y-d),Offset(ex+5,y+d),4f,StrokeCap.Round)
             }
             face==RobotFace.SAD -> {

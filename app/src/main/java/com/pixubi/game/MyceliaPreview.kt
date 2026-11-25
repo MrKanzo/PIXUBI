@@ -177,7 +177,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
             myceliaEye(a,17f,-10f,face)
         }
         drawCircle(ink,2.8f,Offset(if(g==0)30f else 39f,0f))
-        myceliaMouth(25f,10f,face)
+        myceliaMouth(25f,10f,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face)
     }else{
         plate(if(g==0)"M 0 -35 Q 34 -34 35 -6 Q 31 24 0 28 Q -31 24 -35 -6 Q -34 -34 0 -35 Z" else "M 0 -36 Q 27 -34 34 -13 Q 37 12 18 23 L 0 28 L -18 23 Q -37 12 -34 -13 Q -27 -34 0 -36 Z")
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
@@ -188,7 +188,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
             drawOval(a.copy(alpha=.25f),Offset(17f,4f),Size(9f,4f))
         }
         drawOval(ink,Offset(-4f,7f),Size(8f,5f))
-        myceliaMouth(0f,15f,face)
+        myceliaMouth(0f,15f,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face)
     }
     if(g>=2)translate(if(side)-7f else 0f,-28f){flower(a,9f+g*1.5f,phase)}
     if(g==4)translate(0f,-65f){drawOval(cyan,Offset(-24f,-6f),Size(48f,12f),style=Stroke(1.6f))}

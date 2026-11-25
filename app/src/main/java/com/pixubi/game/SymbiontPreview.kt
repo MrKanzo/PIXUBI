@@ -140,7 +140,7 @@ private fun DrawScope.symbiontEye(a:Color,x:Float,y:Float,face:RobotFace){
 private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,phase:Float,action:RobotAction,gear:RobotGear?){
     val g=f.grade;val sleepy=face==RobotFace.SLEEP||action==RobotAction.SLEEP
     val blink=sleepy||(action==RobotAction.IDLE&&phase>.94f)
-    val jaw=if(action==RobotAction.ATTACK)12f*sin(phase*PI.toFloat()).coerceAtLeast(0f) else when(face){RobotFace.HAPPY->4f;RobotFace.SURPRISE->9f;RobotFace.ANGRY->2f;else->0f}
+    val jaw=if(action==RobotAction.ATTACK)12f*sin(phase*PI.toFloat()).coerceAtLeast(0f) else if(sleepy)0f else when(face){RobotFace.HAPPY->4f;RobotFace.SURPRISE->9f;RobotFace.ANGRY->2f;else->0f}
     if(side){
         val shape=when(g){
             0->"M -25 -11 Q -30 -34 0 -36 Q 28 -36 34 -12 L 39 2 Q 32 22 8 23 L -17 17 Z"
@@ -176,7 +176,8 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
         if(g>=2)translate(0f,-30f){crystal(a,6f,15f+g*3f)}
         plate("M -13 5 L 13 5 L 18 17 L 0 25 L -18 17 Z",shade)
         drawOval(ink,Offset(-6f,8f),Size(12f,5f))
-        if(face==RobotFace.SURPRISE)drawOval(ink,Offset(-4f,13f),Size(8f,9f))
+        if(sleepy)line(a,-6f,17f,6f,17f,1.4f)
+        else if(face==RobotFace.SURPRISE)drawOval(ink,Offset(-4f,13f),Size(8f,9f))
         else if(action==RobotAction.ATTACK)drawOval(ink,Offset(-8f,13f),Size(16f,3f+jaw*.5f))
         else {
             val mouth=Path().apply{moveTo(-7f,17f);quadraticBezierTo(0f,17f+when(face){RobotFace.HAPPY->7f;RobotFace.SAD->-5f;RobotFace.ANGRY->-2f;else->0f},7f,17f)}
