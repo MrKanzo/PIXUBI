@@ -15,3 +15,6 @@ PIXUBI LAB is an offline virtual robot pet, not primarily a combat RPG. Future m
 
 ## 0.37.0 Chassis evolution preview
 MK-1 remains visually unchanged. MK-2 Wanderer, MK-3 Maker and MK-4 Ultra have distinct shell materials, head/body contours, articulated limb plating and tier-specific trim in front and profile. All use the existing rig, equipment transforms and expressions; no new animation poses. Lab tier selection is unrestricted and transient; level requirements are informational, not actual game evolution. Stats follow the previewed chassis. Device visual review is required, especially layered gear and running poses. Main pet screen remains unchanged.
+
+## 0.37.1 Secret OMEGA chassis
+A fifth, concept-inspired procedural 2D chassis, with articulated faceted limb armor, crown, reactor and animated rear crystal wings, front and mirrored profile views. Existing shared pivots and equipment slots preserved. Lab preview unrestricted. Level XP alone never unlocks OMEGA; actual achievement requirements, transformation animation, flying and main game integration are deferred. Provisional stats and visual review needed. Earlier four chassis unchanged.

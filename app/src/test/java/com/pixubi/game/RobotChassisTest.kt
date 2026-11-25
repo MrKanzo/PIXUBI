@@ -4,8 +4,8 @@ import org.junit.Test
 class RobotChassisTest {
     @Test fun everyTierHasDistinctChassis() {
         val all=RobotTier.entries.map{RobotChassisCatalog.of(it)}
-        assertEquals(4,all.map{it.title}.distinct().size)
-        assertEquals(4,all.map{it.headRadius}.distinct().size)
+        assertEquals(5,all.map{it.title}.distinct().size)
+        assertEquals(5,all.map{it.headRadius}.distinct().size)
         assertEquals(0f,all.first().limbWidth,0f)
         assertTrue(all.zipWithNext().all{(a,b)->a.limbWidth<b.limbWidth})
     }
@@ -15,6 +15,8 @@ class RobotChassisTest {
         assertTrue(RobotChassisCatalog.unlocked(RobotTier.MK2,5))
         assertFalse(RobotChassisCatalog.unlocked(RobotTier.MK4,19))
         assertTrue(RobotChassisCatalog.unlocked(RobotTier.MK4,20))
+        assertFalse(RobotChassisCatalog.unlocked(RobotTier.OMEGA,30))
+        assertEquals(RobotTier.MK4,RobotProgress(RobotProgress.MAX_XP).nextTier)
     }
     @Test fun gearWorksOnAllCurrentChassis() {
         val equipment=RobotEquipment().equip(RobotGear.ARMOR)

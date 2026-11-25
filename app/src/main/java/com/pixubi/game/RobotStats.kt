@@ -25,7 +25,7 @@ internal data class RobotStats(
     }.ifEmpty{"Без змін"}
 }
 internal enum class RobotTier(val title:String,val requiredLevel:Int) {
-    MK1("MK-1",1), MK2("MK-2",5), MK3("MK-3",12), MK4("MK-4",20)
+    MK1("MK-1",1), MK2("MK-2",5), MK3("MK-3",12), MK4("MK-4",20), OMEGA("MK-X · OMEGA",30)
 }
 internal data class RobotGearSpec(val delta:RobotStats,val minTier:RobotTier=RobotTier.MK1)
 internal object RobotBalance {
@@ -34,6 +34,7 @@ internal object RobotBalance {
         RobotTier.MK2->RobotStats(140,125,20,18,55,35,65)
         RobotTier.MK3->RobotStats(180,150,32,28,62,50,80)
         RobotTier.MK4->RobotStats(240,180,50,45,70,65,100)
+        RobotTier.OMEGA->RobotStats(310,235,65,60,85,90,135)
     }
     fun spec(g:RobotGear):RobotGearSpec=RobotGearSpec(when(g) {
         RobotGear.SCANNER->RobotStats(energy=-5,intelligence=12)
@@ -59,7 +60,7 @@ internal object RobotBalance {
 internal data class RobotProgress(val xp:Int=0) {
     val safeXp get()=xp.coerceIn(0,MAX_XP)
     val level get()=(1..MAX_LEVEL).last{requiredXp(it)<=safeXp}
-    val nextTier get()=RobotTier.entries.last{level>=it.requiredLevel}
+    val nextTier get()=RobotTier.entries.last{it!=RobotTier.OMEGA && level>=it.requiredLevel}
     val remaining get()=if(level==MAX_LEVEL)0 else requiredXp(level+1)-safeXp
     val fraction get()=if(level==MAX_LEVEL)1f else (safeXp-requiredXp(level)).toFloat()/(requiredXp(level+1)-requiredXp(level))
     fun gain(amount:Int)=RobotProgress((safeXp.toLong()+amount.coerceAtLeast(0)).coerceAtMost(MAX_XP.toLong()).toInt())

@@ -13,6 +13,7 @@ internal object RobotChassisCatalog {
         RobotTier.MK2->RobotChassis("Мандрівник","Легкий корпус, сенсорні панелі та посилені гомілки",Color(0xFFD9EDF0),Color(0xFF7C9EAE),12f,10f,1.5f,1f)
         RobotTier.MK3->RobotChassis("Майстер","Сегментований корпус, механічні щоки та радіатори",Color(0xFFC4D1E0),Color(0xFF647B96),8f,7f,2.5f,2f)
         RobotTier.MK4->RobotChassis("Ультра","Багатошаровий корпус, масивні манжети та енергетичні канали",Color(0xFF526B83),Color(0xFF30485F),5f,5f,4f,3f)
+        RobotTier.OMEGA->RobotChassis("Супереволюція","Кристалічні енергокрила, подвійне ядро та кутова броня",Color(0xFFF0F5FF),Color(0xFF416484),3f,3f,5f,4f)
     }
-    fun unlocked(tier:RobotTier,level:Int)=level>=tier.requiredLevel
+    fun unlocked(tier:RobotTier,level:Int)=tier!=RobotTier.OMEGA && level>=tier.requiredLevel
 }
