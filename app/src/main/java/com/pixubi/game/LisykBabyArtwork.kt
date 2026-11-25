@@ -11,12 +11,13 @@ internal object LisykBabyArtwork {
     private var atlas:Bitmap?=null
     private val cells=mutableMapOf<Int,Bitmap>()
     fun matches(s:Species,g:GrowthStage)=s==Species.LISYK&&g==GrowthStage.BABY
-    fun locomotion(c:SpriteClip)=c==SpriteClip.WALK||c==SpriteClip.DIG
+    fun locomotion(c:SpriteClip)=c==SpriteClip.WALK||c==SpriteClip.DIG||c==SpriteClip.HOP
     fun cell(c:SpriteClip,frame:Int)=when(c) {
         SpriteClip.WALK -> frame.mod(4)
         SpriteClip.DIG -> 6
         SpriteClip.SLEEP -> 7
-        SpriteClip.SURPRISE,SpriteClip.HOP -> 5
+        SpriteClip.HOP -> if(frame.mod(4) in 1..2) 5 else 0
+        SpriteClip.SURPRISE -> 5
         else -> 4
     }
     @Synchronized fun get(context:Context,index:Int):Bitmap {

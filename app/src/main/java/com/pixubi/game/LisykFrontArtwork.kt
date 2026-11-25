@@ -11,7 +11,7 @@ internal object LisykFrontArtwork {
     private var atlas:Bitmap?=null
     private val cache=mutableMapOf<Int,Bitmap>()
 
-    fun usesFront(clip:SpriteClip)=clip!=SpriteClip.WALK&&clip!=SpriteClip.DIG&&clip!=SpriteClip.SLEEP
+    fun usesFront(clip:SpriteClip)=clip!=SpriteClip.WALK&&clip!=SpriteClip.DIG&&clip!=SpriteClip.SLEEP&&clip!=SpriteClip.HOP
 
     /** 0 calm, 1 blink, 2 joy, 3 sad, 4 tired, 5 surprised, 6 chew, 7 sip. */
     fun index(emotion:PetEmotion,frame:Int,blink:Boolean):Int=when(emotion) {

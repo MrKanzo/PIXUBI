@@ -21,20 +21,10 @@ internal object PixuFrameLibrary {
     private val nativeOlder=mutableMapOf<Pair<Species,GrowthStage>,IntArray>()
     private val nativeYoung=mutableMapOf<Species,IntArray>()
 
-    fun directional(clip:SpriteClip)=clip in setOf(SpriteClip.WALK,SpriteClip.HOP,SpriteClip.DIG,SpriteClip.SWIM,SpriteClip.FLY)
-    fun moves(s:Species,g:GrowthStage,clip:SpriteClip):Boolean {
-        if(!directional(clip))return false
-        val pack=PetPosePack.forPet(s,g)
-        return pack?.locomotion(clip)==true || clip==SpriteClip.HOP || pack==null
-    }
-    fun mirror(k:PixuFrameKey,left:Boolean):Boolean {
-        if(!directional(k.clip))return false
-        if(LisykStandardArtwork.matches(k.species,k.stage))return left
-        val pack=PetPosePack.forPet(k.species,k.stage)
-        if(pack!=null)return left&&pack.locomotion(k.clip)
-        // The old juvenile illustration faces left; all ten new older sprites face right.
-        return if(k.stage==GrowthStage.YOUNG)!left else left
-    }
+    fun directional(clip:SpriteClip)=PixuAnimationPolicy.directional(clip)
+    fun moves(s:Species,g:GrowthStage,clip:SpriteClip)=
+        directional(clip)&&PixuAnimationPolicy.supports(s,g,clip)
+    fun mirror(k:PixuFrameKey,left:Boolean)=left&&moves(k.species,k.stage,k.clip)
 
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
         cache.get(k)?.let{return it}

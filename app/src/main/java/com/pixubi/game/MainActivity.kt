@@ -729,14 +729,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
     else null
     val searchPose = searchFrame?.pose ?: SearchPose()
     val stage = PetGrowth.stage(pet)
-    val posePack=PetPosePack.forPet(pet.species,stage)
-    val newYoungLisyk=posePack==PetPosePack.LISYK_YOUNG
-    val newLisyk=LisykBabyArtwork.matches(pet.species,stage)
-    val newIskryk=IskrykBabyArtwork.matches(pet.species,stage)
-    val newKraplyk=posePack==PetPosePack.KRAPLYK_BABY
-    val newPishchanyk=PishchanykBabyArtwork.matches(pet.species,stage)
-    val newKhmaryk=KhmarykBabyArtwork.matches(pet.species,stage)
-    val illustratedBaby=newLisyk||newIskryk||newPishchanyk||newKhmaryk||newYoungLisyk
+    val isPishchanyk=pet.species==Species.PISHCHANYK
+    val isKhmaryk=pet.species==Species.KHMARYK
     val homePhase=scoutCycle%1f
     val wandering=(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
         (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
@@ -763,26 +757,36 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         developer?.action?.motion!=null -> developer.action.motion!!
         homeFlight -> PetMotion.FLOAT
         wandering -> PetMotion.WALK
-        newKhmaryk&&searching -> PetMotion.FLOAT
-        pet.species==Species.PISHCHANYK&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
-        illustratedBaby&&searching&&searchFrame?.phase==SearchPhase.HIDING&&pet.species!=Species.KRAPLYK -> PetMotion.DIG
+        isKhmaryk&&searching -> PetMotion.FLOAT
+        isPishchanyk&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
+        searching&&searchFrame?.phase==SearchPhase.HIDING&&
+            PixuAnimationPolicy.supports(pet.species,stage,SpriteClip.DIG) -> PetMotion.DIG
         else -> MotionResolver.resolve(pet,emotion,searching)
     }
-    val clip = SpriteTimeline.clip(motion,emotion)
+    val clip = PixuAnimationPolicy.clip(pet.species,stage,motion,emotion)
     val hasMovementArt = PixuFrameLibrary.moves(pet.species,stage,clip)
     val bodyMotion = MotionResolver.pose(motion,movementCycle)
     val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
     val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
         kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=if(manualWalk)manualX else if(homeFlight)sign*42f*flightArc else if(illustratedBaby||(newKraplyk&&wandering)) (if(searching)searchPose.xDp else wanderX)
-        else if(hasMovementArt) (if(searching) searchPose.xDp else wanderX)+bodyMotion.xDp else 0f
-    val worldY=if(homeFlight)-42f*flightArc else if(newKhmaryk&&searchFrame!=null)searchPose.yDp
-        else if(newKhmaryk&&clip==SpriteClip.FLY)-35f+bodyMotion.yDp
-        else if(pet.species==Species.PISHCHANYK&&searchFrame!=null)67f*searchFrame.concealment
-        else if(newIskryk&&clip==SpriteClip.HOP)0f
-        else if((developer?.action==DevAction.HOP&&hasMovementArt)||developer?.action==DevAction.HAPPY)bodyMotion.yDp else if((illustratedBaby&&(wandering||searching))||(newKraplyk&&clip==SpriteClip.WALK))0f
-        else if(hasMovementArt)searchPose.yDp+bodyMotion.yDp
-        else if(!searching&&emotion==PetEmotion.HAPPY)bodyMotion.yDp else 0f
+    val worldX=when {
+        manualWalk -> manualX
+        homeFlight -> sign*42f*flightArc
+        searching&&hasMovementArt -> searchPose.xDp
+        wandering&&hasMovementArt -> wanderX
+        else -> 0f
+    }
+    val worldY=when {
+        homeFlight -> -42f*flightArc
+        searching&&isPishchanyk&&searchFrame!=null -> 67f*searchFrame.concealment
+        searching&&isKhmaryk -> searchPose.yDp
+        searching -> searchPose.yDp + if(clip==SpriteClip.HOP) PixuAnimationPolicy.hopOffset(pet.species,stage,movementCycle) else 0f
+        clip==SpriteClip.FLY&&isKhmaryk -> -35f+bodyMotion.yDp
+        clip==SpriteClip.HOP -> PixuAnimationPolicy.hopOffset(pet.species,stage,movementCycle)
+        clip==SpriteClip.SWIM -> bodyMotion.yDp
+        emotion==PetEmotion.HAPPY||emotion==PetEmotion.SURPRISED -> bodyMotion.yDp
+        else -> 0f
+    }
     val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)
     val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
@@ -924,9 +928,9 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                 style = MaterialTheme.typography.labelMedium, color = Color.White)
         }
-        if (!(searching && pet.species == Species.KRAPLYK && stage == GrowthStage.BABY) &&
-            !(newPishchanyk && searchFrame?.phase==SearchPhase.HIDDEN) &&
-            !(newKhmaryk && (clip==SpriteClip.FLY || searchFrame?.phase==SearchPhase.HIDDEN))) Box(
+        if (!(searching && pet.species == Species.KRAPLYK) &&
+            searchFrame?.phase!=SearchPhase.HIDDEN &&
+            !(isKhmaryk && clip==SpriteClip.FLY)) Box(
             Modifier.align(Alignment.BottomCenter).offset(x=worldX.dp,y = (-35).dp)
                 .size(width = 112.dp, height = 16.dp)
                 .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))

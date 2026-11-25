@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.delay
 
 /** An isolated, disposable session. Leaving this screen discards all test changes. */
@@ -23,6 +24,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
     var speed by remember { mutableFloatStateOf(1f) }
     var seconds by remember { mutableFloatStateOf(0f) }
     var left by remember { mutableStateOf(false) }
+    var matrix by remember { mutableStateOf(false) }
     LaunchedEffect(running,speed) {
         if(running) {
             var last=withFrameNanos{it}
@@ -43,10 +45,19 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             }
             OutlinedButton(onClick=onExit){Text("Вимкнути")}
         }
-        // Keep the actual game scene visible while scrolling the controls.
-        WorldScene(pet,action.emotion,onPetTap={
-            action=DevAction.HAPPY;seconds=0f
-        },developer=control)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected=!matrix,onClick={matrix=false},label={Text("Ігрова сцена")})
+            FilterChip(selected=matrix,onClick={matrix=true},label={Text("Усі анімації")})
+        }
+        if(matrix) {
+            Text(spec.species.title+" • "+spec.stage.title+" • "+spec.sex.title,
+                style=MaterialTheme.typography.titleSmall)
+            AnimationMatrix(spec,seconds,left,Modifier.weight(1f))
+        } else {
+            WorldScene(pet,action.emotion,onPetTap={
+                action=DevAction.HAPPY;seconds=0f
+            },developer=control)
+        }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             Button(onClick={running=!running},modifier=Modifier.weight(1f)){
                 Text(if(running)"⏸ Пауза" else "▶ Старт")
@@ -55,7 +66,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 modifier=Modifier.weight(1f)){Text("+ Кадр")}
             OutlinedButton(onClick={seconds=0f},modifier=Modifier.weight(1f)){Text("↺ Спочатку")}
         }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+        Column((if(matrix) Modifier.heightIn(max=210.dp) else Modifier.weight(1f)).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text("Швидкість",fontWeight=FontWeight.Bold)
             DevChoices(listOf(.25f,.5f,1f,2f),speed,{speed=it}){ "${it}×" }
@@ -73,6 +84,18 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                     }
                 }
             }
+            if(matrix) {
+                Text("Персонаж / форма",fontWeight=FontWeight.Bold)
+                DevChoices(Species.entries.toList(),spec.species,{spec=spec.copy(species=it,region=it.native);seconds=0f}){it.icon+" "+it.title}
+                DevChoices(GrowthStage.playable.toList(),spec.stage,{spec=spec.copy(stage=it);seconds=0f}){it.title}
+                DevChoices(Sex.entries.toList(),spec.sex,{spec=spec.copy(sex=it)}){it.title}
+                DevChoices((0..5).toList(),spec.color,{spec=spec.copy(color=it)}){"№${it+1}"}
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Рух ліворуч",modifier=Modifier.weight(1f))
+                    Switch(checked=left,onCheckedChange={left=it})
+                }
+            }
+            if(!matrix) {
             Text("Дії та емоції",fontWeight=FontWeight.Bold)
             DevAction.entries.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
@@ -85,10 +108,10 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 }
             }
             if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
-                Text("Краплик: 4 кадри плавання з оригінальної моделі. Дія «Пошук» перевіряє занурення; решта поз ще потребує художніх кадрів.",
+                Text("Краплик: оригінальні ходьба й плавання; сон поки використовує позу із заплющеними очима.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
             else if(LisykStandardArtwork.matches(spec.species,spec.stage))
-                Text("Новий піксельний набір: 16 поз • художня перевірка v0.33.",
+                Text("16 поз у тимчасовому піксельному атласі; художню якість ще не затверджено.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
             else if(PetPosePack.forPet(spec.species,spec.stage)==null)
                 Text("Для цієї форми деякі рухи ще не мають готових художніх кадрів. Режим покаже поточну реалізацію, а не вигадану анімацію.",
@@ -130,6 +153,7 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
                 color=Color(0xFFBFCFE9),style=MaterialTheme.typography.bodySmall)
             Button(onClick=onExit,modifier=Modifier.fillMaxWidth()){Text("Вимкнути режим і повернутися до гри")}
             Spacer(Modifier.height(10.dp))
+            }
         }
     }
 }
