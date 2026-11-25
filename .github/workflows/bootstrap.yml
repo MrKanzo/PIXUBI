@@ -50,7 +50,7 @@ jobs:
             echo '::notice::PIXUBI release needs PIXUBI_KEYSTORE_BASE64, PIXUBI_STORE_PASSWORD, PIXUBI_KEY_ALIAS and PIXUBI_KEY_PASSWORD secrets.'
           fi
       - name: Restore private signing keystore
-        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
+        if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-release]'))) && steps.signing.outputs.ready == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.PIXUBI_KEYSTORE_BASE64 }}
         shell: bash
@@ -58,7 +58,7 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pixubi-release.jks"
           chmod 600 "$RUNNER_TEMP/pixubi-release.jks"
       - name: Build signed release APK
-        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
+        if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-release]'))) && steps.signing.outputs.ready == 'true'
         env:
           PIXUBI_KEYSTORE_PATH: ${{ runner.temp }}/pixubi-release.jks
           PIXUBI_STORE_PASSWORD: ${{ secrets.PIXUBI_STORE_PASSWORD }}
@@ -66,7 +66,7 @@ jobs:
           PIXUBI_KEY_PASSWORD: ${{ secrets.PIXUBI_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
       - name: Publish signed stable release
-        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
+        if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-release]'))) && steps.signing.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
