@@ -26,7 +26,7 @@ import kotlin.math.*
 internal enum class RobotView(val title: String) { FRONT("Перед"), RIGHT("Праворуч"), LEFT("Ліворуч") }
 internal enum class RobotAction(val title: String) {
     IDLE("Спокій"), WALK("Ходьба"), RUN("Біг"), JUMP("Стрибок"), WAVE("Привітання"),
-    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака")
+    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака"), NINJA_DASH("Ривок ніндзі")
 }
 internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
@@ -690,20 +690,28 @@ private fun DrawScope.companionRobot(p:RobotPose,view:RobotView,a:Color,e:RobotE
 private val kageDark=Color(0xFF222632)
 private val kageSteel=Color(0xFF626D80)
 private val kageCloth=Color(0xFF38384D)
-private val kageLight=Color(0xFFB9C4D0)
+private val kageLight=Color(0xFFC2C8D3)
+private val kageEdge=Color(0xFF8492A7)
+private val kageBlack=Color(0xFF131822)
 private fun DrawScope.kageMetal(path:Path,far:Boolean=false) {
-    drawPath(path,Brush.linearGradient(listOf(if(far)kageSteel else kageLight,kageDark),Offset(62f,20f),Offset(150f,180f)))
+    val b=path.getBounds()
+    drawPath(path,Brush.linearGradient(listOf(if(far)kageSteel else kageLight,kageSteel,kageDark),Offset(b.left,b.top),Offset(b.right,b.bottom)))
     drawPath(path,ink,style=Stroke(1.8f,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+}
+private fun DrawScope.kageSeam(a:Offset,b:Offset) {
+    drawLine(kageBlack,a,b,2f,StrokeCap.Round)
+    drawLine(kageEdge.copy(alpha=.55f),a+Offset(0f,-.8f),b+Offset(0f,-.8f),.8f,StrokeCap.Round)
 }
 private fun DrawScope.kageScarf(tier:RobotTier,side:Boolean,a:Color,phase:Float,action:RobotAction) {
     val d=KageCatalog.of(tier)
-    val swing=sin(phase*2f*PI.toFloat())*(if(action==RobotAction.RUN)13f else if(action==RobotAction.SLEEP)0f else 5f)
+    val swing=sin(phase*2f*PI.toFloat())*(if(action==RobotAction.NINJA_DASH)19f else if(action==RobotAction.RUN)13f else if(action==RobotAction.SLEEP)0f else 5f)
     val len=d.scarfLength
     val root=Offset(if(side)82f else 79f,78f)
     for(i in 0..(if(tier==RobotTier.OMEGA)1 else 0)) {
         val r=Offset(root.x+i*8f,root.y+i*3f)
-        val tipX=r.x-len*(if(side).68f else .61f)+swing
-        val tipY=r.y+len*.76f+i*13f
+        val dash=if(action==RobotAction.NINJA_DASH)KageDashMotion.pose(phase).trail else 0f
+        val tipX=r.x-len*(if(side).68f else .61f)+swing-dash*22f
+        val tipY=r.y+len*.76f+i*13f-dash*len*.55f
         val scarf=Path().apply {
             moveTo(r.x,r.y-5f)
             cubicTo(r.x-18f,r.y-2f,r.x-len*.6f,r.y+len*.16f,tipX,tipY)
@@ -745,7 +753,8 @@ private fun DrawScope.kageHead(tier:RobotTier,side:Boolean,a:Color,f:RobotFace,b
             quadraticTo(110f,13f,126f,32f);lineTo(140f,46f)
             quadraticTo(135f,72f,114f,79f);quadraticTo(76f,87f,61f,48f);close()
         }
-        companionShape(kageCloth,hood)
+        drawPath(hood,Brush.linearGradient(listOf(Color(0xFF686477),kageCloth,kageBlack),Offset(77f,17f),Offset(131f,80f)))
+        drawPath(hood,kageBlack,style=Stroke(2f))
         val opening=Path().apply {moveTo(107f,37f);lineTo(136f,48f);lineTo(129f,66f);lineTo(112f,74f);quadraticTo(101f,57f,107f,37f);close()}
         companionShape(screen,opening)
         omegaPlate(kageSteel,listOf(Offset(113f,59f),Offset(133f,57f),Offset(127f,70f),Offset(115f,72f)))
@@ -755,20 +764,27 @@ private fun DrawScope.kageHead(tier:RobotTier,side:Boolean,a:Color,f:RobotFace,b
         if(d.armor>=3f)omegaPlate(kageSteel,listOf(Offset(77f,36f),Offset(87f,31f),Offset(100f,45f),Offset(88f,49f)))
     } else {
         val hood=Path().apply {
-            moveTo(100f,15f);quadraticTo(125f,17f,138f,47f)
+            moveTo(100f,12f);quadraticTo(124f,17f,138f,47f)
             lineTo(143f,62f);quadraticTo(128f,79f,100f,83f)
             quadraticTo(72f,79f,57f,62f);lineTo(62f,47f);quadraticTo(75f,17f,100f,15f);close()
         }
-        companionShape(kageCloth,hood)
+        drawPath(hood,Brush.linearGradient(listOf(Color(0xFF686477),kageCloth,kageBlack),Offset(77f,17f),Offset(131f,80f)))
+        drawPath(hood,kageBlack,style=Stroke(2f))
         val opening=Path().apply {
             moveTo(100f,33f);quadraticTo(123f,42f,134f,58f)
             quadraticTo(124f,74f,100f,77f);quadraticTo(76f,74f,66f,58f);quadraticTo(77f,42f,100f,33f);close()
         }
-        companionShape(screen,opening)
+        companionShape(kageBlack,opening)
+        val brow=Path().apply{moveTo(78f,48f);lineTo(100f,39f);lineTo(122f,48f);lineTo(100f,59f);close()}
+        kageMetal(brow)
         val mask=Path().apply {moveTo(73f,59f);lineTo(90f,61f);lineTo(100f,65f);lineTo(110f,61f);lineTo(127f,59f);lineTo(117f,72f);lineTo(100f,78f);lineTo(83f,72f);close()}
         kageMetal(mask)
         kageEyes(100f,53f,false,f,blink,a)
-        drawLine(kageSteel,Offset(100f,18f),Offset(100f,32f),1.5f)
+        kageSeam(Offset(100f,15f),Offset(100f,32f))
+        for(sign in listOf(-1f,1f)) {
+            kageSeam(Offset(100f+16f*sign,23f),Offset(100f+34f*sign,48f))
+            drawLine(kageEdge.copy(alpha=.65f),Offset(100f+38f*sign,60f),Offset(100f+24f*sign,72f),1.4f)
+        }
         if(d.armor>=1f)for(sign in listOf(-1f,1f)){
             drawLine(a,Offset(100f+24f*sign,38f),Offset(100f+33f*sign,51f),3.5f,StrokeCap.Round)
         }
@@ -799,7 +815,10 @@ private fun DrawScope.kageBody(tier:RobotTier,side:Boolean,a:Color,e:RobotEquipm
             if(d.armor>=1f)omegaPlate(kageSteel,listOf(Offset(100f+10f*sign,125f),Offset(100f+23f*sign,123f),Offset(100f+29f*sign,143f),Offset(100f+15f*sign,147f)))
             if(d.armor>=3f)drawLine(a,Offset(100f+18f*sign,128f),Offset(100f+22f*sign,140f),2f)
         }
-        for(y in listOf(109f,114f,119f))drawLine(kageSteel,Offset(93f,y),Offset(107f,y),1.2f)
+        for(y in listOf(109f,114f,119f)) {
+            omegaPlate(kageDark,listOf(Offset(90f,y-2f),Offset(100f,y),Offset(110f,y-2f),Offset(107f,y+3f),Offset(93f,y+3f)))
+            drawLine(kageEdge.copy(alpha=.7f),Offset(94f,y),Offset(106f,y),1f)
+        }
         panel(81f,120f,38f,9f,2f,kageSteel)
         panel(95f,120f,10f,9f,2f,kageLight)
     }
@@ -832,11 +851,15 @@ private fun DrawScope.kageArm(x:Float,y:Float,angle:Float,far:Boolean,a:Color,ge
         omegaPlate(kageDark,listOf(Offset(x-6f,y+3f),Offset(x+6f,y+3f),Offset(x+5f,y+20f),Offset(x-5f,y+20f)))
         val shoulder=Path().apply {moveTo(x-w,y-3f);lineTo(x+w,y-3f);lineTo(x+w+4f,y+6f);lineTo(x+5f,y+13f);lineTo(x-5f,y+13f);lineTo(x-w-4f,y+6f);close()}
         kageMetal(shoulder,far)
+        kageSeam(Offset(x-w+2f,y+1f),Offset(x+w-2f,y+1f))
         drawLine(a,Offset(x-w+1f,y+6f),Offset(x+w-1f,y+6f),2f)
+        drawCircle(kageBlack,1.7f,Offset(x,y+3f))
         companionJoint(x,y+20f,4.5f,a)
         val fore=Path().apply {moveTo(x-5f,y+22f);lineTo(x+5f,y+22f);lineTo(x+w+2f,y+31f);lineTo(x+6f,y+40f);lineTo(x-6f,y+40f);lineTo(x-w-2f,y+31f);close()}
         kageMetal(fore,far)
+        omegaPlate(kageDark,listOf(Offset(x-3f,y+24f),Offset(x+4f,y+24f),Offset(x+6f,y+31f),Offset(x+2f,y+37f),Offset(x-3f,y+35f)))
         drawLine(a,Offset(x,y+26f),Offset(x,y+35f),3f,StrokeCap.Round)
+        drawLine(kageLight.copy(alpha=.7f),Offset(x-w,y+30f),Offset(x-6f,y+38f),1f)
         panel(x-6f,y+39f,12f,10f,3f,kageDark)
         for(i in -1..1)drawLine(kageSteel,Offset(x+i*3f,y+44f),Offset(x+i*3f,y+48f),1.4f)
         when(gear){
@@ -847,53 +870,86 @@ private fun DrawScope.kageArm(x:Float,y:Float,angle:Float,far:Boolean,a:Color,ge
         }
     }
 }
-private fun DrawScope.kageLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier) {
+private fun DrawScope.kageLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier,shinAngle:Float=angle,plantFoot:Boolean=false) {
     val w=7f+KageCatalog.of(tier).armor*.65f
+    val rad=angle*PI.toFloat()/180f
+    val knee=Offset(x-18f*sin(rad),y+18f*cos(rad))
     rotate(angle,Offset(x,y)) {
         companionJoint(x,y+1f,6f,a)
-        omegaPlate(kageDark,listOf(Offset(x-w,y),Offset(x+w,y),Offset(x+5f,y+18f),Offset(x-5f,y+18f)))
-        companionJoint(x,y+18f,5f,a)
-        val shin=Path().apply {moveTo(x-6f,y+18f);lineTo(x+6f,y+18f);lineTo(x+w+2f,y+25f);lineTo(x+6f,y+39f);lineTo(x-6f,y+39f);lineTo(x-w-2f,y+25f);close()}
-        kageMetal(shin,far)
-        drawLine(a,Offset(x,y+22f),Offset(x,y+34f),3f,StrokeCap.Round)
-        val toe=if(side)17f else 11f
-        val foot=Path().apply {moveTo(x-8f,y+35f);lineTo(x+7f,y+35f);lineTo(x+toe,y+43f);lineTo(x+toe,y+47f);lineTo(x-11f,y+47f);lineTo(x-11f,y+41f);close()}
-        kageMetal(foot,far)
-        drawLine(a,Offset(x-7f,y+44f),Offset(x+toe-2f,y+44f),2.5f)
-        if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS) {
-            panel(x-12f,y+34f,if(side)32f else 24f,13f,4f,kageDark)
-            drawLine(a,Offset(x-8f,y+40f),Offset(x+toe-2f,y+40f),3f)
-            if(gear==RobotGear.SPEED_BOOTS)drawLine(Color.White,Offset(x-8f,y+44f),Offset(x+toe-2f,y+44f),1.4f)
+        val thigh=Path().apply{moveTo(x-w,y);lineTo(x+w,y);lineTo(x+w-2f,y+9f);lineTo(x+5f,y+18f);lineTo(x-5f,y+18f);lineTo(x-w+2f,y+9f);close()}
+        kageMetal(thigh,far)
+        kageSeam(Offset(x-4f,y+4f),Offset(x-2f,y+14f))
+    }
+    translate(knee.x-x,knee.y-y-18f) {
+        rotate(shinAngle,Offset(x,y+18f)) {
+            companionJoint(x,y+18f,5f,a)
+            val shin=Path().apply {moveTo(x-6f,y+18f);lineTo(x+6f,y+18f);lineTo(x+w+2f,y+25f);lineTo(x+6f,y+39f);lineTo(x-6f,y+39f);lineTo(x-w-2f,y+25f);close()}
+            kageMetal(shin,far)
+            omegaPlate(kageDark,listOf(Offset(x-3f,y+22f),Offset(x+4f,y+22f),Offset(x+6f,y+29f),Offset(x+2f,y+36f),Offset(x-4f,y+33f)))
+            drawLine(a,Offset(x,y+23f),Offset(x,y+34f),3f,StrokeCap.Round)
+            drawLine(kageLight.copy(alpha=.7f),Offset(x-6f,y+21f),Offset(x-9f,y+26f),1f)
+            val toe=if(side)17f else 11f
+            rotate(if(plantFoot)-shinAngle else 0f,Offset(x,y+38f)) {
+                val foot=Path().apply {moveTo(x-8f,y+35f);lineTo(x+7f,y+35f);lineTo(x+toe,y+43f);lineTo(x+toe,y+47f);lineTo(x-11f,y+47f);lineTo(x-11f,y+41f);close()}
+                kageMetal(foot,far)
+                drawLine(a,Offset(x-7f,y+44f),Offset(x+toe-2f,y+44f),2.5f)
+                if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS) {
+                    panel(x-12f,y+34f,if(side)32f else 24f,13f,4f,kageDark)
+                    drawLine(a,Offset(x-8f,y+40f),Offset(x+toe-2f,y+40f),3f)
+                    if(gear==RobotGear.SPEED_BOOTS)drawLine(Color.White,Offset(x-8f,y+44f),Offset(x+toe-2f,y+44f),1.4f)
+                }
+            }
         }
     }
 }
 private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean,tier:RobotTier,phase:Float,action:RobotAction) {
     val side=view!=RobotView.FRONT
+    val dash=if(action==RobotAction.NINJA_DASH)KageDashMotion.pose(phase) else null
     val swordReady=action==RobotAction.ATTACK && e.equipped(RobotSlot.LEFT_HAND)==null && tier>=RobotTier.MK2
-    kageScarf(tier,side,a,phase,action)
-    if(tier>=RobotTier.MK2 && !swordReady && e.equipped(RobotSlot.BACK)==null) {
-        rotate(if(side)-18f else 32f,Offset(if(side)75f else 121f,83f)) {
-            kageSword(if(side)75f else 121f,58f,a,false)
-        }
-    }
-    backGear(e.equipped(RobotSlot.BACK),side,a)
     val boots=e.equipped(RobotSlot.FEET)
-    if(side) {
-        kageLeg(94f,132f,p.farLeg,true,true,a,boots,tier)
-        kageArm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()),tier,swordReady&&view.farHand()==RobotSlot.LEFT_HAND)
-        kageLeg(102f,133f,p.nearLeg,true,false,a,boots,tier)
-        kageBody(tier,true,a,e)
-        kageArm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()),tier,swordReady&&view.nearHand()==RobotSlot.LEFT_HAND)
-        companionJoint(99f,92f,6.5f,a)
-        kageHead(tier,true,a,f,blink,e)
-    } else {
-        kageLeg(85f,133f,p.farLeg*.12f,false,false,a,boots,tier)
-        kageLeg(115f,133f,p.nearLeg*.12f,false,false,a,boots,tier)
-        kageBody(tier,false,a,e)
-        kageArm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND),tier)
-        kageArm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND),tier,swordReady)
-        companionJoint(65f,94f,6.5f,a);companionJoint(135f,94f,6.5f,a)
-        kageHead(tier,false,a,f,blink,e)
+    val nearThigh=dash?.nearThigh?:p.nearLeg
+    val farThigh=dash?.farThigh?:p.farLeg
+    val nearShin=dash?.nearShin?:p.nearLeg
+    val farShin=dash?.farShin?:p.farLeg
+    val nearArm=dash?.nearArm?:p.nearArm
+    val farArm=dash?.farArm?:p.farArm
+    fun DrawScope.backParts() {
+        kageScarf(tier,side,a,phase,action)
+        if(tier>=RobotTier.MK2 && !swordReady && e.equipped(RobotSlot.BACK)==null) {
+            rotate(if(side)-18f else 32f,Offset(if(side)75f else 121f,83f)) {
+                kageSword(if(side)75f else 121f,58f,a,false)
+            }
+        }
+        backGear(e.equipped(RobotSlot.BACK),side,a)
+    }
+    translate(top=dash?.drop?:0f) {
+        if(side) {
+            kageLeg(94f,132f,farThigh,true,true,a,boots,tier,farShin,dash!=null)
+            rotate(dash?.lean?:0f,Offset(100f,133f)) {
+                backParts()
+                kageArm(94f,91f,farArm,true,a,e.equipped(view.farHand()),tier,swordReady&&view.farHand()==RobotSlot.LEFT_HAND)
+            }
+            kageLeg(102f,133f,nearThigh,true,false,a,boots,tier,nearShin,dash!=null)
+            rotate(dash?.lean?:0f,Offset(100f,133f)) {
+                kageBody(tier,true,a,e)
+                kageArm(99f,92f,nearArm,false,a,e.equipped(view.nearHand()),tier,swordReady&&view.nearHand()==RobotSlot.LEFT_HAND)
+                companionJoint(99f,92f,6.5f,a)
+                kageHead(tier,true,a,f,blink,e)
+            }
+        } else {
+            val nearA=if(dash==null)nearThigh*.12f else nearThigh*.35f
+            val farA=if(dash==null)farThigh*.12f else farThigh*.35f
+            kageLeg(85f,133f,farA,false,false,a,boots,tier,if(dash==null)farA else farShin*.75f,dash!=null)
+            kageLeg(115f,133f,nearA,false,false,a,boots,tier,if(dash==null)nearA else nearShin*.35f,dash!=null)
+            rotate(if(dash==null)0f else -dash.lean*.22f,Offset(100f,133f)) {
+                backParts()
+                kageBody(tier,false,a,e)
+                kageArm(65f,94f,RobotMotion.frontArmAngle(farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND),tier)
+                kageArm(135f,94f,RobotMotion.frontArmAngle(nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND),tier,swordReady)
+                companionJoint(65f,94f,6.5f,a);companionJoint(135f,94f,6.5f,a)
+                kageHead(tier,false,a,f,blink,e)
+            }
+        }
     }
 }
 
@@ -905,18 +961,30 @@ internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, lo
         val omega=loadout.tier==RobotTier.OMEGA
         val companion=loadout.series==RobotSeries.COMPANION
         val ninja=loadout.series==RobotSeries.KAGE
-        val growth=when { companion->CompanionCatalog.of(loadout.tier).scale; ninja->KageCatalog.of(loadout.tier).scale; else->1f }
-        val s=min(size.width/(if(ninja)285f else if(omega)236f else 200f),size.height/(if(omega)270f else if(ninja)255f else if(companion)235f else 215f))
+        val dash=if(ninja && action==RobotAction.NINJA_DASH)KageDashMotion.pose(phase) else null
+        val growth=when { companion->CompanionCatalog.of(loadout.tier).scale; ninja->KageCatalog.of(loadout.tier).scale; else->1f }*(if(dash!=null && view==RobotView.FRONT)1f+dash.travel/440f else 1f)
+        val s=min(size.width/(if(dash!=null)390f else if(ninja)250f else if(omega)236f else 200f),size.height/(if(dash!=null)275f else if(omega)270f else if(ninja)235f else if(companion)235f else 215f))
         val dx=(size.width-200*s)/2; val dy=(size.height-215*s)/2+(if(omega)18*s else if(companion)5*s else 0f)
         translate(dx,dy) {
             scale(s,s,Offset.Zero) {
-                drawOval(ink.copy(alpha=.35f),Offset(63f,181f),Size(74f,8f))
-                translate(top=p.lift) {
+                val travel=if(dash==null||view==RobotView.FRONT)0f else (dash.travel-44f)*(if(view==RobotView.LEFT)-1f else 1f)
+                drawOval(ink.copy(alpha=.35f),Offset(63f+travel,181f),Size(74f,8f))
+                if(dash!=null && dash.trail>0f && view!=RobotView.FRONT) {
+                    val direction=if(view==RobotView.LEFT)-1f else 1f
+                    for(i in 0..4) {
+                        val x=100f+travel-direction*(30f+i*9f)
+                        drawLine(loadout.accent.copy(alpha=dash.trail*(.6f-i*.08f)),Offset(x-direction*35f,90f+i*14f),Offset(x,90f+i*14f),3f-i*.35f,StrokeCap.Round)
+                    }
+                }
+                translate(left=travel,top=p.lift) {
                     scale(growth,growth,Offset(100f,180f)) {
                     scale(if(view==RobotView.LEFT) -1f else 1f,1f,Offset(100f,100f)) {
                         val actualFace=if(action==RobotAction.SLEEP) RobotFace.SLEEP else face
                         val blink=phase>.94f && action==RobotAction.IDLE
-                        if(loadout.tier==RobotTier.OMEGA) omegaWings(view!=RobotView.FRONT,loadout.accent,phase,action,if(companion)companionLight else glow)
+                        if(loadout.tier==RobotTier.OMEGA) {
+                            if(dash!=null)translate(top=dash.drop){rotate(if(view==RobotView.FRONT)-dash.lean*.22f else dash.lean,Offset(100f,133f)){omegaWings(view!=RobotView.FRONT,loadout.accent,phase,action,glow)}}
+                            else omegaWings(view!=RobotView.FRONT,loadout.accent,phase,action,if(companion)companionLight else glow)
+                        }
                         if(companion) companionRobot(p,view,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier,phase,action)
                         else if(ninja) kageRobot(p,view,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier,phase,action)
                         else if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink,loadout.tier)
@@ -969,8 +1037,9 @@ internal fun RobotLab(onBack:()->Unit) {
             var last=0L
             while(true) withFrameNanos { now ->
                 if(last!=0L) {
-                    val duration=when(action){RobotAction.RUN->480f;RobotAction.WALK->950f;RobotAction.IDLE->3200f;else->1600f}
-                    phase=(phase+(now-last).coerceAtMost(50_000_000L)/1_000_000f/duration)%1f
+                    val duration=when(action){RobotAction.NINJA_DASH->KageDashMotion.DURATION_MS;RobotAction.RUN->480f;RobotAction.WALK->950f;RobotAction.IDLE->3200f;else->1600f}
+                    val next=phase+(now-last).coerceAtMost(50_000_000L)/1_000_000f/duration
+                    if(action==RobotAction.NINJA_DASH){phase=next.coerceAtMost(1f);if(phase>=1f)running=false}else phase=next%1f
                 }
                 last=now
             }
@@ -986,7 +1055,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Серія робота")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSeries.entries.forEach { item ->
-                FilterChip(selected=series==item,onClick={series=item},label={Text(item.title)})
+                FilterChip(selected=series==item,onClick={series=item;if(item!=RobotSeries.KAGE&&action==RobotAction.NINJA_DASH){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(item.title)})
             }
         }
         Text("Еволюції · вільний перегляд")
@@ -1009,11 +1078,11 @@ internal fun RobotLab(onBack:()->Unit) {
         }
         Text("Рухи")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            RobotAction.entries.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f},label={Text(a.title)}) }
+            RobotAction.entries.filter{it!=RobotAction.NINJA_DASH||series==RobotSeries.KAGE}.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;if(a==RobotAction.NINJA_DASH){if(view==RobotView.FRONT)view=RobotView.RIGHT;running=true}},label={Text(a.title)}) }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Button(onClick={running=!running}){Text(if(running)"Пауза" else "Відтворити")}
-            OutlinedButton(onClick={phase=(phase+0.0625f)%1f;running=false}){Text("Крок кадру")}
+            Button(onClick={if(action==RobotAction.NINJA_DASH&&phase>=1f)phase=0f;running=!running}){Text(if(running)"Пауза" else "Відтворити")}
+            OutlinedButton(onClick={phase=if(action==RobotAction.NINJA_DASH)(phase+0.0625f).coerceAtMost(1f) else (phase+0.0625f)%1f;running=false}){Text("Крок кадру")}
         }
         Slider(value=phase,onValueChange={phase=it;running=false})
         Text("Міміка дисплея")

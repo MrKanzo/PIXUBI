@@ -27,3 +27,6 @@ Reference-led procedural rebuild of the female head, face bezel, shoulders, ches
 
 ## 0.37.4 PX-N7 KAGE
 Third series, five preview stages with independent hood/mask, angular eyes, articulated dark metal limbs, hex core, scarf and tier-dependent armor. Default cyan accent stored separately; animated scarf follows shared action phase. Cosmetic sheathed katana from MK2 when back slot is empty, drawn in attack if left hand is free; not a new combat mechanic or inventory item. Existing gear slots, stats, XP and motion shared. Existing Classic and Companion render paths preserved. Concept-inspired vector recreation, not exact artwork; visual checks on device required. No new main-screen integration.
+
+## 0.37.5 KAGE detail and ninja dash
+Refined hood, face mask, panel highlights, articulated two-segment legs and armor details. KAGE-only one-shot 1250 ms dash, kneel preparation, forward translation, recovery and speed lines; side direction mirrors with view, front uses depth scale. Frame controls support pause, stepping and replay. This is a lab animation, not movement in the actual pet world. Concept remains a procedural interpretation; visual fit and foot contact need device verification. Other two series are unchanged.
