@@ -26,7 +26,7 @@ import kotlin.math.*
 internal enum class RobotView(val title: String) { FRONT("Перед"), RIGHT("Праворуч"), LEFT("Ліворуч") }
 internal enum class RobotAction(val title: String) {
     IDLE("Спокій"), WALK("Ходьба"), RUN("Біг"), JUMP("Стрибок"), WAVE("Привітання"),
-    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака"), NINJA_DASH("Ривок ніндзі"), HACK("Голограма"), TELEPORT("Телепорт"), DRONE_SWARM("Дрони")
+    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака"), NINJA_DASH("Ривок ніндзі"), HACK("Голограма"), TELEPORT("Телепорт"), DRONE_SWARM("Дрони"), ENERGY_SHIELD("Енергощит"), HOVER("Левітація")
 }
 internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
@@ -1002,6 +1002,10 @@ private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipm
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
+    if(loadout.series==RobotSeries.VALKYRIE) {
+        ValkyriePreview(view,action,face,loadout,phase,showSockets,modifier)
+        return
+    }
     if(loadout.series==RobotSeries.CLASSIC) {
         ClassicPreview(view,action,face,loadout,phase,showSockets,modifier)
         return
@@ -1081,7 +1085,8 @@ internal fun RobotLab(onBack:()->Unit) {
     var series by remember { mutableStateOf(RobotSeries.CLASSIC) }
     var ninjaSkin by remember(context){mutableStateOf(RobotLabStorage.loadKageSkin(context))}
     var glitchSkin by remember(context){mutableStateOf(RobotLabStorage.loadGlitchSkin(context))}
-    val skin=when(series){RobotSeries.CLASSIC->classicSkin;RobotSeries.COMPANION->companionSkin;RobotSeries.KAGE->ninjaSkin;RobotSeries.GLITCH->glitchSkin}
+    var valkyrieSkin by remember(context){mutableStateOf(RobotLabStorage.loadValkyrieSkin(context))}
+    val skin=when(series){RobotSeries.CLASSIC->classicSkin;RobotSeries.COMPANION->companionSkin;RobotSeries.KAGE->ninjaSkin;RobotSeries.GLITCH->glitchSkin;RobotSeries.VALKYRIE->valkyrieSkin}
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
     var progress by remember(context) { mutableStateOf(RobotProgressStorage.load(context)) }
     LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
@@ -1094,6 +1099,7 @@ internal fun RobotLab(onBack:()->Unit) {
     LaunchedEffect(companionSkin){RobotLabStorage.saveCompanionSkin(context,companionSkin)}
     LaunchedEffect(ninjaSkin){RobotLabStorage.saveKageSkin(context,ninjaSkin)}
     LaunchedEffect(glitchSkin){RobotLabStorage.saveGlitchSkin(context,glitchSkin)}
+    LaunchedEffect(valkyrieSkin){RobotLabStorage.saveValkyrieSkin(context,valkyrieSkin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
     var phase by remember { mutableFloatStateOf(0f) }
@@ -1106,6 +1112,7 @@ internal fun RobotLab(onBack:()->Unit) {
                 RobotSeries.COMPANION->companionSkin=newborn.skin
                 RobotSeries.KAGE->ninjaSkin=newborn.skin
                 RobotSeries.GLITCH->glitchSkin=newborn.skin
+                RobotSeries.VALKYRIE->valkyrieSkin=newborn.skin
             }
             tier=RobotTier.MK1;view=RobotView.FRONT;action=RobotAction.WAVE;face=RobotFace.HAPPY;phase=0f;running=true
             genesis=false
@@ -1136,17 +1143,17 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Серія робота")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSeries.entries.forEach { item ->
-                FilterChip(selected=series==item,onClick={series=item;if(item==RobotSeries.KAGE){tier=RobotTier.MK1;action=RobotAction.IDLE;phase=0f;running=true};if(item==RobotSeries.GLITCH||item!=RobotSeries.KAGE&&action==RobotAction.NINJA_DASH||item!=RobotSeries.GLITCH&&action in listOf(RobotAction.HACK,RobotAction.TELEPORT,RobotAction.DRONE_SWARM)){if(item==RobotSeries.GLITCH)tier=RobotTier.MK1;action=RobotAction.IDLE;phase=0f;running=true}},label={Text(item.title)})
+                FilterChip(selected=series==item,onClick={series=item;tier=RobotTier.MK1;action=RobotAction.IDLE;phase=0f;running=true},label={Text(item.title)})
             }
         }
         Text("Еволюції · вільний перегляд")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotTier.entries.forEach { t ->
-                FilterChip(selected=tier==t,onClick={tier=t;if(series==RobotSeries.GLITCH&&((t<RobotTier.MK3&&action in listOf(RobotAction.HACK,RobotAction.DRONE_SWARM))||(t<RobotTier.MK4&&action==RobotAction.TELEPORT))){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(t.title)})
+                FilterChip(selected=tier==t,onClick={tier=t;if((series==RobotSeries.GLITCH&&((t<RobotTier.MK3&&action in listOf(RobotAction.HACK,RobotAction.DRONE_SWARM))||(t<RobotTier.MK4&&action==RobotAction.TELEPORT)))||(series==RobotSeries.VALKYRIE&&((t<RobotTier.MK3&&action==RobotAction.ENERGY_SHIELD)||(t<RobotTier.MK4&&action==RobotAction.HOVER)))){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(t.title)})
             }
         }
         val chassis=RobotChassisCatalog.of(tier)
-        Text(when(series){RobotSeries.COMPANION->CompanionCatalog.of(tier).title+" · Companion"; RobotSeries.KAGE->KageCatalog.of(tier).title+" · PX-N7 KAGE";RobotSeries.GLITCH->GlitchCatalog.of(tier).title+" · PX-C9 GLITCH";RobotSeries.CLASSIC->chassis.title+" · "+chassis.description},style=MaterialTheme.typography.bodyMedium)
+        Text(when(series){RobotSeries.COMPANION->CompanionCatalog.of(tier).title+" · Companion"; RobotSeries.KAGE->KageCatalog.of(tier).title+" · PX-N7 KAGE";RobotSeries.GLITCH->GlitchCatalog.of(tier).title+" · PX-C9 GLITCH";RobotSeries.VALKYRIE->ValkyrieCatalog.of(tier).title+" · PX-V7 VALKYRIE";RobotSeries.CLASSIC->chassis.title+" · "+chassis.description},style=MaterialTheme.typography.bodyMedium)
         Text(when {
             tier==RobotTier.OMEGA -> "Секретна форма · лише особливі досягнення (умови ще не визначені)"
             RobotChassisCatalog.unlocked(tier,progress.level)->"Доступний за рівнем"
@@ -1161,7 +1168,7 @@ internal fun RobotLab(onBack:()->Unit) {
         }
         Text("Рухи")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            RobotAction.entries.filter{ when(it){RobotAction.NINJA_DASH->series==RobotSeries.KAGE;RobotAction.HACK,RobotAction.DRONE_SWARM->series==RobotSeries.GLITCH&&tier>=RobotTier.MK3;RobotAction.TELEPORT->series==RobotSeries.GLITCH&&tier>=RobotTier.MK4;else->true} }.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;running=true;if(a==RobotAction.NINJA_DASH||((series!=RobotSeries.COMPANION)&&KageGait.isLocomotion(a))){if(view==RobotView.FRONT)view=RobotView.RIGHT}},label={Text(a.title)}) }
+            RobotAction.entries.filter{ when(it){RobotAction.NINJA_DASH->series==RobotSeries.KAGE;RobotAction.HACK,RobotAction.DRONE_SWARM->series==RobotSeries.GLITCH&&tier>=RobotTier.MK3;RobotAction.TELEPORT->series==RobotSeries.GLITCH&&tier>=RobotTier.MK4;RobotAction.ENERGY_SHIELD->series==RobotSeries.VALKYRIE&&tier>=RobotTier.MK3;RobotAction.HOVER->series==RobotSeries.VALKYRIE&&tier>=RobotTier.MK4;else->true} }.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;running=true;if(a==RobotAction.NINJA_DASH||((series!=RobotSeries.COMPANION)&&KageGait.isLocomotion(a))){if(view==RobotView.FRONT)view=RobotView.RIGHT}},label={Text(a.title)}) }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Button(onClick={if(action==RobotAction.NINJA_DASH&&phase>=1f)phase=0f;running=!running}){Text(if(running)"Пауза" else "Відтворити")}
@@ -1203,7 +1210,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Скін · колір акцентів")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSkin.entries.forEach { s ->
-                FilterChip(selected=skin==s,onClick={when(series){RobotSeries.COMPANION->companionSkin=s;RobotSeries.KAGE->ninjaSkin=s;RobotSeries.GLITCH->glitchSkin=s;RobotSeries.CLASSIC->classicSkin=s}},label={Text(s.title)})
+                FilterChip(selected=skin==s,onClick={when(series){RobotSeries.COMPANION->companionSkin=s;RobotSeries.KAGE->ninjaSkin=s;RobotSeries.GLITCH->glitchSkin=s;RobotSeries.VALKYRIE->valkyrieSkin=s;RobotSeries.CLASSIC->classicSkin=s}},label={Text(s.title)})
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {

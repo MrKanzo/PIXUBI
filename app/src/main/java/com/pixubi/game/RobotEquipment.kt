@@ -39,6 +39,13 @@ internal enum class RobotSkin(val title:String,val accent:Color) {
     PURPLE("Фіолетовий",Color(0xFF9B74D8)), GRAPHITE("Графіт",Color(0xFF708398)), PINK("Рожевий",Color(0xFFDF64AB)), CYAN("Бірюзовий",Color(0xFF26DFF0))
 }
 internal object RobotLabStorage {
+    fun loadValkyrieSkin(context:Context):RobotSkin {
+        val id=context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE).getString("valkyrie_skin","PINK")
+        return RobotSkin.entries.firstOrNull{it.name==id}?:RobotSkin.PINK
+    }
+    fun saveValkyrieSkin(context:Context,skin:RobotSkin) {
+        context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE).edit().putString("valkyrie_skin",skin.name).apply()
+    }
     fun loadGlitchSkin(context:Context):RobotSkin {
         val id=context.getSharedPreferences("robot_lab_loadout_v1",Context.MODE_PRIVATE).getString("glitch_skin","PURPLE")
         return RobotSkin.entries.firstOrNull{it.name==id}?:RobotSkin.PURPLE

@@ -78,6 +78,16 @@ private fun GenesisVessel(s:GenesisState,phase:Float,opening:Float,modifier:Modi
                         }}
                         drawLine(energy,Offset(-12f,0f),Offset(12f,0f),4f)
                     }
+                    RobotSeries.VALKYRIE->{
+                        for(i in 0..5)rotate(i*60f,Offset.Zero){
+                            translate(0f,-open*48f){
+                                shell("M 0 -73 Q 35 -53 29 -27 L 0 -9 L -29 -27 Q -35 -53 0 -73 Z",a)
+                                circuit(energy,0f,-62f,0f,-23f)
+                            }
+                        }
+                        drawCircle(energy,18f,Offset.Zero,style=Stroke(3f))
+                        drawCircle(energy,7f,Offset.Zero)
+                    }
                     RobotSeries.GLITCH->{
                         for(side in listOf(-1f,1f))scale(side,1f,Offset.Zero){translate(open*55f,-open*18f){
                             shell("M 0 -77 L 42 -30 L 53 7 L 0 73 L 0 22 L 19 1 L 0 -29 Z",a)
