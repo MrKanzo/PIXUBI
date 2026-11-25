@@ -38,6 +38,7 @@ internal fun AnimationMatrix(spec:DevSpec,seconds:Float,left:Boolean,modifier:Mo
                                         DevAction.HOP -> PixuAnimationPolicy.hopOffset(spec.species,spec.stage,phase)*.4f
                                         DevAction.HAPPY,DevAction.SURPRISE -> MotionResolver.pose(motion,phase).yDp*.4f
                                         DevAction.FLY -> -8f+MotionResolver.pose(motion,phase).yDp*.4f
+                                        DevAction.SWIM -> MotionResolver.pose(motion,phase).yDp*.65f
                                         else -> 0f
                                     }
                                     val x=if(action==DevAction.WALK)(if(left)-1f else 1f)*

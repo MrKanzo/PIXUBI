@@ -27,7 +27,7 @@ class NativeSpriteLayoutTest {
         val cases=GrowthStage.playable.flatMap{g->Species.entries.map{s->s to g}}
             .filter{(s,g)->PixuArtRouting.source(s,g)!=PixuArtSource.POSE_PACK}
         assertEquals(14,cases.size)
-        val sheet=BufferedImage(n*6,n*cases.size*2,BufferedImage.TYPE_INT_ARGB)
+        val sheet=BufferedImage(n*10,n*cases.size*2,BufferedImage.TYPE_INT_ARGB)
         val graphics=sheet.createGraphics()
         for((i,entry) in cases.withIndex()){
             val (s,g)=entry
@@ -44,13 +44,16 @@ class NativeSpriteLayoutTest {
                 val src=if(sex==Sex.GIRL)PixuSilhouette.female(original,n,n,s) else original
                 val fit=NativeSpriteLayout.fit(src,g)
                 val frames=(0..3).map{f->NativeSpriteLayout.nativeMotion(src,s,g,SpriteClip.WALK,f)}+
-                    NativeSpriteLayout.nativeMotion(src,s,g,special,1)
+                    (0..3).map{f->NativeSpriteLayout.nativeMotion(src,s,g,special,f)}
                 val geo=if(isYoung)null else ReferenceOlderFrames.geometry(s,g)
                 val eyes=geo?.eyes?:NativeEyeGeometry.regions(s,g)
                 val blink=EyePixelAnimator.frame(src,n,n,eyes,4)
                 assertFalse(src.contentEquals(blink))
-                for((col,pixels) in (frames+listOf(blink)).withIndex()){
-                    val out=NativeSpriteLayout.render(pixels,fit,mirror=isYoung&&col<5)
+                val rest=NativeSpriteLayout.nativeMotion(blink,s,g,SpriteClip.SLEEP,0)
+                assertFalse("Sleep must change the posture",rest.contentEquals(blink))
+                assertFalse("Special action must differ from walk",frames[1].contentEquals(frames[5]))
+                for((col,pixels) in (frames+listOf(blink,rest)).withIndex()){
+                    val out=NativeSpriteLayout.render(pixels,fit,mirror=isYoung)
                     assertTrue("Empty or damaged creature "+s.name+" "+g.name,out.count{it ushr 24>=128}>3000)
                     val img=BufferedImage(n,n,BufferedImage.TYPE_INT_ARGB)
                     img.setRGB(0,0,n,n,out,0,n)

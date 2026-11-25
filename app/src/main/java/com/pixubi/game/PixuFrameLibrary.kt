@@ -57,8 +57,8 @@ internal object PixuFrameLibrary {
         }
         val moved=NativeSpriteLayout.nativeMotion(pixels,k.species,k.stage,k.clip,k.frame)
         val fit=layouts.getOrPut(model){NativeSpriteLayout.fit(src,k.stage)}
-        // Preserve the source orientation at rest; normalize travel to right.
-        val oriented=NativeSpriteLayout.render(moved,fit,mirror=!older&&directional(k.clip))
+        // Keep one native orientation for rest and travel: no idle-to-walk flip.
+        val oriented=NativeSpriteLayout.render(moved,fit,mirror=!older)
         return Bitmap.createBitmap(oriented,CELL,CELL,Bitmap.Config.ARGB_8888)
     }
 

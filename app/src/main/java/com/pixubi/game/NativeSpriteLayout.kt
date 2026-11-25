@@ -37,8 +37,6 @@ internal object NativeSpriteLayout {
         return PixuRaster.pixelate(out,CELL)
     }
     fun nativeMotion(src:IntArray,s:Species,g:GrowthStage,clip:SpriteClip,frame:Int):IntArray {
-        val older=g==GrowthStage.ADULT||g==GrowthStage.ULTRA
-        val parts=if(older)ReferenceOlderFrames.anatomy(s,g) else IllustratedMotionFrames.parts(s,g)
-        return IllustratedMotionFrames.frameWithParts(src,CELL,s,parts,clip,frame,older=older,enhanced=true)
+        return NativePoseMotion.frame(src,s,g,clip,frame)
     }
 }
