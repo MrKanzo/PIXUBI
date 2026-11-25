@@ -66,3 +66,6 @@ Softer continuous hood rim and cheek drape, inset narrower eye, no hard diagonal
 
 ## 0.38.0 PX-C9 GLITCH
 Fourth lab series: BYTE, PROXY, GHOST, GLITCH, OVERLORD. Independent vector shells inspired by the approved purple concept, digital face, articulated limbs, profile gait, equipment and separate saved accent. GHOST and above support hologram and drone preview; GLITCH and OVERLORD support visual teleport; OVERLORD has animated wings and two companion drones. These are visual lab effects, not actual hacking, flight, combat or pet-world mechanics. Existing series artwork retained. Device review required.
+
+## 0.39.0 GENESIS
+Separate Robot Lab incubation screen with random hidden or manual series choice, four original MK-0 vessels (cube, orb, pod, seed), randomized saved color and trait, 8% golden chance for mystery mode. Charge, sync and touch; 100% energy plus all care types unlock the hatch animation. Interrupted hatch can be restarted; progress, newborn identity and name persist locally. Adopt previews the selected MK-1 in the lab. No changes to main game save, real-time incubation or actual trait-driven behavior. Test reset requires confirmation.

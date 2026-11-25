@@ -1093,6 +1093,21 @@ internal fun RobotLab(onBack:()->Unit) {
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
     var phase by remember { mutableFloatStateOf(0f) }
+    var genesis by remember { mutableStateOf(false) }
+    if(genesis){
+        GenesisLab(onBack={genesis=false},onAdopt={ newborn ->
+            series=newborn.series
+            when(series){
+                RobotSeries.CLASSIC->classicSkin=newborn.skin
+                RobotSeries.COMPANION->companionSkin=newborn.skin
+                RobotSeries.KAGE->ninjaSkin=newborn.skin
+                RobotSeries.GLITCH->glitchSkin=newborn.skin
+            }
+            tier=RobotTier.MK1;view=RobotView.FRONT;action=RobotAction.WAVE;face=RobotFace.HAPPY;phase=0f;running=true
+            genesis=false
+        })
+        return
+    }
     LaunchedEffect(running,action) {
         if(running) {
             var last=0L
@@ -1113,6 +1128,7 @@ internal fun RobotLab(onBack:()->Unit) {
             OutlinedButton(onClick=onBack){Text("Назад")}
         }
         Text("Незалежний тестовий стенд. Не змінює збереження гри.")
+        Button(onClick={genesis=true},modifier=Modifier.fillMaxWidth()){Text("GENESIS · Народження робота")}
         Text("Серія робота")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSeries.entries.forEach { item ->
