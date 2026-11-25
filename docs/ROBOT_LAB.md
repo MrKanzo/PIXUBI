@@ -21,3 +21,6 @@ A fifth, concept-inspired procedural 2D chassis, with articulated faceted limb a
 
 ## 0.37.2 Companion series
 Five new female companion chassis rendered procedurally from the approved concept: rounded face, heart reactor, ear tips at MK1, growing articulated energy hair, progressive armor, and pink OMEGA wings and halo. Shared limb rotation, gear sockets, animations, stats and lab XP; both series have equal gameplay stats at each tier. Preview series switch and independent saved accent colors; lab inventory/XP remain shared for testing. No main pet screen integration yet. Device visual checks required; generated concept art is not an exact runtime sprite.
+
+## 0.37.3 Companion visual rebuild
+Reference-led procedural rebuild of the female head, face bezel, shoulders, chest, hip plating, articulated arms, hands, knees and boots, with layered metal shading and tinted hair tips. Independent limb renderer uses shared action angles and gear IDs. Classic series unchanged. Concept is three-quarter artwork rather than a layered orthographic animation asset; runtime is a hand-built approximation, not a pixel-identical import. Check all tiers and gear combinations on device. Main pet screen remains separate.

@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.*
@@ -452,7 +453,13 @@ private fun DrawScope.companionHair(tier:RobotTier,side:Boolean,a:Color,phase:Fl
                 quadraticTo(x+sign*4f,y+8f,x,y)
                 close()
             }
-            companionShape(companionShell,hair)
+            companionMetal(hair)
+            val tip=Path().apply {
+                moveTo(x+sign*14f,y+len*.52f)
+                quadraticTo(x+sign*30f,y+len*.74f,x+sign*24f,y+len)
+                quadraticTo(x+sign*15f,y+len*.84f,x+sign*14f,y+len*.52f);close()
+            }
+            companionShape(a,tip)
             val stripe=Path().apply {
                 moveTo(x+sign*9f,y+7f)
                 quadraticTo(x+sign*23f,y+len*.45f,x+sign*24f,y+len-4f)
@@ -465,130 +472,217 @@ private fun DrawScope.companionHair(tier:RobotTier,side:Boolean,a:Color,phase:Fl
         }
     }
 }
+// Companion has its own sculpted parts, not scaled Classic arms/legs.
+private fun DrawScope.companionMetal(path:Path,far:Boolean=false) {
+    drawPath(path,Brush.linearGradient(listOf(if(far)companionShade else Color.White,
+        if(far)Color(0xFF655F80) else companionShade),Offset(65f,30f),Offset(155f,175f)))
+    drawPath(path,ink,style=Stroke(1.6f,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+}
+private fun DrawScope.companionJoint(x:Float,y:Float,r:Float,a:Color) {
+    drawCircle(ink,r+1.3f,Offset(x,y))
+    drawCircle(joint,r,Offset(x,y))
+    drawCircle(companionShade,r*.66f,Offset(x,y))
+    drawCircle(a,r*.33f,Offset(x,y))
+}
 private fun DrawScope.companionHead(tier:RobotTier,side:Boolean,a:Color,f:RobotFace,blink:Boolean,e:RobotEquipment) {
     val small=tier==RobotTier.MK1
+    val advanced=tier>=RobotTier.MK3
     if(side) {
-        panel(67f,28f,65f,53f,24f,companionShell)
-        panel(111f,39f,24f,33f,10f,screen)
-        face(121f,50f,true,f,blink,companionLight)
-        drawCircle(ink,13f,Offset(87f,54f))
-        drawCircle(a,11f,Offset(87f,54f))
-        drawCircle(companionShade,7f,Offset(87f,54f))
+        val cap=Path().apply {
+            moveTo(65f,47f);cubicTo(63f,22f,106f,18f,124f,32f)
+            quadraticTo(141f,47f,135f,66f);quadraticTo(130f,78f,110f,81f)
+            quadraticTo(76f,85f,66f,65f);close()
+        }
+        companionMetal(cap)
+        val visor=Path().apply {
+            moveTo(111f,37f);quadraticTo(135f,37f,138f,49f)
+            quadraticTo(139f,65f,128f,72f);lineTo(112f,74f)
+            quadraticTo(105f,60f,111f,37f);close()
+        }
+        companionShape(screen,visor)
+        face(123f,50f,true,f,blink,companionLight)
+        drawCircle(ink,14f,Offset(87f,54f))
+        drawCircle(a,12f,Offset(87f,54f))
+        drawCircle(joint,8f,Offset(87f,54f))
         drawCircle(companionLight,5f,Offset(87f,54f),style=Stroke(2f))
-        if(small)omegaPlate(companionShell,listOf(Offset(73f,38f),Offset(65f,15f),Offset(92f,32f)))
-        else omegaPlate(companionShell,listOf(Offset(69f,35f),Offset(55f,19f),Offset(90f,28f),Offset(105f,37f)))
-        drawLine(a,Offset(77f,32f),Offset(100f,34f),3f,StrokeCap.Round)
+        if(small) {
+            omegaPlate(companionShell,listOf(Offset(72f,36f),Offset(64f,14f),Offset(92f,31f)))
+            omegaPlate(a,listOf(Offset(72f,29f),Offset(70f,19f),Offset(84f,30f)))
+        } else {
+            val sweep=Path().apply {moveTo(82f,28f);quadraticTo(114f,19f,129f,35f);quadraticTo(114f,33f,108f,45f);quadraticTo(99f,32f,82f,28f);close()}
+            companionMetal(sweep)
+            if(advanced)omegaPlate(a,listOf(Offset(66f,36f),Offset(50f,20f),Offset(85f,29f),Offset(91f,35f)))
+        }
+        drawLine(a,Offset(78f,29f),Offset(96f,27f),2.5f,StrokeCap.Round)
     } else {
         for(sign in listOf(-1f,1f)) {
-            val x=100f+31f*sign
+            val x=100f+34f*sign
             if(small) {
-                omegaPlate(companionShell,listOf(Offset(x-10f,34f),Offset(x+sign*5f,15f),Offset(x+10f,36f)))
-                drawLine(a,Offset(x,22f),Offset(x+sign*4f,30f),3f,StrokeCap.Round)
+                val ear=Path().apply {moveTo(x-10f,35f);quadraticTo(x-11f,13f,x,15f);quadraticTo(x+10f,17f,x+10f,35f);close()}
+                companionMetal(ear)
+                omegaPlate(a,listOf(Offset(x-5f,29f),Offset(x,20f),Offset(x+5f,29f)))
             }
-            drawCircle(ink,12f,Offset(x,55f))
-            drawCircle(a,10f,Offset(x,55f))
+            drawCircle(ink,13f,Offset(x,55f));drawCircle(a,11f,Offset(x,55f))
+            drawCircle(joint,8f,Offset(x,55f));drawCircle(companionLight,5f,Offset(x,55f),style=Stroke(1.5f))
         }
-        panel(65f,28f,70f,53f,25f,companionShell)
-        panel(72f,40f,56f,33f,15f,screen)
+        val cap=Path().apply {
+            moveTo(62f,49f);cubicTo(62f,16f,138f,16f,138f,49f)
+            quadraticTo(144f,77f,116f,82f);quadraticTo(100f,85f,84f,82f)
+            quadraticTo(56f,77f,62f,49f);close()
+        }
+        companionMetal(cap)
+        val visor=Path().apply {
+            moveTo(70f,49f);quadraticTo(70f,36f,85f,38f)
+            quadraticTo(100f,42f,115f,38f);quadraticTo(130f,36f,130f,49f)
+            quadraticTo(134f,75f,100f,76f);quadraticTo(66f,75f,70f,49f);close()
+        }
+        companionShape(screen,visor)
+        val shine=Path().apply {moveTo(75f,47f);quadraticTo(78f,42f,88f,44f)}
+        drawPath(shine,Color(0xFF77617E),style=Stroke(1.8f,cap=StrokeCap.Round))
         face(100f,51f,false,f,blink,companionLight)
         if(!blink && f!=RobotFace.SLEEP && f!=RobotFace.ANGRY) {
-            drawLine(a.copy(alpha=.8f),Offset(78f,62f),Offset(83f,62f),2f,StrokeCap.Round)
-            drawLine(a.copy(alpha=.8f),Offset(117f,62f),Offset(122f,62f),2f,StrokeCap.Round)
+            for(x in listOf(79f,121f))drawLine(a.copy(alpha=.9f),Offset(x-2f,62f),Offset(x+2f,62f),2f,StrokeCap.Round)
         }
         val fringe=Path().apply {
-            moveTo(73f,40f);quadraticTo(78f,25f,93f,29f)
-            quadraticTo(104f,40f,125f,33f);lineTo(127f,40f)
-            quadraticTo(108f,45f,96f,38f);quadraticTo(82f,36f,73f,40f);close()
+            moveTo(67f,40f);quadraticTo(70f,26f,90f,25f)
+            quadraticTo(99f,27f,108f,38f);quadraticTo(119f,35f,132f,39f)
+            quadraticTo(112f,47f,103f,40f);quadraticTo(92f,34f,84f,38f)
+            quadraticTo(74f,43f,67f,40f);close()
         }
-        companionShape(companionShell,fringe)
-        panel(94f,29f,12f,4f,2f,a)
+        companionMetal(fringe)
+        drawLine(a,Offset(93f,29f),Offset(102f,30f),2.6f,StrokeCap.Round)
+        if(advanced)for(sign in listOf(-1f,1f)) {
+            omegaPlate(companionShell,listOf(Offset(100f+29f*sign,33f),Offset(100f+43f*sign,21f),Offset(100f+39f*sign,43f),Offset(100f+33f*sign,47f)))
+            drawLine(a,Offset(100f+38f*sign,28f),Offset(100f+35f*sign,39f),2f)
+        }
     }
     if(tier==RobotTier.OMEGA) {
-        drawOval(a.copy(alpha=.85f),Offset(if(side)68f else 67f,11f),Size(if(side)57f else 66f,13f),style=Stroke(3f))
-        drawOval(companionLight,Offset(if(side)68f else 67f,11f),Size(if(side)57f else 66f,13f),style=Stroke(1.2f))
+        val cx=if(side)98f else 100f
+        drawOval(a.copy(alpha=.8f),Offset(cx-34f,7f),Size(68f,13f),style=Stroke(4f))
+        drawOval(companionLight,Offset(cx-34f,7f),Size(68f,13f),style=Stroke(1.5f))
     }
     headGear(e.equipped(RobotSlot.HEAD),side,a)
 }
 private fun DrawScope.companionBody(tier:RobotTier,side:Boolean,a:Color,e:RobotEquipment) {
     val d=CompanionCatalog.of(tier)
     if(side) {
-        val body=Path().apply {
-            moveTo(82f,81f);quadraticTo(113f,77f,122f,90f)
-            quadraticTo(128f,104f,111f,113f);lineTo(119f,130f)
-            quadraticTo(98f,142f,79f,132f);lineTo(86f,112f)
-            quadraticTo(72f,95f,82f,81f);close()
+        val spine=Path().apply {
+            moveTo(84f,83f);quadraticTo(111f,78f,122f,89f)
+            quadraticTo(130f,99f,110f,112f);lineTo(115f,126f)
+            quadraticTo(112f,140f,81f,136f);lineTo(84f,114f)
+            quadraticTo(73f,98f,84f,83f);close()
         }
-        companionShape(companionShell,body)
-        panel(88f,109f,22f,14f,5f,joint)
-        panel(117f,92f,9f,20f,4f,a)
-        drawLine(companionLight,Offset(122f,96f),Offset(122f,108f),2f)
-        if(d.armor>=1f)omegaPlate(companionShade,listOf(Offset(80f,123f),Offset(96f,121f),Offset(106f,132f),Offset(76f,141f)))
+        companionShape(joint,spine)
+        val chest=Path().apply {moveTo(84f,85f);quadraticTo(110f,77f,122f,90f);quadraticTo(127f,99f,113f,108f);lineTo(94f,112f);quadraticTo(78f,101f,84f,85f);close()}
+        companionMetal(chest)
+        val hip=Path().apply {moveTo(86f,119f);quadraticTo(101f,115f,116f,125f);lineTo(119f,137f);quadraticTo(95f,144f,80f,135f);close()}
+        companionMetal(hip)
+        drawLine(a,Offset(118f,91f),Offset(120f,102f),4f,StrokeCap.Round)
+        if(d.armor>=1f)omegaPlate(companionShell,listOf(Offset(84f,121f),Offset(99f,122f),Offset(100f,134f),Offset(73f,143f)))
+        if(d.armor>=3f)drawLine(companionLight,Offset(83f,125f),Offset(78f,137f),2f)
         chestGear(e.equipped(RobotSlot.CHEST),true,a)
     } else {
-        panel(63f,87f,22f,13f,5f,joint)
-        panel(115f,87f,22f,13f,5f,joint)
-        val body=Path().apply {
-            moveTo(79f,81f);quadraticTo(100f,75f,121f,81f)
-            quadraticTo(132f,94f,118f,109f);lineTo(114f,117f)
-            quadraticTo(124f,126f,122f,135f);lineTo(78f,135f)
-            quadraticTo(76f,126f,86f,117f);lineTo(82f,109f)
-            quadraticTo(68f,94f,79f,81f);close()
+        panel(65f,87f,22f,12f,5f,joint);panel(113f,87f,22f,12f,5f,joint)
+        val frame=Path().apply {
+            moveTo(78f,84f);quadraticTo(100f,76f,122f,84f)
+            quadraticTo(130f,96f,116f,111f);lineTo(111f,118f)
+            quadraticTo(125f,126f,122f,135f);lineTo(78f,135f)
+            quadraticTo(75f,126f,89f,118f);lineTo(84f,111f)
+            quadraticTo(70f,96f,78f,84f);close()
         }
-        companionShape(companionShell,body)
-        panel(89f,111f,22f,14f,6f,joint)
+        companionShape(joint,frame)
+        val chest=Path().apply {
+            moveTo(78f,84f);quadraticTo(90f,78f,100f,85f);quadraticTo(110f,78f,122f,84f)
+            quadraticTo(129f,94f,117f,104f);lineTo(100f,113f);lineTo(83f,104f);quadraticTo(71f,94f,78f,84f);close()
+        }
+        companionMetal(chest)
+        val hip=Path().apply {moveTo(88f,119f);lineTo(100f,124f);lineTo(112f,119f);quadraticTo(125f,123f,122f,134f);lineTo(100f,142f);lineTo(78f,134f);quadraticTo(75f,123f,88f,119f);close()}
+        companionMetal(hip)
         if(d.armor>=1f)for(sign in listOf(-1f,1f)) {
-            omegaPlate(companionShade,listOf(Offset(100f+12f*sign,121f),Offset(100f+23f*sign,119f),Offset(100f+26f*sign,134f),Offset(100f+16f*sign,139f)))
-            drawLine(a,Offset(100f+18f*sign,124f),Offset(100f+20f*sign,133f),2.5f)
+            omegaPlate(companionShell,listOf(Offset(100f+13f*sign,119f),Offset(100f+25f*sign,118f),Offset(100f+29f*sign,133f),Offset(100f+20f*sign,142f),Offset(100f+14f*sign,135f)))
+            drawLine(a,Offset(100f+20f*sign,124f),Offset(100f+23f*sign,134f),3f)
+            if(d.armor>=3f)drawLine(companionLight,Offset(100f+19f*sign,125f),Offset(100f+22f*sign,132f),1.2f)
         }
         chestGear(e.equipped(RobotSlot.CHEST),false,a)
-        companionHeart(100f,98f,if(tier==RobotTier.OMEGA)13f else 10f,a,e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)
-        if(d.armor>=3f) {
-            drawLine(companionLight,Offset(92f,115f),Offset(92f,121f),2f)
-            drawLine(companionLight,Offset(108f,115f),Offset(108f,121f),2f)
+        companionHeart(100f,96f,if(tier==RobotTier.OMEGA)13f else 10f,a,e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)
+        if(d.armor>=2f) {
+            drawLine(a,Offset(91f,111f),Offset(94f,119f),2f,StrokeCap.Round)
+            drawLine(a,Offset(109f,111f),Offset(106f,119f),2f,StrokeCap.Round)
+        }
+    }
+}
+private fun DrawScope.companionArm(x:Float,y:Float,angle:Float,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier) {
+    val d=CompanionCatalog.of(tier)
+    val w=6f+d.armor*.65f
+    rotate(angle,Offset(x,y)) {
+        companionJoint(x,y,6.5f,a)
+        val upper=Path().apply {moveTo(x-w,y+2f);quadraticTo(x-w-4f,y+9f,x-4f,y+18f);lineTo(x+4f,y+18f);quadraticTo(x+w+4f,y+9f,x+w,y+2f);close()}
+        companionMetal(upper,far)
+        if(d.armor>=1f)omegaPlate(a,listOf(Offset(x-w,y+4f),Offset(x+w,y+4f),Offset(x+3f,y+12f),Offset(x-3f,y+12f)))
+        companionJoint(x,y+20f,4.7f,a)
+        val cuff=Path().apply {moveTo(x-5f,y+22f);quadraticTo(x-w-5f,y+28f,x-w,y+36f);lineTo(x-4f,y+40f);lineTo(x+4f,y+40f);quadraticTo(x+w+5f,y+30f,x+5f,y+22f);close()}
+        companionMetal(cuff,far)
+        drawLine(a,Offset(x,y+26f),Offset(x,y+35f),3.6f,StrokeCap.Round)
+        if(d.armor>=3f)drawLine(companionLight,Offset(x,y+27f),Offset(x,y+34f),1.4f)
+        panel(x-5f,y+39f,10f,8f,3f,joint)
+        for(i in -1..1)drawLine(companionShade,Offset(x+i*3f,y+46f),Offset(x+i*3f,y+49f),2f,StrokeCap.Round)
+        if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R) {
+            panel(x-14f,y+19f,28f,29f,7f,a);companionHeart(x,y+32f,6f,a,true)
+        }
+        if(gear==RobotGear.TOOL_L||gear==RobotGear.TOOL_R) {
+            panel(x-5f,y+45f,10f,16f,3f,companionShade);panel(x-9f,y+58f,18f,6f,2f,amber)
+        }
+        if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R) {
+            panel(x-11f,y+27f,22f,24f,5f,joint);panel(x-8f,y+48f,16f,12f,3f,a)
+            drawLine(companionLight,Offset(x-5f,y+55f),Offset(x+5f,y+55f),3f)
+        }
+    }
+}
+private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier) {
+    val d=CompanionCatalog.of(tier)
+    val w=7f+d.armor*.7f
+    rotate(angle,Offset(x,y)) {
+        companionJoint(x,y+2f,6f,a)
+        val thigh=Path().apply {moveTo(x-w,y);quadraticTo(x-w-2f,y+8f,x-5f,y+18f);lineTo(x+5f,y+18f);quadraticTo(x+w+2f,y+8f,x+w,y);close()}
+        companionMetal(thigh,far)
+        companionJoint(x,y+18f,5f,a)
+        val shin=Path().apply {moveTo(x-5f,y+19f);quadraticTo(x-w-4f,y+24f,x-w-1f,y+36f);lineTo(x-5f,y+40f);lineTo(x+5f,y+40f);quadraticTo(x+w+4f,y+27f,x+5f,y+19f);close()}
+        companionMetal(shin,far)
+        omegaPlate(a,listOf(Offset(x-4f,y+20f),Offset(x+4f,y+20f),Offset(x+5f,y+27f),Offset(x,y+32f),Offset(x-5f,y+27f)))
+        if(d.armor>=2f)drawLine(companionLight,Offset(x,y+23f),Offset(x,y+28f),2f,StrokeCap.Round)
+        val toe=if(side)16f else 10f
+        val foot=Path().apply {moveTo(x-8f,y+36f);lineTo(x+7f,y+36f);quadraticTo(x+toe,y+40f,x+toe,y+46f);quadraticTo(x+toe-3f,y+49f,x-10f,y+47f);lineTo(x-10f,y+43f);close()}
+        companionMetal(foot,far)
+        drawLine(a,Offset(x-7f,y+45f),Offset(x+toe-2f,y+45f),2.6f,StrokeCap.Round)
+        if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS) {
+            panel(x-12f,y+35f,if(side)31f else 24f,12f,4f,joint)
+            drawLine(a,Offset(x-8f,y+40f),Offset(x+toe-1f,y+40f),4f,StrokeCap.Round)
+            if(gear==RobotGear.SPEED_BOOTS)drawLine(companionLight,Offset(x-8f,y+45f),Offset(x+toe-1f,y+45f),1.5f)
         }
     }
 }
 private fun DrawScope.companionRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean,tier:RobotTier,phase:Float,action:RobotAction) {
     val side=view!=RobotView.FRONT
-    val d=CompanionCatalog.of(tier)
-    // Same equipment anchors as classic; local scale narrows the silhouette at fixed pivots.
-    fun DrawScope.limbArm(x:Float,y:Float,angle:Float,far:Boolean,gear:RobotGear?) {
-        rotate(angle,Offset(x,y)) {
-            scale(.83f+d.armor*.025f,1f,Offset(x,y)) {
-                arm(x,y,0f,far,a,gear,tier)
-            }
-        }
-    }
-    fun DrawScope.limbLeg(x:Float,y:Float,angle:Float,far:Boolean) {
-        rotate(angle,Offset(x,y)) {
-            scale(.84f+d.armor*.025f,1f,Offset(x,y)) {
-                leg(x,y,0f,side,far,a,e.equipped(RobotSlot.FEET),tier)
-            }
-        }
-    }
     companionHair(tier,side,a,phase,action)
     backGear(e.equipped(RobotSlot.BACK),side,a)
+    val boots=e.equipped(RobotSlot.FEET)
     if(side) {
-        limbLeg(94f,132f,p.farLeg,true)
-        limbArm(94f,91f,p.farArm,true,e.equipped(view.farHand()))
-        limbLeg(102f,133f,p.nearLeg,false)
+        companionLeg(94f,132f,p.farLeg,true,true,a,boots,tier)
+        companionArm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()),tier)
+        companionLeg(102f,133f,p.nearLeg,true,false,a,boots,tier)
         companionBody(tier,true,a,e)
-        panel(92f,72f,13f,13f,4f,joint)
+        panel(94f,74f,11f,11f,4f,joint)
         companionHead(tier,true,a,f,blink,e)
-        limbArm(99f,92f,p.nearArm,false,e.equipped(view.nearHand()))
-        drawCircle(ink,8f,Offset(99f,92f));drawCircle(a,6f,Offset(99f,92f))
-        drawCircle(companionShade,3f,Offset(99f,92f))
+        companionArm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()),tier)
+        companionJoint(99f,92f,6.5f,a)
     } else {
-        limbLeg(85f,133f,p.farLeg*.12f,false)
-        limbLeg(115f,133f,p.nearLeg*.12f,false)
+        companionLeg(85f,133f,p.farLeg*.12f,false,false,a,boots,tier)
+        companionLeg(115f,133f,p.nearLeg*.12f,false,false,a,boots,tier)
         companionBody(tier,false,a,e)
-        limbArm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,e.equipped(RobotSlot.RIGHT_HAND))
-        limbArm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,e.equipped(RobotSlot.LEFT_HAND))
-        for(x in listOf(65f,135f)) {
-            drawCircle(ink,9f,Offset(x,94f));drawCircle(companionShell,7.5f,Offset(x,94f))
-            drawCircle(a,5f,Offset(x,94f));drawCircle(joint,2.5f,Offset(x,94f))
-        }
-        panel(94f,70f,12f,13f,4f,joint)
+        companionArm(68f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND),tier)
+        companionArm(132f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND),tier)
+        companionJoint(68f,94f,6.5f,a);companionJoint(132f,94f,6.5f,a)
+        panel(95f,74f,10f,11f,4f,joint)
         companionHead(tier,false,a,f,blink,e)
     }
 }
@@ -600,8 +694,8 @@ internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, lo
         val omega=loadout.tier==RobotTier.OMEGA
         val companion=loadout.series==RobotSeries.COMPANION
         val growth=if(companion)CompanionCatalog.of(loadout.tier).scale else 1f
-        val s=min(size.width/(if(omega)236f else 200f),size.height/(if(omega)270f else 215f))
-        val dx=(size.width-200*s)/2; val dy=(size.height-215*s)/2+(if(omega)18*s else 0f)
+        val s=min(size.width/(if(omega)236f else 200f),size.height/(if(omega)270f else if(companion)235f else 215f))
+        val dx=(size.width-200*s)/2; val dy=(size.height-215*s)/2+(if(omega)18*s else if(companion)5*s else 0f)
         translate(dx,dy) {
             scale(s,s,Offset.Zero) {
                 drawOval(ink.copy(alpha=.35f),Offset(63f,181f),Size(74f,8f))
