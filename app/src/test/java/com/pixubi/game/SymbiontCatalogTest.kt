@@ -7,6 +7,28 @@ class SymbiontCatalogTest {
         assertTrue(forms.all{it.frontBulk>it.rearBulk&&it.shoulderRise>it.rumpDrop})
         assertTrue(forms.zipWithNext().all{(a,b)->b.frontBulk/b.rearBulk>a.frontBulk/a.rearBulk&&b.clawReach>a.clawReach})
     }
+    @Test fun groundedPawPushesBackAndLiftedPawReachesForward(){
+        for(run in listOf(false,true)){
+            val stance=if(run).52f else .72f
+            val plantedA=SymbiontCatalog.foot(stance*.2f,0,run)
+            val plantedB=SymbiontCatalog.foot(stance*.8f,0,run)
+            assertEquals(0f,plantedA.y,.001f)
+            assertEquals(0f,plantedB.y,.001f)
+            assertTrue(plantedA.x>plantedB.x)
+            val liftedA=SymbiontCatalog.foot(stance+(1f-stance)*.2f,0,run)
+            val liftedB=SymbiontCatalog.foot(stance+(1f-stance)*.8f,0,run)
+            assertTrue(liftedA.y<0f&&liftedB.y<0f)
+            assertTrue(liftedA.x<liftedB.x)
+        }
+    }
+    @Test fun gaitKeepsDiagonalPairsAndWalkingSupport(){
+        for(frame in 0 until 100){
+            val p=frame/100f
+            assertEquals(SymbiontCatalog.foot(p,0,true),SymbiontCatalog.foot(p,3,true))
+            assertEquals(SymbiontCatalog.foot(p,1,true),SymbiontCatalog.foot(p,2,true))
+            assertTrue((0..3).count{SymbiontCatalog.foot(p,it,false).y==0f}>=2)
+        }
+    }
     @Test fun anatomyAndGates(){
         val f=RobotTier.entries.map(SymbiontCatalog::of)
         assertEquals(listOf("MITE","CRAWLER","STALKER","SYMBIONT","LEVIATHAN"),f.map{it.title})

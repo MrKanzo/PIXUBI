@@ -24,10 +24,23 @@ internal object SymbiontCatalog {
         RobotTier.MK4->SymbiontForm("SYMBIONT",3,1f,79f,41f,64f,7,3)
         RobotTier.OMEGA->SymbiontForm("LEVIATHAN",4,1.04f,88f,44f,70f,9,4)
     }
-    // Diagonal trot and four-beat walking. One full cycle returns exactly to its starting pose.
+    // Model faces local +X. Grounded paws push toward -X, lifted paws recover toward +X.
+    // Mirroring the entire rig handles left-facing movement without reversing the gait.
     fun foot(phase:Float,index:Int,run:Boolean):Offset{
-        val t=(phase+if(run) (if(index==0||index==3)0f else .5f) else listOf(0f,.5f,.75f,.25f)[index])*2f*PI.toFloat()
-        return Offset(cos(t)*(if(run)24f else 13f),-max(0f,sin(t))*(if(run)20f else 9f))
+        val offset=if(run){if(index==0||index==3)0f else .5f}
+            else when(index){0->0f;1->.75f;2->.5f;else->.25f}
+        val p=phase+offset
+        val t=p-floor(p)
+        val stance=if(run).52f else .72f
+        val stride=if(run)24f else 13f
+        val lift=if(run)20f else 9f
+        return if(t<stance){
+            Offset(stride*(1f-2f*t/stance),0f)
+        }else{
+            val u=(t-stance)/(1f-stance)
+            val smooth=u*u*(3f-2f*u)
+            Offset(stride*(2f*smooth-1f),-lift*sin(PI.toFloat()*u).coerceAtLeast(0f))
+        }
     }
 }
 private val ink=Color(0xFF080D12)
