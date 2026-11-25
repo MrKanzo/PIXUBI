@@ -651,7 +651,7 @@ private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:
         omegaPlate(a,listOf(Offset(x-4f,y+20f),Offset(x+4f,y+20f),Offset(x+5f,y+27f),Offset(x,y+32f),Offset(x-5f,y+27f)))
         if(d.armor>=2f)drawLine(companionLight,Offset(x,y+23f),Offset(x,y+28f),2f,StrokeCap.Round)
         val toe=if(side)16f else 10f
-        val foot=Path().apply {moveTo(x-8f,y+36f);lineTo(x+7f,y+36f);quadraticTo(x+toe,y+40f,x+toe,y+46f);quadraticTo(x+toe-3f,y+49f,x-10f,y+47f);lineTo(x-10f,y+43f);close()}
+        val foot=Path().apply {moveTo(x-8f,y+36f);lineTo(x+8f,y+36f);if(side){quadraticTo(x+toe,y+40f,x+toe,y+46f);quadraticTo(x+toe-3f,y+49f,x-10f,y+47f);lineTo(x-10f,y+43f)}else{quadraticTo(x+11f,y+39f,x+11f,y+45f);quadraticTo(x,y+50f,x-11f,y+45f);quadraticTo(x-11f,y+39f,x-8f,y+36f)};close()}
         companionMetal(foot,far)
         drawLine(a,Offset(x-7f,y+45f),Offset(x+toe-2f,y+45f),2.6f,StrokeCap.Round)
         if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS) {

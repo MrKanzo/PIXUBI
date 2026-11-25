@@ -56,9 +56,10 @@ private fun DrawScope.tail(f:SymbiontForm,a:Color,phase:Float,action:RobotAction
         else p+Offset(-len*.38f+swing*.22f,7f-t*10f)
         val ang=atan2(next.y-p.y,next.x-p.x)*180f/PI.toFloat()
         translate(p.x,p.y){rotate(ang,Offset.Zero){
+            val segmentLength=(next-p).getDistance()
             val r=8f*(1f-t*.7f)
-            plate("M 0 ${-r} L ${len*.8f} ${-r*.75f} L $len 0 L ${len*.8f} ${r*.75f} L 0 $r Z",if(i%2==0)shade else pearl)
-            line(a,3f,0f,len*.78f,0f,1.5f)
+            plate("M 0 ${-r} L ${segmentLength*.8f} ${-r*.75f} L $segmentLength 0 L ${segmentLength*.8f} ${r*.75f} L 0 $r Z",if(i%2==0)shade else pearl)
+            line(a,segmentLength*.15f,0f,segmentLength*.78f,0f,1.5f)
         }}
         p=next
     }
@@ -85,7 +86,7 @@ private fun DrawScope.wings(f:SymbiontForm,a:Color,phase:Float,action:RobotActio
     if(f.grade!=4)return
     val open=if(action==RobotAction.BIO_FLIGHT||action==RobotAction.JUMP||action==RobotAction.ATTACK)1f else .38f
     val wave=sin(phase*6.28f)*if(action==RobotAction.BIO_FLIGHT)15f else 3f
-    for(s in if(side)listOf(-1f,1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){
+    for(s in listOf(-1f,1f))scale(if(side)s*.65f else s,if(side&&s<0).82f else 1f,Offset.Zero){
         translate(if(side)-5f else 14f,-f.depth*.4f){rotate(-open*28f+wave+(if(side&&s<0)12f else 0f),Offset.Zero){
             val reach=if(side)96f else 103f
             val p=Path().apply{moveTo(0f,0f);quadraticBezierTo(35f,-82f,reach,-70f);lineTo(reach-19f,-21f);lineTo(reach-42f,-34f);lineTo(31f,3f);lineTo(18f,-13f);close()}
@@ -183,7 +184,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
         val squat=if(action==RobotAction.SLEEP)f.leg*.42f else 0f
         val bob=if(move)2f*sin(phase*12.56f)else sin(phase*6.28f)*1.4f
         drawOval(ink.copy(alpha=.35f),Offset(size.width/2-72f*fit,floor-2f),Size(144f*fit,6f*fit))
-        translate(size.width/2+(if(side)20f*fit else 0f),floor){scale(fit*(if(view==RobotView.LEFT)-1f else 1f),fit,Offset.Zero){
+        translate(size.width/2+(if(view==RobotView.RIGHT)20f*fit else if(view==RobotView.LEFT)-20f*fit else 0f),floor){scale(fit*(if(view==RobotView.LEFT)-1f else 1f),fit,Offset.Zero){
             translate(0f,-f.leg-9f-lift+squat+bob){
                 fun DrawScope.creature(){
                     tail(f,a,phase,action,side)
@@ -191,16 +192,16 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
                     val rootY=9f
                     for(i in 0..3){
                         val front=i%2==1;val far=i<2
-                        val x=if(side)(if(front)f.length*.67f else -f.length*.66f) else (if(front)1f else -1f)*(if(far)f.length*.30f else f.length*.38f)
+                        val x=if(side)(if(front)f.length*.67f else -f.length*.66f) else (if(i<2)-1f else 1f)*(if(front)f.length*.38f else f.length*.30f)
                         val step=if(move)SymbiontCatalog.foot(phase,i,action==RobotAction.RUN)else Offset.Zero
-                        val root=Offset(x,rootY+if(far)-4f else 0f)
-                        val foot=Offset(x+(if(side)step.x else 0f)+if(flight) (if(front)-10f else 10f) else 0f,f.leg-squat-bob+step.y+(if(far)-3f else 0f))
-                        if(far)limb(f,a,root,foot,front,true,debug,e.equipped(RobotSlot.FEET))
+                        val root=Offset(x,rootY+if(if(side)far else !front)-4f else 0f)
+                        val foot=Offset(x+(if(side)step.x else 0f)+if(flight) (if(front)-10f else 10f) else 0f,f.leg-squat-bob+step.y+(if(if(side)far else !front)-3f else 0f))
+                        if(if(side)far else !front)limb(f,a,root,foot,front,true,debug,e.equipped(RobotSlot.FEET))
                     }
                     body(f,a,side,phase,grow,e.equipped(RobotSlot.CHEST))
-                    for(i in 2..3){
+                    for(i in if(side)listOf(2,3)else listOf(1,3)){
                         val front=i%2==1
-                        val x=if(side)(if(front)f.length*.67f else -f.length*.66f) else (if(front)1f else -1f)*f.length*.38f
+                        val x=if(side)(if(front)f.length*.67f else -f.length*.66f) else (if(i<2)-1f else 1f)*f.length*.38f
                         val step=if(move)SymbiontCatalog.foot(phase,i,action==RobotAction.RUN)else Offset.Zero
                         limb(f,a,Offset(x,rootY),Offset(x+(if(side)step.x else 0f),f.leg-squat-bob+step.y),front,false,debug,e.equipped(RobotSlot.FEET))
                     }

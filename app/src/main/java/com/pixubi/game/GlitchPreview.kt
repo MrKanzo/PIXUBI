@@ -211,9 +211,9 @@ private fun DrawScope.leg(form:GlitchForm,x:Float,t:Float,s:Float,side:Boolean,f
         translate(0f,v){rotate(-s,Offset.Zero){
             hinge(a,4.7f,debug)
             val toe=if(side)17 else 11
-            plate("M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z",if(far)slate else pale)
-            glowLine(a,-6f,10f,toe-2f,10f)
-            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate("M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z",slate)
+            plate(if(side)"M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z" else "M -8 -4 L 8 -4 L 12 6 L 10 12 L -10 12 L -12 6 Z",if(far)slate else pale)
+            glowLine(a,if(side)-6f else -8f,10f,if(side)toe-2f else 8f,10f)
+            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate(if(side)"M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z" else "M -10 -2 L 10 -2 L 14 7 L 12 13 L -12 13 L -14 7 Z",slate)
         }}
     }}
 }
@@ -274,16 +274,16 @@ internal fun GlitchPreview(requested:RobotView,action:RobotAction,face:RobotFace
                     cape(f.grade,side,a,phase)
                     if(f.grade==4)wings(a,side,action,phase)
                     if(e.equipped(RobotSlot.BACK)!=null)translate(if(side)-22f else 0f,4f){plate("M -15 -8 L 15 -8 L 18 25 L -18 25 Z");glowLine(a,-9f,0f,-9f,19f)}
-                    leg(f,if(side)0f else -14f,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,true,a,e.equipped(RobotSlot.FEET),debug)
-                    if(side)arm(f,0f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug,false,phase)
-                    leg(f,if(side)0f else 14f,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,e.equipped(RobotSlot.FEET),debug)
+                    leg(f,if(side)-4f else -14f,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,side,a,e.equipped(RobotSlot.FEET),debug)
+                    if(side)rotate(gait?.lean?:0f,Offset(0f,f.hips)){arm(f,-3f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug,false,phase)}
+                    leg(f,if(side)4f else 14f,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,e.equipped(RobotSlot.FEET),debug)
                     rotate(gait?.lean?:0f,Offset(0f,f.hips)){
                         body(f,side,a,e)
                         if(!side){
                             for(s in listOf(-1f,1f))drawLine(dark,Offset(s*18f,3f),Offset(s*f.shoulder,3f),9f)
                             arm(f,-f.shoulder,RobotMotion.frontArmAngle(fa,false),-bends.farElbow,bends.wrist,false,false,a,e.equipped(RobotSlot.RIGHT_HAND),debug,false,phase)
                         }
-                        arm(f,if(side)0f else f.shoulder,if(showTerminal)-35f else if(side)na else RobotMotion.frontArmAngle(na,true),if(showTerminal)-60f else bends.nearElbow,bends.wrist,side,false,a,e.equipped(if(side)view.nearHand() else RobotSlot.LEFT_HAND),debug,showTerminal,phase)
+                        arm(f,if(side)3f else f.shoulder,if(showTerminal)-35f else if(side)na else RobotMotion.frontArmAngle(na,true),if(showTerminal)-60f else bends.nearElbow,bends.wrist,side,false,a,e.equipped(if(side)view.nearHand() else RobotSlot.LEFT_HAND),debug,showTerminal,phase)
                         translate(0f,-32f){scale(f.head,f.head,Offset(0f,23f)){glitchHead(f.grade,side,a,actual,action==RobotAction.IDLE&&phase>.95f,e.equipped(RobotSlot.HEAD))}}
                     }
                 }

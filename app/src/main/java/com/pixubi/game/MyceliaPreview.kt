@@ -97,7 +97,7 @@ private fun DrawScope.leg(f:MyceliaForm,a:Color,root:Offset,foot:Offset,front:Bo
 private fun DrawScope.wings(f:MyceliaForm,a:Color,phase:Float,action:RobotAction,side:Boolean){
     if(f.grade!=4)return
     val flap=sin(phase*6.28f)*(if(action==RobotAction.BIO_FLIGHT)19f else 4f)
-    for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
+    for(s in listOf(-1f,1f))scale(if(side)s*.62f else s,if(side&&s<0).82f else 1f,Offset.Zero){
         translate(if(side)-6f else 13f,-f.depth*.6f){rotate((if(side)22f else 36f)+flap,Offset.Zero){
             for(i in 0..1)rotate(i*35f,Offset.Zero){
                 val h=if(i==0)104f else 79f
@@ -138,14 +138,14 @@ private fun DrawScope.body(f:MyceliaForm,a:Color,side:Boolean,phase:Float,bloom:
 private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,phase:Float,action:RobotAction,gear:RobotGear?){
     val g=f.grade;val blink=face==RobotFace.SLEEP||action==RobotAction.SLEEP||(action==RobotAction.IDLE&&phase>.94f)
     val ear=if(g==0)37f else 32f+g*2f
-    for(s in if(side)listOf(-1f,1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){
+    for(s in if(side)listOf(-1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){
         translate(if(side)15f else 19f,-18f){rotate(25f+sin(phase*6.28f)*6f,Offset.Zero){
             petal(a,15f,ear)
             if(g>=2)rotate(26f,Offset.Zero){petal(a,9f,ear*.74f)}
         }}
     }
     if(g>=1){
-        for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){translate(5f,-24f){tendril(a,22f+g*3f,-30f-g*4f,phase+s*.12f,9f)}}
+        for(s in if(side)listOf(-1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){translate(5f,-24f){tendril(a,22f+g*3f,-30f-g*4f,phase+s*.12f,9f)}}
     }
     if(side){
         plate(if(g==0)"M -23 -12 Q -25 -32 1 -34 Q 27 -32 31 -10 L 35 1 Q 27 20 5 24 Q -25 19 -23 -12 Z" else "M -25 -9 Q -22 -35 4 -34 Q 22 -30 28 -15 L 44 -3 L 38 9 L 17 19 L -9 21 Q -27 8 -25 -9 Z")
@@ -201,10 +201,10 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
                         val x=if(side)(if(front)f.length*.62f else -f.length*.67f)
                             else (if(far)-1f else 1f)*(if(front)f.length*.37f else f.length*.29f)
                         val step=if(move)MyceliaCatalog.foot(phase,i,action==RobotAction.RUN)else Offset.Zero
-                        val y=if(far)-4f else 0f
+                        val y=if(if(side)far else !front)-4f else 0f
                         val root=Offset(x,6f+y)
                         val foot=Offset(x+(if(side)step.x else 0f)+(if(flight&&side)(if(front)-12f else 9f)else 0f),f.leg-squat-bob+step.y+y-(if(flight)8f else 0f))
-                        leg(f,a,root,foot,front,far,debug,e.equipped(RobotSlot.FEET))
+                        leg(f,a,root,foot,front,if(side)far else !front,debug,e.equipped(RobotSlot.FEET))
                     }
                     if(side){paw(0);paw(1)}else{paw(0);paw(2)}
                     body(f,a,side,phase,bloom,e.equipped(RobotSlot.CHEST))

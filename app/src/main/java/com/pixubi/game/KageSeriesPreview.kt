@@ -406,11 +406,11 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
         translate(0f,v){rotate(if(plant)-shin else ankle,Offset.Zero){
             joint(0f,0f,5.2f,a)
             val toe=if(side)20 else 12
-            metal("M -8 -4 L 8 -4 L $toe 8 L $toe 13 L -11 13 L -12 8 Z",if(side&&g==4&&far)carbon else steel,graphite)
+            metal(if(side)"M -8 -4 L 8 -4 L $toe 8 L $toe 13 L -11 13 L -12 8 Z" else "M -8 -4 L 8 -4 L 12 8 L 10 13 L -10 13 L -12 8 Z",if(side&&g==4&&far)carbon else steel,graphite)
             metal("M -7 -5 L 5 -5 L 9 3 L 5 6 L -6 3 Z",if(side&&g==4&&far)steel else silver,graphite)
             led(-7f,10f,toe-2f,10f,if(side&&g==4&&far)a.copy(alpha=.45f) else a,2f)
             if(boots==RobotGear.BOOTS||boots==RobotGear.SPEED_BOOTS){
-                metal("M -12 -2 L 9 -2 L ${toe+3} 8 L ${toe+3} 14 L -14 14 Z",steel,black)
+                metal(if(side)"M -12 -2 L 9 -2 L ${toe+3} 8 L ${toe+3} 14 L -14 14 Z" else "M -11 -2 L 11 -2 L 14 8 L 12 14 L -12 14 L -14 8 Z",steel,black)
                 led(-9f,11f,toe.toFloat(),11f,a,if(boots==RobotGear.SPEED_BOOTS)3f else 1.8f)
             }
             pivotDot(debug)
@@ -494,7 +494,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                 val nt=if(side)nearT else nearT*.18f
                 val ft=if(side)farT else farT*.18f
                 val ns=if(side)nearS else nearS*.18f
-                val fs=if(side)farS else farS*.65f
+                val fs=if(side)farS else farS*.18f
                 val hips=64f
                 val base=hips+form.thigh+form.shin+13f
                 fun extent(t:Float,s:Float)=form.thigh*cos(t*PI.toFloat()/180f)+form.shin*cos(s*PI.toFloat()/180f)+13f

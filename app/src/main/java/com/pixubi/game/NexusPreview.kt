@@ -110,8 +110,8 @@ private fun DrawScope.nexusHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Boo
             scale(if(side).8f else 1f,1f,Offset.Zero){nexusFace(a,f,blink,g,phase)}
         }
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
-            val x=if(side)30f else 36f
-            translate(x+if(g>=3)4f+drift else 0f,-9f){
+            val x=if(side)24f else 36f
+            translate(x+if(g>=3)4f+drift else 0f,if(side&&s<0)-15f else -9f){
                 if(g==2)plate("M -7 -28 L 9 -20 L 12 2 L 2 27 L -6 15 L -3 -8 Z")
                 else plate("M -9 -27 L 7 -31 L 16 -14 L 13 14 L 0 30 L -5 21 L 4 0 Z",if(g==4)gold else pale)
                 glowLine(a,4f,-18f,7f,10f,2f)
@@ -130,14 +130,14 @@ private fun DrawScope.nexusBody(f:NexusForm,side:Boolean,a:Color,e:RobotEquipmen
     if(g<=1){
         plate(if(g==0)"M 0 -11 Q $w -8 ${w+5} 13 Q $w 40 0 ${h+6} Q ${-w} 40 ${-w-5} 13 Q ${-w} -8 0 -11 Z"
             else "M 0 -14 L ${w+5} 5 L $w 25 L 16 ${h+5} L -16 ${h+5} L ${-w} 25 L ${-w-5} 5 Z",if(g==0)pale else dark)
-        for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){plate("M 5 -8 L $w 4 L ${w-5} 20 L 10 24 L 5 12 Z");glowLine(a,w-7f,7f,14f,18f)}
+        for(s in if(side)listOf(1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){plate("M 5 -8 L $w 4 L ${w-5} 20 L 10 24 L 5 12 Z");glowLine(a,w-7f,7f,14f,18f)}
     }else{
         // Open chassis: visible energy spine and separate shell pieces; no solid torso behind the core.
         val spine=Path().apply{moveTo(0f,-10f);quadraticBezierTo(-7f,h*.45f,0f,h);quadraticBezierTo(7f,h*.45f,0f,-10f);close()}
         drawPath(spine,a.copy(alpha=.28f));drawPath(spine,a,style=Stroke(1.8f))
         val gap=if(g>=3)6f+sep*18f else 2f
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
-            translate(gap,0f){
+            translate(if(side)gap*.55f else gap,0f){
                 plate("M 8 -12 L ${w-5} -10 L ${w+1} 3 L ${w-4} 18 L 12 24 L 16 7 Z",if(g==4)gold else pale)
                 glowLine(a,w-8f,1f,w-11f,13f)
                 if(g>=3)plate("M 12 28 L ${w-9} 24 L ${w-6} 36 L 15 ${h-13} L 8 ${h-18} Z",slate)
@@ -236,9 +236,9 @@ private fun DrawScope.leg(form:NexusForm,x:Float,t:Float,s:Float,side:Boolean,fa
         translate(0f,v){rotate(-s,Offset.Zero){
             if(g>=3)drawCircle(a,4.7f,Offset.Zero,style=Stroke(1.5f))else hinge(a,4.7f,debug)
             val toe=if(side)17 else 11
-            plate(if(g>=3)"M -8 1 L 6 1 L $toe 7 L 5 12 L -10 12 L -13 6 Z" else "M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z",if(far)slate else pale)
-            glowLine(a,-6f,10f,toe-2f,10f)
-            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate("M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z",slate)
+            plate(if(!side)"M -8 -4 L 8 -4 L 12 6 L 10 12 L -10 12 L -12 6 Z" else if(g>=3)"M -8 1 L 6 1 L $toe 7 L 5 12 L -10 12 L -13 6 Z" else "M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z",if(far)slate else pale)
+            glowLine(a,if(side)-6f else -8f,10f,if(side)toe-2f else 8f,10f)
+            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate(if(side)"M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z" else "M -10 -2 L 10 -2 L 14 7 L 12 13 L -12 13 L -14 7 Z",slate)
         }}
     }}
 }
@@ -265,16 +265,16 @@ internal fun NexusPreview(requested:RobotView,action:RobotAction,face:RobotFace,
                 fun DrawScope.robot(){
                 val boots=e.equipped(RobotSlot.FEET)
                 val hipWidth=if(f.grade==0)11f else 15f
-                leg(f,if(side)0f else -hipWidth,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,true,a,boots,debug)
-                if(side)rotate(lean,Offset(0f,f.hips)){arm(f,0f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug)}
-                leg(f,if(side)0f else hipWidth,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,boots,debug)
+                leg(f,if(side)-4f else -hipWidth,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,side,a,boots,debug)
+                if(side)rotate(lean,Offset(0f,f.hips)){arm(f,-3f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug)}
+                leg(f,if(side)4f else hipWidth,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,boots,debug)
                 rotate(lean,Offset(0f,f.hips)){
                     nexusBody(f,side,a,e,phase,sep)
                     if(!side){
                         for(s in listOf(-1f,1f))if(f.grade>=3)glowLine(a,s*18f,3f,s*f.shoulder,3f,1.2f)else drawLine(dark,Offset(s*18f,3f),Offset(s*f.shoulder,3f),9f)
                         arm(f,-f.shoulder,RobotMotion.frontArmAngle(fa,false),-bends.farElbow,bends.wrist,false,false,a,e.equipped(RobotSlot.RIGHT_HAND),debug)
                     }
-                    arm(f,if(side)0f else f.shoulder,if(side)na else RobotMotion.frontArmAngle(na,true),bends.nearElbow,bends.wrist,side,false,a,e.equipped(if(side)view.nearHand()else RobotSlot.LEFT_HAND),debug)
+                    arm(f,if(side)3f else f.shoulder,if(side)na else RobotMotion.frontArmAngle(na,true),bends.nearElbow,bends.wrist,side,false,a,e.equipped(if(side)view.nearHand()else RobotSlot.LEFT_HAND),debug)
                     translate(if(side)-2f else 0f,-33f-(if(f.grade>=2)8f+2f*sin(phase*6.28f)else 0f)-sep*16f){scale(f.head,f.head,Offset(0f,23f)){nexusHead(f.grade,side,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,action==RobotAction.IDLE&&phase>.94f,e.equipped(RobotSlot.HEAD),phase)}}
                     if(debug)translate(0f,-12f){drawCircle(gold,5f,Offset.Zero,style=Stroke(1.4f))}
                 }
