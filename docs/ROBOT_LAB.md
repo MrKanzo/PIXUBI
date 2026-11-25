@@ -72,3 +72,6 @@ Separate Robot Lab incubation screen with random hidden or manual series choice,
 
 ## 0.39.1 GLITCH polish
 Refined MK-4/MK-X hood front/profile, recessed face and eye expression for MK-3 and later, extra articulated wing panel details on OVERLORD. Drone rendering, flight orbit, counts, all action timelines, GENESIS and other series unchanged. Device visual verification pending.
+
+## 0.40.0 CLASSIC rebuild
+New dedicated ClassicPreview for all five stages: compact round MK-1 with antenna, angular explorer MK-2, segmented MK-3, reinforced MK-4 with rear boosters, crystal-panel wings and two cores for OMEGA. Preserves white/silver and accent, orange ear markers, all views, equipment slots, shared gait and joint motion; visual test sockets. GENESIS uses the new MK-1 through RobotPreview. Old Classic helpers remain in source but no longer render Classic. Companion, KAGE, GLITCH and game saves unchanged. On-device inspection pending.

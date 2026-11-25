@@ -1002,6 +1002,10 @@ private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipm
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
+    if(loadout.series==RobotSeries.CLASSIC) {
+        ClassicPreview(view,action,face,loadout,phase,showSockets,modifier)
+        return
+    }
     if(loadout.series==RobotSeries.GLITCH) {
         GlitchPreview(view,action,face,loadout,phase,showSockets,modifier)
         return
@@ -1153,11 +1157,11 @@ internal fun RobotLab(onBack:()->Unit) {
                 Modifier.fillMaxWidth().height(300.dp))
         }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v;if((series==RobotSeries.KAGE||series==RobotSeries.GLITCH)&&v==RobotView.FRONT&&KageGait.isLocomotion(action)){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(v.title)}) }
+            RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v;if((series!=RobotSeries.COMPANION)&&v==RobotView.FRONT&&KageGait.isLocomotion(action)){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(v.title)}) }
         }
         Text("Рухи")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            RobotAction.entries.filter{ when(it){RobotAction.NINJA_DASH->series==RobotSeries.KAGE;RobotAction.HACK,RobotAction.DRONE_SWARM->series==RobotSeries.GLITCH&&tier>=RobotTier.MK3;RobotAction.TELEPORT->series==RobotSeries.GLITCH&&tier>=RobotTier.MK4;else->true} }.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;running=true;if(a==RobotAction.NINJA_DASH||((series==RobotSeries.KAGE||series==RobotSeries.GLITCH)&&KageGait.isLocomotion(a))){if(view==RobotView.FRONT)view=RobotView.RIGHT}},label={Text(a.title)}) }
+            RobotAction.entries.filter{ when(it){RobotAction.NINJA_DASH->series==RobotSeries.KAGE;RobotAction.HACK,RobotAction.DRONE_SWARM->series==RobotSeries.GLITCH&&tier>=RobotTier.MK3;RobotAction.TELEPORT->series==RobotSeries.GLITCH&&tier>=RobotTier.MK4;else->true} }.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;running=true;if(a==RobotAction.NINJA_DASH||((series!=RobotSeries.COMPANION)&&KageGait.isLocomotion(a))){if(view==RobotView.FRONT)view=RobotView.RIGHT}},label={Text(a.title)}) }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Button(onClick={if(action==RobotAction.NINJA_DASH&&phase>=1f)phase=0f;running=!running}){Text(if(running)"Пауза" else "Відтворити")}
@@ -1203,7 +1207,7 @@ internal fun RobotLab(onBack:()->Unit) {
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {
-            Text(if(series==RobotSeries.KAGE||series==RobotSeries.GLITCH)"Суглоби · плечі, лікті, зап’ястя, коліна, щиколотки" else "Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
+            Text(if(series!=RobotSeries.COMPANION)"Суглоби · плечі, лікті, зап’ястя, коліна, щиколотки" else "Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
             Switch(checked=sockets,onCheckedChange={sockets=it})
         }
         Text("Еволюції доступні для тестового перегляду. Справжні мініігри та автономний пошук ще не підключені.",style=MaterialTheme.typography.bodySmall)
