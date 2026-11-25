@@ -110,6 +110,9 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: оригінальні ходьба й плавання; сон поки використовує позу із заплющеними очима.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
+            else if(LisykMatureArtwork.matches(spec.species,spec.stage))
+                Text("Лісик: 24 окремі піксельні пози, окремі набори для статі й стадії. Художня перевірка триває.",
+                    color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
             else if(PixuArtRouting.source(spec.species,spec.stage)!=PixuArtSource.POSE_PACK)
                 Text("Власний видовий спрайт; рухи створені з його пікселів. Окремі художні пози сну, ходьби та особливих дій ще потребують перевірки.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)

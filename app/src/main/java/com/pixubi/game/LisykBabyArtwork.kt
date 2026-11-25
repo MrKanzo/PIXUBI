@@ -14,7 +14,7 @@ internal object LisykBabyArtwork {
     fun locomotion(c:SpriteClip)=c==SpriteClip.WALK||c==SpriteClip.DIG||c==SpriteClip.HOP
     fun cell(c:SpriteClip,frame:Int)=when(c) {
         SpriteClip.WALK -> frame.mod(4)
-        SpriteClip.DIG -> 6
+        SpriteClip.DIG -> if(frame.mod(4)==3)0 else 6
         SpriteClip.SLEEP -> 7
         SpriteClip.HOP -> if(frame.mod(4) in 1..2) 5 else 0
         SpriteClip.SURPRISE -> 5

@@ -787,7 +787,8 @@ internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, d
         emotion==PetEmotion.HAPPY||emotion==PetEmotion.SURPRISED -> bodyMotion.yDp
         else -> 0f
     }
-    val eyeClosure = if(sleeping||developer?.action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(blinkCycle)
+    val eyeClosure = if(sleeping)1f else if(developer?.action==DevAction.BLINK)
+        NativeEyeMotion.blinkAt(((developer?.seconds?:0f)%1.2f)/1.2f) else NativeEyeMotion.blinkAt(blinkCycle)
     val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
     val frame = RoundedCornerShape(24.dp)
     Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {

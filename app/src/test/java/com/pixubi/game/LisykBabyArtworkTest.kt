@@ -18,7 +18,7 @@ class LisykBabyArtworkTest {
             for(j in 0 until i)assertFalse(f.contentEquals(frames[j]))
         }
         for(i in 0..3)assertEquals(i,LisykBabyArtwork.cell(SpriteClip.WALK,i))
-        assertEquals(6,LisykBabyArtwork.cell(SpriteClip.DIG,0))
+        assertEquals(listOf(6,6,6,0),(0..3).map{LisykBabyArtwork.cell(SpriteClip.DIG,it)})
         assertEquals(7,LisykBabyArtwork.cell(SpriteClip.SLEEP,0))
         assertEquals(4,LisykBabyArtwork.cell(SpriteClip.IDLE,0))
         assertTrue(LisykBabyArtwork.matches(Species.LISYK,GrowthStage.BABY))

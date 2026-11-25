@@ -1,11 +1,11 @@
 package com.pixubi.game
 
-internal enum class PixuArtSource { POSE_PACK, YOUNG_ATLAS, OLDER_ATLAS }
+internal enum class PixuArtSource { POSE_PACK, LISYK_MATURE_PACK, YOUNG_ATLAS, OLDER_ATLAS }
 internal object PixuArtRouting {
     fun source(s:Species,g:GrowthStage):PixuArtSource=when(GrowthStage.migrate(g)){
         GrowthStage.BABY -> PixuArtSource.POSE_PACK
         GrowthStage.YOUNG -> if(s==Species.LISYK) PixuArtSource.POSE_PACK else PixuArtSource.YOUNG_ATLAS
-        GrowthStage.ADULT,GrowthStage.ULTRA -> PixuArtSource.OLDER_ATLAS
+        GrowthStage.ADULT,GrowthStage.ULTRA -> if(s==Species.LISYK) PixuArtSource.LISYK_MATURE_PACK else PixuArtSource.OLDER_ATLAS
         else -> error("Unsupported growth form")
     }
 }

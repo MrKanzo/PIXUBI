@@ -9,7 +9,7 @@ internal data class PixuFrameKey(
     val clip:SpriteClip,val frame:Int,val emotion:PetEmotion,val closure:Int
 )
 
-/** Six authored pose packs plus fourteen distinct original species rasters. */
+/** Authored pose packs, dedicated mature Lisyk packs and remaining species rasters. */
 internal object PixuFrameLibrary {
     const val CELL=192
     private val cache=object:LruCache<PixuFrameKey,Bitmap>(16*1024*1024){
@@ -65,7 +65,9 @@ internal object PixuFrameLibrary {
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
         cache.get(k)?.let{return it}
         val source=PixuArtRouting.source(k.species,k.stage)
-        val raw=if(source==PixuArtSource.POSE_PACK){
+        val raw=if(source==PixuArtSource.LISYK_MATURE_PACK){
+            LisykMatureArtwork.bitmap(context,k.stage,k.sex,k.clip,k.frame,k.closure)
+        }else if(source==PixuArtSource.POSE_PACK){
             val pack=requireNotNull(PetPosePack.forPet(k.species,k.stage))
             val original=pack.bitmap(context,k.clip,k.emotion,k.frame,k.closure>=3)
             if(k.sex==Sex.GIRL){
