@@ -26,7 +26,7 @@ class NativeSpriteLayoutTest {
         val older=ImageIO.read(File("src/main/assets/pixubi_older_v032.png"))
         val cases=GrowthStage.playable.flatMap{g->Species.entries.map{s->s to g}}
             .filter{(s,g)->PixuArtRouting.source(s,g) in listOf(PixuArtSource.YOUNG_ATLAS,PixuArtSource.OLDER_ATLAS)}
-        assertEquals(14,cases.size)
+        assertEquals(10,cases.size)
         val sheet=BufferedImage(n*10,n*cases.size,BufferedImage.TYPE_INT_ARGB)
         val graphics=sheet.createGraphics()
         for((i,entry) in cases.withIndex()){

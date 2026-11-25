@@ -65,7 +65,9 @@ internal object PixuFrameLibrary {
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {
         cache.get(k)?.let{return it}
         val source=PixuArtRouting.source(k.species,k.stage,k.sex)
-        val raw=if(source==PixuArtSource.ORIGINAL_FEMALE){
+        val raw=if(source==PixuArtSource.ORIGINAL_YOUNG_MALE){
+            OriginalYoungMaleArtwork.bitmap(context,k)
+        }else if(source==PixuArtSource.ORIGINAL_FEMALE){
             OriginalFemaleArtwork.bitmap(context,k)
         }else if(source==PixuArtSource.LISYK_MATURE_PACK){
             LisykMatureArtwork.bitmap(context,k.stage,k.sex,k.clip,k.frame,k.closure)

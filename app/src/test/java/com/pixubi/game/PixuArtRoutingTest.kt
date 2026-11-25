@@ -7,7 +7,8 @@ class PixuArtRoutingTest {
         val sources=Species.entries.flatMap{s->GrowthStage.playable.map{g->PixuArtRouting.source(s,g)}}
         assertEquals(20,sources.size)
         assertEquals(6,sources.count{it==PixuArtSource.POSE_PACK})
-        assertEquals(4,sources.count{it==PixuArtSource.YOUNG_ATLAS})
+        assertEquals(0,sources.count{it==PixuArtSource.YOUNG_ATLAS})
+        assertEquals(4,sources.count{it==PixuArtSource.ORIGINAL_YOUNG_MALE})
         assertEquals(10,sources.count{it==PixuArtSource.OLDER_ATLAS})
         assertEquals(0,sources.count{it==PixuArtSource.LISYK_MATURE_PACK})
         for(s in Species.entries)for(g in GrowthStage.playable)

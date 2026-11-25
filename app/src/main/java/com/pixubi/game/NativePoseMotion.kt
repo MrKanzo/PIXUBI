@@ -104,9 +104,13 @@ internal object NativePoseMotion {
         if(clip==SpriteClip.WALK||clip==SpriteClip.DIG||clip==SpriteClip.HOP){
             for((i,p) in parts.paws.withIndex()){
                 val phase=(f+i*2)%4
-                val lift=if(phase==1||phase==3) (if(clip==SpriteClip.DIG&&i>=1)12f else 8f) else 0f
+                val lift=when(clip){
+                    SpriteClip.HOP -> if(f in 1..2)8f else 0f
+                    SpriteClip.DIG -> if(phase==1&&i>=1)12f else if(phase==1)4f else 0f
+                    else -> if(phase==1)8f else 0f
+                }
                 val swing=if(phase==1)4f else if(phase==3)-4f else 0f
-                if(lift!=0f)out=paw(out,p,lift,swing)
+                if(lift!=0f||swing!=0f)out=paw(out,p,lift,swing)
             }
         }
         return when(clip){

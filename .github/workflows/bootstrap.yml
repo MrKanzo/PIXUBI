@@ -51,23 +51,28 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.33.6-test-debug-APK
+          name: PIXUBI-v0.33.7-test-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.33.6-native-model-review
+          name: PIXUBI-v0.33.7-native-model-review
           path: app/build/eye-preview/active-native-forms.png
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.33.6-lisyk-pose-review
+          name: PIXUBI-v0.33.7-lisyk-pose-review
           path: app/build/eye-preview/lisyk-mature-poses.png
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.33.6-original-female-review
+          name: PIXUBI-v0.33.7-original-female-review
           path: app/build/eye-preview/original-female-poses.png
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: PIXUBI-v0.33.7-young-male-review
+          path: app/build/eye-preview/original-young-male-poses.png
       - name: Detect release signing secrets
         id: signing
         env:

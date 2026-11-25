@@ -71,9 +71,9 @@ internal object OriginalFemaleMotion {
         return if(xx in 0 until N&&yy in 0 until N)src[yy*N+xx] else 0
     }
     private fun wave(frame:Int)=floatArrayOf(0f,-1f,.35f,1f)[frame.mod(4)]
-    private fun appendage(src:IntArray,s:Species,g:GrowthStage,f:Int,strength:Float):IntArray{
+    private fun appendage(src:IntArray,s:Species,g:GrowthStage,f:Int,strength:Float,sex:Sex):IntArray{
         var current=src
-        for(r in OriginalAppendageMotion.regions(s,g,Sex.GIRL)){
+        for(r in OriginalAppendageMotion.regions(s,g,sex)){
             val out=current.copyOf()
             for(y in (r.top-10).coerceAtLeast(0)..(r.bottom+10).coerceAtMost(N-1))for(x in 0 until N){
                 val d=(if(r.right)x-r.root else r.root-x).toFloat()
@@ -86,8 +86,8 @@ internal object OriginalFemaleMotion {
         }
         return current
     }
-    private fun legs(src:IntArray,s:Species,g:GrowthStage,f:Int,action:SpriteClip):IntArray {
-        val p=profile(s,g,Sex.GIRL)
+    private fun legs(src:IntArray,s:Species,g:GrowthStage,f:Int,action:SpriteClip,sex:Sex):IntArray {
+        val p=profile(s,g,sex)
         val out=src.copyOf()
         for(y in (p.top-6).coerceAtLeast(0) until N)for(x in (p.left-4).coerceAtLeast(0)..(p.right+4).coerceAtMost(N-1)){
             val left=x<p.split
@@ -98,9 +98,9 @@ internal object OriginalFemaleMotion {
             val wy=smooth((y-p.top+5f)/18f)*smooth((127f-y)/8f)
             val lift=when(action){
                 SpriteClip.SWIM,SpriteClip.FLY->4f+2f*abs(wave(f))
-                SpriteClip.DIG->if(phase%2==1)7f else 0f
+                SpriteClip.DIG->if(phase==1)7f else 0f
                 SpriteClip.HOP->if(f in 1..2)5f else 0f
-                else->if(phase%2==1)5f else 0f
+                else->if(phase==1)5f else 0f
             }
             val swing=if(action==SpriteClip.WALK||action==SpriteClip.DIG)wave(phase)*3f else 0f
             out[y*N+x]=sample(src,x-swing*wx*wy,y+lift*wx*wy)
@@ -124,9 +124,9 @@ internal object OriginalFemaleMotion {
         }
         return out
     }
-    private fun nod(src:IntArray,s:Species,g:GrowthStage,amount:Float):IntArray{
+    private fun nod(src:IntArray,s:Species,g:GrowthStage,amount:Float,sex:Sex):IntArray{
         if(amount==0f)return src
-        val mouth=OriginalFaceGeometry.mouth(s,g,Sex.GIRL)
+        val mouth=OriginalFaceGeometry.mouth(s,g,sex)
         val out=src.copyOf()
         val left=(mouth.centerX-31f).coerceAtLeast(0f)
         for(y in 0..100)for(x in left.toInt() until N){
@@ -135,18 +135,18 @@ internal object OriginalFemaleMotion {
         }
         return out
     }
-    fun frame(src:IntArray,s:Species,g:GrowthStage,clip:SpriteClip,index:Int):IntArray{
+    fun frame(src:IntArray,s:Species,g:GrowthStage,clip:SpriteClip,index:Int,sex:Sex=Sex.GIRL):IntArray{
         require(src.size==N*N)
         val f=index.mod(4)
         return when(clip){
-            SpriteClip.IDLE -> appendage(src,s,g,f,.5f)
-            SpriteClip.WALK -> legs(appendage(src,s,g,f,.8f),s,g,f,clip)
-            SpriteClip.HOP -> legs(src,s,g,f,clip)
-            SpriteClip.DIG -> if(s==Species.LISYK)nod(appendage(src,s,g,f,.6f),s,g,intArrayOf(0,7,12,6)[f].toFloat())
-                else legs(lower(src,intArrayOf(2,7,10,5)[f]),s,g,f,clip)
-            SpriteClip.SWIM -> legs(appendage(src,s,g,f,2.4f),s,g,f,clip)
-            SpriteClip.FLY -> legs(appendage(src,s,g,f,3f),s,g,f,clip)
-            SpriteClip.EAT,SpriteClip.DRINK -> nod(src,s,g,intArrayOf(0,3,5,2)[f].toFloat())
+            SpriteClip.IDLE -> appendage(src,s,g,f,.5f,sex)
+            SpriteClip.WALK -> legs(appendage(src,s,g,f,.8f,sex),s,g,f,clip,sex)
+            SpriteClip.HOP -> legs(src,s,g,f,clip,sex)
+            SpriteClip.DIG -> if(s==Species.LISYK)nod(appendage(src,s,g,f,.6f,sex),s,g,intArrayOf(0,7,12,6)[f].toFloat(),sex)
+                else legs(lower(src,intArrayOf(2,7,10,5)[f]),s,g,f,clip,sex)
+            SpriteClip.SWIM -> legs(appendage(src,s,g,f,2.4f,sex),s,g,f,clip,sex)
+            SpriteClip.FLY -> legs(appendage(src,s,g,f,3f,sex),s,g,f,clip,sex)
+            SpriteClip.EAT,SpriteClip.DRINK -> nod(src,s,g,intArrayOf(0,3,5,2)[f].toFloat(),sex)
             SpriteClip.SLEEP -> lower(src,17)
             else -> src
         }
