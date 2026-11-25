@@ -81,3 +81,6 @@ Five-stage feminine android series LUMI, NOVA, AURA, VALKYRIE, SERAPH with white
 
 ## 0.42.0 PX-AI NEXUS
 Genderless quantum AI series BIT, LOGIC, NEURAL, NEXUS, SINGULARITY. Distinct front/profile geometric shells, animated eyes, rotating core, orbital modules, final halo, independent cyan default skin and shared articulated gait. Hologram clones (MK-3+), animated module separation/reassembly (MK-4+). GENESIS QUANTUM orbital core for sixth series, random/manual selection. Action availability centralized with tests. Visual effects only, not actual AI or fusion; existing saves and other series artwork untouched. Device verification pending.
+
+## 0.42.1 VALKYRIE silhouette redesign
+LUMI flower sensor buns and swept fringe; NOVA short mechanical bob; AURA longer segmented locks and crystal tiara; VALKYRIE flowing head segments and petal armor; SERAPH longer ceremonial locks, crown and six curved petal wings. New luminous expressive eyes and mouth; side-specific mask and hair anchored to head, hair sway depends on animation. More headroom for upper stages. Shared skeleton, skill gates, Genesis, saved skin and other series preserved. Visual inspection on device pending.
