@@ -1181,7 +1181,7 @@ internal fun RobotLab(onBack:()->Unit) {
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {
-            Text("Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
+            Text(if(series==RobotSeries.KAGE)"Суглоби · плечі, лікті, зап’ястя, коліна, щиколотки" else "Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
             Switch(checked=sockets,onCheckedChange={sockets=it})
         }
         Text("Еволюції доступні для тестового перегляду. Справжні мініігри та автономний пошук ще не підключені.",style=MaterialTheme.typography.bodySmall)

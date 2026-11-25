@@ -42,3 +42,6 @@ Actual front/profile crops from the approved KAGE character sheet, transparent l
 
 ## 0.37.9 Unified KAGE series
 All five KAGE forms now use a single new layered vector rig, with distinct stage dimensions and armor packages, a reference-style hood, inset visor, scarf, hip armor, limb plating, and OMEGA energy fins. Modular gear is rendered on its own anchors in every stage; all motions and dash remain accessible. The single cropped MK4 reference mode is removed. This is new hand-authored 2D art inspired by the reference, not a pixel-perfect reproduction. Needs on-device visual and motion review. Classic and Companion unchanged; lab only.
+
+## 0.37.10 KAGE adult-led forms and articulation
+MK4 reference-style adult is the base for five separately authored shell designs (hood, torso, shoulders, forearms and leg armor), including compact rounded MK1, light MK2, armored MK3 and angular OMEGA. Independent elbow, wrist, knee and ankle rotations with equipment carried by the corresponding limb. Live debug markers at moving joint pivots. Existing dash timeline retained. Vector interpretation; on-device visual and animation review needed. No changes to other series or pet gameplay.
