@@ -87,3 +87,6 @@ LUMI flower sensor buns and swept fringe; NOVA short mechanical bob; AURA longer
 
 ## 0.42.2 NEXUS nonhuman visual evolution
 BIT is a seed-shaped optical drone; LOGIC has a triangular processor head; NEURAL has a suspended crystal and open energy spine; NEXUS uses separated chassis and limb segments; SINGULARITY has a quantum nucleus, rotating cage and halo. One expressive optical aperture replaces humanoid eyes across all stages. Upper stages hover outside locomotion/sleep. Shared gait, equipment, clone/reassembly actions, skin and Genesis state preserved. Visual and build verification pending; not a real AI.
+
+## 0.43.0 PX-BIO SYMBIONT
+Seventh series, five quadrupedal forms MITE, CRAWLER, STALKER, SYMBIONT, LEVIATHAN. Dedicated front/profile canvas, four independent gait phases, segmented tail, animated ears/jaw, crystal armor, final dragon wings. Independent green default accent and GENESIS SPORE. Visual camouflage/regeneration MK-3+, crystal growth MK-4+, flight MK-X. Equipment visual adapters; wave is a signal rather than a humanoid gesture. Existing game saves and other models untouched. Tests and on-device visual inspection pending; no gameplay combat/regeneration/FUSION effects yet.

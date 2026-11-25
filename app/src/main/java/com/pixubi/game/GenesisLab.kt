@@ -97,6 +97,17 @@ private fun GenesisVessel(s:GenesisState,phase:Float,opening:Float,modifier:Modi
                         shell("M 0 -22 L 22 0 L 0 22 L -22 0 Z",a)
                         drawCircle(energy,9f,Offset.Zero)
                     }
+                    RobotSeries.SYMBIONT->{
+                        for(i in 0..4)rotate(i*72f+sin(phase*6.28f)*4f,Offset.Zero){
+                            translate(0f,-open*48f){
+                                shell("M 0 -78 Q 37 -53 29 -22 L 0 -7 L -29 -22 Q -37 -53 0 -78 Z",a)
+                                circuit(energy,0f,-65f,0f,-19f)
+                                for(j in 0..2)drawCircle(energy,3f,Offset(9f,-45f+j*9f))
+                            }
+                        }
+                        drawCircle(energy,18f,Offset.Zero,style=Stroke(2f))
+                        for(i in 0..5)drawCircle(energy,3f,Offset(cos(i*1.047f)*12f,sin(i*1.047f)*12f))
+                    }
                     RobotSeries.GLITCH->{
                         for(side in listOf(-1f,1f))scale(side,1f,Offset.Zero){translate(open*55f,-open*18f){
                             shell("M 0 -77 L 42 -30 L 53 7 L 0 73 L 0 22 L 19 1 L 0 -29 Z",a)

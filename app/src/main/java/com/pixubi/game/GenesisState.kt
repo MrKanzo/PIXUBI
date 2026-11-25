@@ -32,6 +32,7 @@ internal object GenesisRules {
         RobotSeries.GLITCH->"PIXU SEED · кристал"
         RobotSeries.VALKYRIE->"PIXU BLOOM · механічна квітка"
         RobotSeries.NEXUS->"PIXU QUANTUM · квантове ядро"
+        RobotSeries.SYMBIONT->"PIXU SPORE · біомеханічна спора"
     }
 }
 internal object GenesisStorage{
