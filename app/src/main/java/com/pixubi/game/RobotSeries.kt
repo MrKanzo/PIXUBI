@@ -1,7 +1,7 @@
 package com.pixubi.game
 
 internal enum class RobotSeries(val title:String) {
-    CLASSIC("Хлопчик"), COMPANION("Дівчинка"), KAGE("Ніндзя")
+    CLASSIC("Хлопчик"), COMPANION("Дівчинка"), KAGE("Ніндзя"), GLITCH("Кібер")
 }
 internal data class CompanionDesign(val title:String,val scale:Float,val hairLength:Float,val armor:Float)
 internal object CompanionCatalog {

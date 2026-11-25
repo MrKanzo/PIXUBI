@@ -63,3 +63,6 @@ Refined actual side silhouette: forward fabric brow, recessed single-eye visor, 
 
 ## 0.37.16 OMEGA profile finishing
 Softer continuous hood rim and cheek drape, inset narrower eye, no hard diagonal fabric division. Aligns projected hip and shoulder pivots in strict side view so idle legs overlap instead of showing double knee joints; separate movement angles retained. Darker far-side shin and foot shading improves depth while moving. Front view, wings and other stages unchanged. Device verification pending.
+
+## 0.38.0 PX-C9 GLITCH
+Fourth lab series: BYTE, PROXY, GHOST, GLITCH, OVERLORD. Independent vector shells inspired by the approved purple concept, digital face, articulated limbs, profile gait, equipment and separate saved accent. GHOST and above support hologram and drone preview; GLITCH and OVERLORD support visual teleport; OVERLORD has animated wings and two companion drones. These are visual lab effects, not actual hacking, flight, combat or pet-world mechanics. Existing series artwork retained. Device review required.
