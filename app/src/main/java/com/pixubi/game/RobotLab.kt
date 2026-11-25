@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
@@ -29,9 +30,8 @@ internal enum class RobotAction(val title: String) {
 internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
 }
-internal enum class RobotSlot { HEAD, CHEST, LEFT_HAND, RIGHT_HAND, BACK, FEET }
-internal enum class RobotModule(val title:String) { NONE("Без модуля"), SCANNER("Сканер"), SHIELD("Щит"), TOOL("Інструмент") }
-internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val module: RobotModule = RobotModule.NONE)
+internal enum class RobotSlot(val title:String) { HEAD("Голова"), CHEST("Корпус"), LEFT_HAND("Ліва рука"), RIGHT_HAND("Права рука"), BACK("Спина"), FEET("Ноги") }
+internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment())
 internal data class RobotPose(val nearLeg:Float, val farLeg:Float, val nearArm:Float, val farArm:Float, val lift:Float)
 internal object RobotMotion {
     fun pose(action:RobotAction, phase:Float):RobotPose {
@@ -57,9 +57,15 @@ internal object RobotMotion {
     }
     fun sockets(view:RobotView): Map<RobotSlot,Offset> {
         val front = view == RobotView.FRONT
-        val points = if(front) listOf(Offset(100f,32f),Offset(100f,105f),Offset(59f,140f),Offset(141f,140f),Offset(100f,100f),Offset(100f,180f))
+        val points = if(front) listOf(Offset(100f,32f),Offset(100f,105f),Offset(141f,140f),Offset(59f,140f),Offset(100f,100f),Offset(100f,180f))
         else listOf(Offset(98f,32f),Offset(125f,105f),Offset(100f,133f),Offset(97f,133f),Offset(74f,100f),Offset(111f,180f))
-        return RobotSlot.entries.zip(points.map { if(view==RobotView.LEFT) Offset(200f-it.x,it.y) else it }).toMap()
+        val raw=RobotSlot.entries.zip(points).toMap().toMutableMap()
+        if(view==RobotView.LEFT) {
+            val left=raw.getValue(RobotSlot.LEFT_HAND)
+            raw[RobotSlot.LEFT_HAND]=raw.getValue(RobotSlot.RIGHT_HAND)
+            raw[RobotSlot.RIGHT_HAND]=left
+        }
+        return raw.mapValues { (_,p)->if(view==RobotView.LEFT) Offset(200f-p.x,p.y) else p }
     }
 }
 private val ink=Color(0xFF142338)
@@ -76,7 +82,7 @@ private fun DrawScope.panel(x:Float,y:Float,w:Float,h:Float,r:Float,fill:Color) 
 private fun DrawScope.bolt(x:Float,y:Float,r:Float=4f) {
     drawCircle(ink,r+1,Offset(x,y));drawCircle(amber,r,Offset(x,y));drawCircle(joint,r*0.45f,Offset(x,y))
 }
-private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,accent:Color) {
+private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,accent:Color,gear:RobotGear?=null) {
     val c=if(far) shade else shell
     rotate(angle,Offset(x,y)) {
         panel(x-6,y,12f,19f,5f,joint)
@@ -89,9 +95,15 @@ private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a
             panel(x-12,y+35,24f,12f,5f,c)
             drawRoundRect(accent,Offset(x-9,y+37),Size(18f,6f),CornerRadius(2f))
         }
+        if(gear==RobotGear.BOOTS || gear==RobotGear.SPEED_BOOTS) {
+            val left=x-12; val width=if(side) 33f else 24f
+            panel(left,y+31,width,17f,5f,if(far) shade else joint)
+            panel(left+3,y+34,width-6,8f,3f,accent)
+            if(gear==RobotGear.SPEED_BOOTS) drawLine(glow,Offset(left+3,y+44),Offset(left+width-3,y+44),2f)
+        }
     }
 }
-private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,module:RobotModule) {
+private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,gear:RobotGear?) {
     val c=if(far) shade else shell
     rotate(angle,Offset(x,y)) {
         bolt(x,y,7f)
@@ -100,13 +112,18 @@ private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,m
         panel(x-9,y+23,18f,17f,6f,c)
         drawRoundRect(accent,Offset(x-6,y+26),Size(12f,5f),CornerRadius(2f))
         panel(x-7,y+39,14f,10f,4f,joint)
-        if(!far && module==RobotModule.SHIELD) {
+        if(gear==RobotGear.SHIELD_L || gear==RobotGear.SHIELD_R) {
             panel(x-14,y+19,28f,29f,7f,accent)
             drawCircle(glow,5f,Offset(x,y+33))
         }
-        if(!far && module==RobotModule.TOOL) {
+        if(gear==RobotGear.TOOL_L || gear==RobotGear.TOOL_R) {
             panel(x-5,y+45,10f,16f,3f,shade)
             panel(x-9,y+58,18f,6f,2f,amber)
+        }
+        if(gear==RobotGear.BLASTER_L || gear==RobotGear.BLASTER_R) {
+            panel(x-11,y+27,22f,24f,5f,joint)
+            panel(x-8,y+48,16f,12f,3f,accent)
+            drawRoundRect(glow,Offset(x-5,y+55),Size(10f,3f),CornerRadius(1.5f))
         }
     }
 }
@@ -136,21 +153,24 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
         }
     }
 }
-private fun DrawScope.robotFront(p:RobotPose,a:Color,m:RobotModule,f:RobotFace,blink:Boolean) {
-    leg(85f,133f,p.farLeg*0.12f,false,false,a)
-    leg(115f,133f,p.nearLeg*0.12f,false,false,a)
+private fun DrawScope.robotFront(p:RobotPose,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean) {
+    backGear(e.equipped(RobotSlot.BACK),false,a)
+    val boots=e.equipped(RobotSlot.FEET)
+    leg(85f,133f,p.farLeg*0.12f,false,false,a,boots)
+    leg(115f,133f,p.nearLeg*0.12f,false,false,a,boots)
     // Fixed shoulder mounts overlap the torso shell; the arm pivots stay at their centers.
     panel(63f,87f,22f,13f,5f,joint)
     panel(115f,87f,22f,13f,5f,joint)
     panel(74f,78f,52f,60f,14f,shell)
     panel(80f,126f,40f,9f,4f,shade)
-    arm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,RobotModule.NONE)
-    arm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,m)
+    arm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,e.equipped(RobotSlot.RIGHT_HAND))
+    arm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,e.equipped(RobotSlot.LEFT_HAND))
     // Stationary bearing caps sit over the rotating arm roots.
     drawCircle(ink,9f,Offset(65f,94f));drawCircle(shade,7.5f,Offset(65f,94f))
     drawCircle(ink,9f,Offset(135f,94f));drawCircle(shade,7.5f,Offset(135f,94f))
     bolt(65f,94f,4f);bolt(135f,94f,4f)
     drawCircle(ink,13f,Offset(100f,104f));drawCircle(a,10f,Offset(100f,104f));drawCircle(glow,6f,Offset(100f,104f))
+    chestGear(e.equipped(RobotSlot.CHEST),false,a)
     panel(94f,70f,12f,13f,4f,joint)
     panel(56f,42f,12f,27f,5f,amber);panel(132f,42f,12f,27f,5f,amber)
     panel(65f,30f,70f,49f,18f,shell)
@@ -159,17 +179,20 @@ private fun DrawScope.robotFront(p:RobotPose,a:Color,m:RobotModule,f:RobotFace,b
     panel(92f,29f,16f,5f,2f,a)
     drawLine(joint,Offset(100f,29f),Offset(104f,16f),4f,StrokeCap.Round)
     drawCircle(ink,5f,Offset(104f,14f));drawCircle(glow,3.5f,Offset(104f,14f))
-    if(m==RobotModule.SCANNER) { panel(114f,22f,15f,8f,3f,shade);drawCircle(glow,2.5f,Offset(124f,26f)) }
+    headGear(e.equipped(RobotSlot.HEAD),false,a)
 }
-private fun DrawScope.robotSide(p:RobotPose,a:Color,m:RobotModule,f:RobotFace,blink:Boolean) {
+private fun DrawScope.robotSide(p:RobotPose,a:Color,e:RobotEquipment,view:RobotView,f:RobotFace,blink:Boolean) {
+    backGear(e.equipped(RobotSlot.BACK),true,a)
+    val boots=e.equipped(RobotSlot.FEET)
     // True right profile: far limbs first, then depth-specific torso and near limbs.
-    leg(94f,132f,p.farLeg,true,true,a)
-    arm(94f,91f,p.farArm,true,a,RobotModule.NONE)
-    leg(102f,133f,p.nearLeg,true,false,a)
+    leg(94f,132f,p.farLeg,true,true,a,boots)
+    arm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()))
+    leg(102f,133f,p.nearLeg,true,false,a,boots)
     panel(76f,82f,46f,54f,13f,shell)
     panel(70f,91f,10f,34f,4f,shade)
     panel(117f,95f,8f,22f,3f,a)
     drawRoundRect(glow,Offset(121f,100f),Size(3f,12f),CornerRadius(1.5f))
+    chestGear(e.equipped(RobotSlot.CHEST),true,a)
     panel(92f,72f,13f,13f,4f,joint)
     panel(67f,30f,65f,49f,18f,shell)
     panel(112f,39f,23f,33f,9f,screen)
@@ -178,8 +201,63 @@ private fun DrawScope.robotSide(p:RobotPose,a:Color,m:RobotModule,f:RobotFace,bl
     panel(89f,29f,13f,5f,2f,a)
     drawLine(joint,Offset(95f,29f),Offset(92f,16f),4f,StrokeCap.Round)
     drawCircle(ink,5f,Offset(92f,14f));drawCircle(glow,3.5f,Offset(92f,14f))
-    arm(99f,92f,p.nearArm,false,a,m)
-    if(m==RobotModule.SCANNER) { panel(112f,23f,17f,8f,3f,shade);drawCircle(glow,2.5f,Offset(126f,27f)) }
+    arm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()))
+    headGear(e.equipped(RobotSlot.HEAD),true,a)
+}
+private fun DrawScope.headGear(g:RobotGear?,side:Boolean,a:Color) {
+    when(g) {
+        RobotGear.SCANNER -> {
+            val x=if(side)112f else 114f
+            panel(x,22f,17f,8f,3f,shade)
+            drawCircle(glow,2.5f,Offset(x+12f,26f))
+        }
+        RobotGear.HELMET -> {
+            if(side) {
+                panel(65f,27f,61f,10f,4f,a)
+                panel(65f,35f,11f,43f,4f,joint)
+            } else {
+                panel(63f,26f,74f,10f,4f,a)
+                panel(60f,36f,10f,40f,4f,joint)
+                panel(130f,36f,10f,40f,4f,joint)
+            }
+        }
+        else -> Unit
+    }
+}
+private fun DrawScope.chestGear(g:RobotGear?,side:Boolean,a:Color) {
+    if(g==RobotGear.ARMOR) {
+        if(side) { panel(110f,85f,14f,40f,5f,a);panel(117f,97f,8f,19f,3f,joint) }
+        else {
+            panel(76f,83f,14f,45f,5f,a);panel(110f,83f,14f,45f,5f,a)
+            panel(89f,122f,22f,10f,4f,shade)
+        }
+    }
+    if(g==RobotGear.REACTOR) {
+        if(side) {
+            panel(117f,91f,12f,27f,4f,joint)
+            drawRoundRect(glow,Offset(122f,96f),Size(4f,17f),CornerRadius(2f))
+        } else {
+            drawCircle(ink,15f,Offset(100f,104f))
+            drawCircle(amber,12f,Offset(100f,104f))
+            drawCircle(glow,8f,Offset(100f,104f))
+            drawCircle(shell,3f,Offset(100f,104f))
+        }
+    }
+}
+private fun DrawScope.backGear(g:RobotGear?,side:Boolean,a:Color) {
+    if(g!=RobotGear.BATTERY && g!=RobotGear.BOOSTER)return
+    if(side) {
+        panel(57f,84f,24f,48f,6f,joint)
+        panel(60f,89f,13f,24f,4f,a)
+        drawRoundRect(glow,Offset(63f,93f),Size(7f,15f),CornerRadius(2f))
+        if(g==RobotGear.BOOSTER) panel(57f,126f,17f,13f,4f,amber)
+    } else {
+        for(x in listOf(65f,120f)) {
+            panel(x,80f,15f,48f,5f,joint)
+            panel(x+3,83f,9f,27f,3f,a)
+            if(g==RobotGear.BOOSTER)panel(x,124f,15f,12f,3f,amber)
+        }
+    }
 }
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
@@ -195,8 +273,8 @@ internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, lo
                     scale(if(view==RobotView.LEFT) -1f else 1f,1f,Offset(100f,100f)) {
                         val actualFace=if(action==RobotAction.SLEEP) RobotFace.SLEEP else face
                         val blink=phase>.94f && action==RobotAction.IDLE
-                        if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.module,actualFace,blink)
-                        else robotSide(p,loadout.accent,loadout.module,actualFace,blink)
+                        if(view==RobotView.FRONT) robotFront(p,loadout.accent,loadout.equipment,actualFace,blink)
+                        else robotSide(p,loadout.accent,loadout.equipment,view,actualFace,blink)
                         if(action==RobotAction.SCAN) {
                             val x=if(view==RobotView.FRONT) 100f else 134f
                             drawLine(glow.copy(alpha=.6f),Offset(x,48f),Offset(x+if(view==RobotView.FRONT) 0f else 40f,30f+phase*50),1.5f)
@@ -217,8 +295,12 @@ internal fun RobotLab(onBack:()->Unit) {
     var view by remember { mutableStateOf(RobotView.FRONT) }
     var action by remember { mutableStateOf(RobotAction.IDLE) }
     var face by remember { mutableStateOf(RobotFace.NEUTRAL) }
-    var accent by remember { mutableStateOf(Color(0xFF268ED2)) }
-    var module by remember { mutableStateOf(RobotModule.NONE) }
+    val context=LocalContext.current
+    val initial=remember(context){RobotLabStorage.load(context)}
+    var equipment by remember { mutableStateOf(initial.first) }
+    var skin by remember { mutableStateOf(initial.second) }
+    var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
+    LaunchedEffect(equipment,skin){RobotLabStorage.save(context,equipment,skin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
     var phase by remember { mutableFloatStateOf(0f) }
@@ -241,7 +323,7 @@ internal fun RobotLab(onBack:()->Unit) {
             OutlinedButton(onClick=onBack){Text("Назад")}
         }
         Text("Незалежний тестовий стенд. Не змінює збереження гри.")
-        Card { RobotPreview(view,action,face,RobotLoadout(accent,module),phase,sockets,
+        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment),phase,sockets,
             Modifier.fillMaxWidth().height(300.dp)) }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v},label={Text(v.title)}) }
@@ -259,13 +341,27 @@ internal fun RobotLab(onBack:()->Unit) {
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             RobotFace.entries.forEach { f -> FilterChip(selected=face==f,onClick={face=f},label={Text(f.title)}) }
         }
-        Text("Модулі · тест сумісності")
+        HorizontalDivider()
+        Text("Інвентар · ${RobotSlot.entries.count { equipment.equipped(it)!=null }}/6 слотів",style=MaterialTheme.typography.titleMedium)
+        Text("Усі деталі доступні в лабораторії. Можна комбінувати та знімати незалежно.")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            RobotModule.entries.forEach { m -> FilterChip(selected=module==m,onClick={module=m},label={Text(m.title)}) }
+            RobotSlot.entries.forEach { slot ->
+                FilterChip(selected=selectedSlot==slot,onClick={selectedSlot=slot},
+                    label={Text(slot.title+if(equipment.equipped(slot)!=null)" ✓" else "")})
+            }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            listOf("Синій" to Color(0xFF268ED2),"Зелений" to Color(0xFF29AB83),"Червоний" to Color(0xFFC94A5C)).forEach { (n,c) ->
-                FilterChip(selected=accent==c,onClick={accent=c},label={Text(n)})
+        Text(selectedSlot.title+": "+(equipment.equipped(selectedSlot)?.title?:"порожньо"))
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            FilterChip(selected=equipment.equipped(selectedSlot)==null,onClick={equipment=equipment.remove(selectedSlot)},label={Text("Зняти")})
+            RobotGear.forSlot(selectedSlot).forEach { g ->
+                FilterChip(selected=equipment.equipped(selectedSlot)==g,onClick={equipment=equipment.equip(g)},label={Text(g.title)})
+            }
+        }
+        OutlinedButton(onClick={equipment=RobotEquipment()}){Text("Зняти все")}
+        Text("Скін · колір акцентів")
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            RobotSkin.entries.forEach { s ->
+                FilterChip(selected=skin==s,onClick={skin=s},label={Text(s.title)})
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {

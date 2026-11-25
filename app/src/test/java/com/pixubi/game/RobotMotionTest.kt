@@ -23,7 +23,14 @@ class RobotMotionTest {
         val r=RobotMotion.sockets(RobotView.RIGHT)
         val l=RobotMotion.sockets(RobotView.LEFT)
         assertEquals(RobotSlot.entries.size,r.size)
-        r.forEach { (slot,p) -> assertEquals(200f-p.x,l.getValue(slot).x,.001f) }
+        r.forEach { (slot,p) ->
+            val opposite=when(slot) {
+                RobotSlot.LEFT_HAND -> RobotSlot.RIGHT_HAND
+                RobotSlot.RIGHT_HAND -> RobotSlot.LEFT_HAND
+                else -> slot
+            }
+            assertEquals(200f-p.x,l.getValue(opposite).x,.001f)
+        }
         assertNotEquals(RobotMotion.sockets(RobotView.FRONT),r)
     }
 }
