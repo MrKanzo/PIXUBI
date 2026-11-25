@@ -54,6 +54,11 @@ fun PixubiSettingsScreen(
     val context=LocalContext.current
     val version=remember(context){context.packageManager.getPackageInfo(context.packageName,0).versionName ?: "?"}
     var showAbout by rememberSaveable { mutableStateOf(false) }
+    var showRobotLab by rememberSaveable { mutableStateOf(false) }
+    if(showRobotLab) {
+        RobotLab { showRobotLab=false }
+        return
+    }
     BackHandler(enabled=showAbout){showAbout=false}
     if(showAbout) {
         PixubiAboutScreen(version){showAbout=false}
@@ -70,6 +75,9 @@ fun PixubiSettingsScreen(
                 Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
+        }
+        OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
+            Text("Robot Lab · MK-1")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
             Text("📖 Про PIXUBI · Світ, види та автори")
