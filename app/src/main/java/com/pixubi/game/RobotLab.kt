@@ -931,8 +931,8 @@ private fun DrawScope.kageLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boole
             drawLine(a,Offset(x+5f,y+25f),Offset(x,y+28f),2.5f,StrokeCap.Round)
             drawLine(a,Offset(x,y+28f),Offset(x,y+35f),2.5f,StrokeCap.Round)
             drawLine(kageLight.copy(alpha=.7f),Offset(x-6f,y+21f),Offset(x-9f,y+26f),1f)
-            val toe=if(side)17f else 11f
             }
+            val toe=if(side)17f else 11f
             translate(top=20f*(stretch-1f)) {
             rotate(if(plantFoot)-shinAngle else 0f,Offset(x,y+38f)) {
                 val foot=Path().apply {moveTo(x-8f,y+35f);lineTo(x+7f,y+35f);lineTo(x+toe,y+43f);lineTo(x+toe,y+47f);lineTo(x-11f,y+47f);lineTo(x-11f,y+41f);close()}
