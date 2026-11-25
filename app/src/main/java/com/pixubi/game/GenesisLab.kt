@@ -97,6 +97,17 @@ private fun GenesisVessel(s:GenesisState,phase:Float,opening:Float,modifier:Modi
                         shell("M 0 -22 L 22 0 L 0 22 L -22 0 Z",a)
                         drawCircle(energy,9f,Offset.Zero)
                     }
+                    RobotSeries.MYCELIA->{
+                        for(side in listOf(-1f,1f))scale(side,1f,Offset.Zero){translate(open*55f,0f){
+                            shell("M 0 -78 Q 40 -57 43 -12 Q 48 45 0 73 L 0 28 Q 23 12 17 -13 L 0 -28 Z",a)
+                            for(i in 0..2)circuit(energy,8f,-48f+i*22f,28f,-35f+i*20f)
+                        }}
+                        for(i in 0..4)rotate(i*72f,Offset.Zero){
+                            val p=Path().apply{moveTo(0f,0f);quadraticBezierTo(-15f,-15f,0f,-30f);quadraticBezierTo(15f,-15f,0f,0f);close()}
+                            drawPath(p,energy.copy(alpha=.7f))
+                        }
+                        drawCircle(energy,7f,Offset.Zero)
+                    }
                     RobotSeries.SYMBIONT->{
                         for(i in 0..4)rotate(i*72f+sin(phase*6.28f)*4f,Offset.Zero){
                             translate(0f,-open*48f){

@@ -26,7 +26,7 @@ import kotlin.math.*
 internal enum class RobotView(val title: String) { FRONT("Перед"), RIGHT("Праворуч"), LEFT("Ліворуч") }
 internal enum class RobotAction(val title: String) {
     IDLE("Спокій"), WALK("Ходьба"), RUN("Біг"), JUMP("Стрибок"), WAVE("Привітання"),
-    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака"), NINJA_DASH("Ривок ніндзі"), HACK("Голограма"), TELEPORT("Телепорт"), DRONE_SWARM("Дрони"), ENERGY_SHIELD("Енергощит"), HOVER("Левітація"), HOLO_CLONE("Голокопії"), REASSEMBLE("Перезбирання"), BIO_CAMOUFLAGE("Маскування"), BIO_REGENERATE("Регенерація"), BIO_GROW("Кристалізація"), BIO_FLIGHT("Політ")
+    SLEEP("Сон"), CHARGE("Зарядка"), SCAN("Сканування"), ATTACK("Атака"), NINJA_DASH("Ривок ніндзі"), HACK("Голограма"), TELEPORT("Телепорт"), DRONE_SWARM("Дрони"), ENERGY_SHIELD("Енергощит"), HOVER("Левітація"), HOLO_CLONE("Голокопії"), REASSEMBLE("Перезбирання"), BIO_CAMOUFLAGE("Маскування"), BIO_REGENERATE("Регенерація"), BIO_GROW("Кристалізація"), BIO_FLIGHT("Політ"), MYCO_BLOOM("Розквіт")
 }
 internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
@@ -1002,6 +1002,10 @@ private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipm
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
+    if(loadout.series==RobotSeries.MYCELIA) {
+        MyceliaPreview(view,action,face,loadout,phase,showSockets,modifier)
+        return
+    }
     if(loadout.series==RobotSeries.SYMBIONT) {
         SymbiontPreview(view,action,face,loadout,phase,showSockets,modifier)
         return
@@ -1096,7 +1100,8 @@ internal fun RobotLab(onBack:()->Unit) {
     var valkyrieSkin by remember(context){mutableStateOf(RobotLabStorage.loadValkyrieSkin(context))}
     var nexusSkin by remember(context){mutableStateOf(RobotLabStorage.loadNexusSkin(context))}
     var symbiontSkin by remember(context){mutableStateOf(RobotLabStorage.loadSymbiontSkin(context))}
-    val skin=when(series){RobotSeries.CLASSIC->classicSkin;RobotSeries.COMPANION->companionSkin;RobotSeries.KAGE->ninjaSkin;RobotSeries.GLITCH->glitchSkin;RobotSeries.VALKYRIE->valkyrieSkin;RobotSeries.NEXUS->nexusSkin;RobotSeries.SYMBIONT->symbiontSkin}
+    var myceliaSkin by remember(context){mutableStateOf(RobotLabStorage.loadMyceliaSkin(context))}
+    val skin=when(series){RobotSeries.CLASSIC->classicSkin;RobotSeries.COMPANION->companionSkin;RobotSeries.KAGE->ninjaSkin;RobotSeries.GLITCH->glitchSkin;RobotSeries.VALKYRIE->valkyrieSkin;RobotSeries.NEXUS->nexusSkin;RobotSeries.SYMBIONT->symbiontSkin;RobotSeries.MYCELIA->myceliaSkin}
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
     var progress by remember(context) { mutableStateOf(RobotProgressStorage.load(context)) }
     LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
@@ -1112,6 +1117,7 @@ internal fun RobotLab(onBack:()->Unit) {
     LaunchedEffect(valkyrieSkin){RobotLabStorage.saveValkyrieSkin(context,valkyrieSkin)}
     LaunchedEffect(nexusSkin){RobotLabStorage.saveNexusSkin(context,nexusSkin)}
     LaunchedEffect(symbiontSkin){RobotLabStorage.saveSymbiontSkin(context,symbiontSkin)}
+    LaunchedEffect(myceliaSkin){RobotLabStorage.saveMyceliaSkin(context,myceliaSkin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
     var phase by remember { mutableFloatStateOf(0f) }
@@ -1127,6 +1133,7 @@ internal fun RobotLab(onBack:()->Unit) {
                 RobotSeries.VALKYRIE->valkyrieSkin=newborn.skin
                 RobotSeries.NEXUS->nexusSkin=newborn.skin
                 RobotSeries.SYMBIONT->symbiontSkin=newborn.skin
+                RobotSeries.MYCELIA->myceliaSkin=newborn.skin
             }
             tier=RobotTier.MK1;view=RobotView.FRONT;action=RobotAction.WAVE;face=RobotFace.HAPPY;phase=0f;running=true
             genesis=false
@@ -1167,7 +1174,7 @@ internal fun RobotLab(onBack:()->Unit) {
             }
         }
         val chassis=RobotChassisCatalog.of(tier)
-        Text(when(series){RobotSeries.COMPANION->CompanionCatalog.of(tier).title+" · Companion"; RobotSeries.KAGE->KageCatalog.of(tier).title+" · PX-N7 KAGE";RobotSeries.GLITCH->GlitchCatalog.of(tier).title+" · PX-C9 GLITCH";RobotSeries.VALKYRIE->ValkyrieCatalog.of(tier).title+" · PX-V7 VALKYRIE";RobotSeries.NEXUS->NexusCatalog.of(tier).title+" · PX-AI NEXUS";RobotSeries.SYMBIONT->SymbiontCatalog.of(tier).title+" · PX-BIO SYMBIONT";RobotSeries.CLASSIC->chassis.title+" · "+chassis.description},style=MaterialTheme.typography.bodyMedium)
+        Text(when(series){RobotSeries.COMPANION->CompanionCatalog.of(tier).title+" · Companion"; RobotSeries.KAGE->KageCatalog.of(tier).title+" · PX-N7 KAGE";RobotSeries.GLITCH->GlitchCatalog.of(tier).title+" · PX-C9 GLITCH";RobotSeries.VALKYRIE->ValkyrieCatalog.of(tier).title+" · PX-V7 VALKYRIE";RobotSeries.NEXUS->NexusCatalog.of(tier).title+" · PX-AI NEXUS";RobotSeries.SYMBIONT->SymbiontCatalog.of(tier).title+" · PX-BIO SYMBIONT";RobotSeries.MYCELIA->MyceliaCatalog.of(tier).title+" · PX-BIO MYCELIA";RobotSeries.CLASSIC->chassis.title+" · "+chassis.description},style=MaterialTheme.typography.bodyMedium)
         Text(when {
             tier==RobotTier.OMEGA -> "Секретна форма · лише особливі досягнення (умови ще не визначені)"
             RobotChassisCatalog.unlocked(tier,progress.level)->"Доступний за рівнем"
@@ -1224,7 +1231,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Скін · колір акцентів")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSkin.entries.forEach { s ->
-                FilterChip(selected=skin==s,onClick={when(series){RobotSeries.COMPANION->companionSkin=s;RobotSeries.KAGE->ninjaSkin=s;RobotSeries.GLITCH->glitchSkin=s;RobotSeries.VALKYRIE->valkyrieSkin=s;RobotSeries.NEXUS->nexusSkin=s;RobotSeries.SYMBIONT->symbiontSkin=s;RobotSeries.CLASSIC->classicSkin=s}},label={Text(s.title)})
+                FilterChip(selected=skin==s,onClick={when(series){RobotSeries.COMPANION->companionSkin=s;RobotSeries.KAGE->ninjaSkin=s;RobotSeries.GLITCH->glitchSkin=s;RobotSeries.VALKYRIE->valkyrieSkin=s;RobotSeries.NEXUS->nexusSkin=s;RobotSeries.SYMBIONT->symbiontSkin=s;RobotSeries.MYCELIA->myceliaSkin=s;RobotSeries.CLASSIC->classicSkin=s}},label={Text(s.title)})
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -1308,8 +1315,10 @@ internal fun robotActionAvailable(series:RobotSeries,tier:RobotTier,action:Robot
     RobotAction.HOVER->series==RobotSeries.VALKYRIE&&tier>=RobotTier.MK4
     RobotAction.HOLO_CLONE->series==RobotSeries.NEXUS&&tier>=RobotTier.MK3
     RobotAction.REASSEMBLE->series==RobotSeries.NEXUS&&tier>=RobotTier.MK4
-    RobotAction.BIO_CAMOUFLAGE,RobotAction.BIO_REGENERATE->series==RobotSeries.SYMBIONT&&tier>=RobotTier.MK3
+    RobotAction.BIO_CAMOUFLAGE->series==RobotSeries.SYMBIONT&&tier>=RobotTier.MK3
+    RobotAction.BIO_REGENERATE->(series==RobotSeries.SYMBIONT||series==RobotSeries.MYCELIA)&&tier>=RobotTier.MK3
+    RobotAction.MYCO_BLOOM->series==RobotSeries.MYCELIA&&tier>=RobotTier.MK2
     RobotAction.BIO_GROW->series==RobotSeries.SYMBIONT&&tier>=RobotTier.MK4
-    RobotAction.BIO_FLIGHT->series==RobotSeries.SYMBIONT&&tier==RobotTier.OMEGA
+    RobotAction.BIO_FLIGHT->(series==RobotSeries.SYMBIONT||series==RobotSeries.MYCELIA)&&tier==RobotTier.OMEGA
     else->true
 }

@@ -90,3 +90,6 @@ BIT is a seed-shaped optical drone; LOGIC has a triangular processor head; NEURA
 
 ## 0.43.0 PX-BIO SYMBIONT
 Seventh series, five quadrupedal forms MITE, CRAWLER, STALKER, SYMBIONT, LEVIATHAN. Dedicated front/profile canvas, four independent gait phases, segmented tail, animated ears/jaw, crystal armor, final dragon wings. Independent green default accent and GENESIS SPORE. Visual camouflage/regeneration MK-3+, crystal growth MK-4+, flight MK-X. Equipment visual adapters; wave is a signal rather than a humanoid gesture. Existing game saves and other models untouched. Tests and on-device visual inspection pending; no gameplay combat/regeneration/FUSION effects yet.
+
+## 0.44.0 PX-BIO MYCELIA
+Eighth series. Separate floral quadrupedal canvas PIXIE, FLORA, NYMPH, MYCELIA, AETHER; pearl/lavender shells, articulated legs, expressive eyes, leaf ears, animated tendrils, growing flowers and mushroom caps, 1/1/2/2/3 tails, final translucent butterfly wings. GENESIS COCOON and independent saved purple accent. Bloom MK-2+, regeneration MK-3+, flight MK-X are preview animations. Intended future compatible partner of SYMBIONT; no fusion rules or gameplay effects implemented. Existing saves and other series preserved. Device visual inspection pending.
