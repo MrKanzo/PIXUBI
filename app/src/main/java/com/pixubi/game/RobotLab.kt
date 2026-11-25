@@ -300,6 +300,10 @@ internal fun RobotLab(onBack:()->Unit) {
     var equipment by remember { mutableStateOf(initial.first) }
     var skin by remember { mutableStateOf(initial.second) }
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
+    var progress by remember(context) { mutableStateOf(RobotProgressStorage.load(context)) }
+    LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
+    val stats=remember(equipment,progress.level){RobotBalance.total(RobotTier.MK1,equipment,progress.level)}
+    val baseStats=remember(progress.level){RobotBalance.total(RobotTier.MK1,RobotEquipment(),progress.level)}
     LaunchedEffect(equipment,skin){RobotLabStorage.save(context,equipment,skin)}
     var sockets by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(true) }
@@ -342,6 +346,8 @@ internal fun RobotLab(onBack:()->Unit) {
             RobotFace.entries.forEach { f -> FilterChip(selected=face==f,onClick={face=f},label={Text(f.title)}) }
         }
         HorizontalDivider()
+        RobotStatsPanel(stats,baseStats,progress,onTrain={progress=progress.gain(25)},onReset={progress=RobotProgress()})
+        HorizontalDivider()
         Text("Інвентар · ${RobotSlot.entries.count { equipment.equipped(it)!=null }}/6 слотів",style=MaterialTheme.typography.titleMedium)
         Text("Усі деталі доступні в лабораторії. Можна комбінувати та знімати незалежно.")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
@@ -354,8 +360,11 @@ internal fun RobotLab(onBack:()->Unit) {
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             FilterChip(selected=equipment.equipped(selectedSlot)==null,onClick={equipment=equipment.remove(selectedSlot)},label={Text("Зняти")})
             RobotGear.forSlot(selectedSlot).forEach { g ->
-                FilterChip(selected=equipment.equipped(selectedSlot)==g,onClick={equipment=equipment.equip(g)},label={Text(g.title)})
+                FilterChip(selected=equipment.equipped(selectedSlot)==g,enabled=RobotBalance.compatible(g,RobotTier.MK1),onClick={equipment=equipment.equip(g)},label={Text(g.title)})
             }
+        }
+        equipment.equipped(selectedSlot)?.let { gear ->
+            Text(RobotBalance.spec(gear).delta.summary(),style=MaterialTheme.typography.bodySmall)
         }
         OutlinedButton(onClick={equipment=RobotEquipment()}){Text("Зняти все")}
         Text("Скін · колір акцентів")
@@ -370,4 +379,36 @@ internal fun RobotLab(onBack:()->Unit) {
         }
         Text("MK-2–MK-4 та адаптивні навички ще не підключені.",style=MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun RobotStatsPanel(stats:RobotStats,base:RobotStats,progress:RobotProgress,onTrain:()->Unit,onReset:()->Unit) {
+    var confirmReset by remember { mutableStateOf(false) }
+    Card {
+        Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            Text("Характеристики · MK-1",style=MaterialTheme.typography.titleMedium)
+            RobotStat.entries.forEach { stat ->
+                val change=stats[stat]-base[stat]
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Text(stat.title,Modifier.weight(1f))
+                    Text(stats[stat].toString(),style=MaterialTheme.typography.titleMedium)
+                    if(change!=0) Text("  (${if(change>0)"+" else ""}$change)",color=if(change>0)Color(0xFF69D4A9) else Color(0xFFFFA59C))
+                }
+            }
+            HorizontalDivider()
+            Text("Рівень ${progress.level} · ${progress.safeXp} XP",style=MaterialTheme.typography.titleMedium)
+            LinearProgressIndicator(progress={progress.fraction},modifier=Modifier.fillMaxWidth())
+            Text(if(progress.remaining==0)"Максимальний рівень" else "До нового рівня: ${progress.remaining} XP")
+            Text("Доступний за рівнем ранг: ${progress.nextTier.title}. Модель залишається MK-1; еволюції ще не реалізовано.",style=MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Button(onClick=onTrain,enabled=progress.remaining>0){Text("Тест +25 XP")}
+                OutlinedButton(onClick={confirmReset=true}){Text("Скинути XP")}
+            }
+            Text("Тестовий XP окремий від гри. Скіни не змінюють показники. Ефекти бою, витрат енергії та швидкості ще не підключені.",style=MaterialTheme.typography.bodySmall)
+        }
+    }
+    if(confirmReset) AlertDialog(onDismissRequest={confirmReset=false},title={Text("Скинути тестовий XP?")},
+        text={Text("Обладнання, скіни та збереження основної гри не зміняться.")},
+        confirmButton={TextButton(onClick={confirmReset=false;onReset()}){Text("Скинути")}},
+        dismissButton={TextButton(onClick={confirmReset=false}){Text("Скасувати")}})
 }

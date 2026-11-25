@@ -6,3 +6,6 @@ Next: approve MK-1 silhouette and gait on device; refine front walking and attac
 
 ## 0.34.3 Equipment
 Six independent slots, stable gear IDs and six accent skins. Front and profile attach limbs and feet inside the existing rotation transforms. Right and left views resolve anatomical handedness separately. Lab-only inventory is unlimited; equipment and skin are persisted in separate preferences. Stats, unlocks, combat, evolution and adaptive skills are not connected. Neutral socket display remains illustrative. Verify appearance with all gear combinations on device.
+
+## 0.35.0 Balance and progression
+Seven derived stats, gear trade-offs, independent cosmetic skins, data-driven tier compatibility, capped XP and level 1–30, test-only training with separate persistence. Tier unlock thresholds 5/12/20 are provisional; MK-1 is the only rendered tier. No combat, gameplay events, adaptive skills or movement-rate effects connected yet. Test XP never migrates to the real game. Existing equipment and render geometry remain unchanged.
