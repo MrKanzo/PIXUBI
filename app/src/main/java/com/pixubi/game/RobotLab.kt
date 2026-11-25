@@ -302,7 +302,9 @@ internal fun RobotLab(onBack:()->Unit) {
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
     var progress by remember(context) { mutableStateOf(RobotProgressStorage.load(context)) }
     LaunchedEffect(progress){RobotProgressStorage.save(context,progress)}
-    val stats=remember(equipment,progress.level){RobotBalance.total(RobotTier.MK1,equipment,progress.level)}
+    var skills by remember(context){mutableStateOf(RobotSkillsStorage.load(context))}
+    LaunchedEffect(skills){RobotSkillsStorage.save(context,skills)}
+    val stats=remember(equipment,progress.level,skills){RobotBalance.total(RobotTier.MK1,equipment,progress.level,skills.bonuses())}
     val baseStats=remember(progress.level){RobotBalance.total(RobotTier.MK1,RobotEquipment(),progress.level)}
     LaunchedEffect(equipment,skin){RobotLabStorage.save(context,equipment,skin)}
     var sockets by remember { mutableStateOf(false) }
@@ -348,6 +350,12 @@ internal fun RobotLab(onBack:()->Unit) {
         HorizontalDivider()
         RobotStatsPanel(stats,baseStats,progress,onTrain={progress=progress.gain(25)},onReset={progress=RobotProgress()})
         HorizontalDivider()
+        RobotSkillsPanel(skills,onActivity={ event ->
+            skills=skills.record(event)
+            progress=progress.gain(event.robotXp)
+            action=event.animation; phase=0f; running=true
+        },onReset={skills=RobotSkills()})
+        HorizontalDivider()
         Text("Інвентар · ${RobotSlot.entries.count { equipment.equipped(it)!=null }}/6 слотів",style=MaterialTheme.typography.titleMedium)
         Text("Усі деталі доступні в лабораторії. Можна комбінувати та знімати незалежно.")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
@@ -377,7 +385,7 @@ internal fun RobotLab(onBack:()->Unit) {
             Text("Точки кріплення (у нейтральній позі)",Modifier.weight(1f))
             Switch(checked=sockets,onCheckedChange={sockets=it})
         }
-        Text("MK-2–MK-4 та адаптивні навички ще не підключені.",style=MaterialTheme.typography.bodySmall)
+        Text("MK-2–MK-4, справжні мініігри та автономний пошук ще не підключені.",style=MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -404,11 +412,44 @@ private fun RobotStatsPanel(stats:RobotStats,base:RobotStats,progress:RobotProgr
                 Button(onClick=onTrain,enabled=progress.remaining>0){Text("Тест +25 XP")}
                 OutlinedButton(onClick={confirmReset=true}){Text("Скинути XP")}
             }
-            Text("Тестовий XP окремий від гри. Скіни не змінюють показники. Ефекти бою, витрат енергії та швидкості ще не підключені.",style=MaterialTheme.typography.bodySmall)
+            Text("Тестовий XP окремий від гри. Скіни не змінюють показники. Зміни показників від спорядження й навичок. Реальні витрати енергії, бої та швидкість ще не підключені.",style=MaterialTheme.typography.bodySmall)
         }
     }
     if(confirmReset) AlertDialog(onDismissRequest={confirmReset=false},title={Text("Скинути тестовий XP?")},
         text={Text("Обладнання, скіни та збереження основної гри не зміняться.")},
+        confirmButton={TextButton(onClick={confirmReset=false;onReset()}){Text("Скинути")}},
+        dismissButton={TextButton(onClick={confirmReset=false}){Text("Скасувати")}})
+}
+
+@Composable
+private fun RobotSkillsPanel(skills:RobotSkills,onActivity:(RobotActivity)->Unit,onReset:()->Unit) {
+    var confirmReset by remember{mutableStateOf(false)}
+    Card {
+        Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Адаптивні навички",style=MaterialTheme.typography.titleMedium)
+            Text(if(skills.specialties.isEmpty())"Спеціалізація: ще не визначена" else
+                "Провідні навички: "+skills.specialties.joinToString(", "){it.title})
+            Text("Тестові завершені дії. Кнопки перевіряють розвиток, але не витрачають ресурси і не запускають справжні мініігри.",style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                RobotActivity.entries.forEach { event ->
+                    OutlinedButton(onClick={onActivity(event)}){Text(event.title+" +"+event.points)}
+                }
+            }
+            RobotSkill.entries.forEach { skill ->
+                val lvl=skills.level(skill)
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Text(skill.title,Modifier.weight(1f))
+                    Text("Рівень $lvl/${RobotSkills.MAX_LEVEL}")
+                }
+                LinearProgressIndicator(progress={skills.fraction(skill)},modifier=Modifier.fillMaxWidth())
+                Text(skill.description,style=MaterialTheme.typography.bodySmall)
+            }
+            Text("Сумарні бонуси: "+skills.bonuses().summary(),style=MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick={confirmReset=true}){Text("Скинути тестові навички")}
+        }
+    }
+    if(confirmReset)AlertDialog(onDismissRequest={confirmReset=false},title={Text("Скинути навички?")},
+        text={Text("Лише тестові навички. Загальний XP, обладнання та скіни залишаться.")},
         confirmButton={TextButton(onClick={confirmReset=false;onReset()}){Text("Скинути")}},
         dismissButton={TextButton(onClick={confirmReset=false}){Text("Скасувати")}})
 }

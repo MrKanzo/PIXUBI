@@ -9,3 +9,6 @@ Six independent slots, stable gear IDs and six accent skins. Front and profile a
 
 ## 0.35.0 Balance and progression
 Seven derived stats, gear trade-offs, independent cosmetic skins, data-driven tier compatibility, capped XP and level 1–30, test-only training with separate persistence. Tier unlock thresholds 5/12/20 are provisional; MK-1 is the only rendered tier. No combat, gameplay events, adaptive skills or movement-rate effects connected yet. Test XP never migrates to the real game. Existing equipment and render geometry remain unchanged.
+
+## 0.36.0 Tamagotchi-first adaptive skills
+PIXUBI LAB is an offline virtual robot pet, not primarily a combat RPG. Future minigames live in its pet screen; autonomous offline gathering and optional multiplayer arenas are future systems. Seven independent skill tracks, levels 0–10 and additive stat bonuses. Six explicit test activity events grant skill XP and general XP; battle track remains reserved. Rendering and frame loops never award XP. Separate lab-only skill persistence; no real gameplay event integration, resource spending, offline gathering or multiplayer in this version. All balance values provisional.

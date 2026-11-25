@@ -49,9 +49,9 @@ internal object RobotBalance {
         RobotGear.SPEED_BOOTS->RobotStats(speed=12,energy=-4,defense=-2)
     })
     fun compatible(gear:RobotGear,tier:RobotTier)=tier.ordinal>=spec(gear).minTier.ordinal
-    fun total(tier:RobotTier,equipment:RobotEquipment,level:Int=1):RobotStats {
+    fun total(tier:RobotTier,equipment:RobotEquipment,level:Int=1,skillBonus:RobotStats=RobotStats()):RobotStats {
         val l=(level.coerceIn(1,RobotProgress.MAX_LEVEL)-1)
-        val innate=base(tier)+RobotStats(l*3,l*2,l,l,l/2,l,l)
+        val innate=base(tier)+RobotStats(l*3,l*2,l,l,l/2,l,l)+skillBonus
         return RobotSlot.entries.mapNotNull{equipment.equipped(it)}
             .filter{compatible(it,tier)}.fold(innate){acc,g->acc+spec(g).delta}.bounded()
     }
