@@ -84,3 +84,6 @@ Genderless quantum AI series BIT, LOGIC, NEURAL, NEXUS, SINGULARITY. Distinct fr
 
 ## 0.42.1 VALKYRIE silhouette redesign
 LUMI flower sensor buns and swept fringe; NOVA short mechanical bob; AURA longer segmented locks and crystal tiara; VALKYRIE flowing head segments and petal armor; SERAPH longer ceremonial locks, crown and six curved petal wings. New luminous expressive eyes and mouth; side-specific mask and hair anchored to head, hair sway depends on animation. More headroom for upper stages. Shared skeleton, skill gates, Genesis, saved skin and other series preserved. Visual inspection on device pending.
+
+## 0.42.2 NEXUS nonhuman visual evolution
+BIT is a seed-shaped optical drone; LOGIC has a triangular processor head; NEURAL has a suspended crystal and open energy spine; NEXUS uses separated chassis and limb segments; SINGULARITY has a quantum nucleus, rotating cage and halo. One expressive optical aperture replaces humanoid eyes across all stages. Upper stages hover outside locomotion/sleep. Shared gait, equipment, clone/reassembly actions, skin and Genesis state preserved. Visual and build verification pending; not a real AI.
