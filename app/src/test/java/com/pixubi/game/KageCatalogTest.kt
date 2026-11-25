@@ -10,9 +10,11 @@ class KageCatalogTest {
     }
     @Test fun refinedHeadProportionsKeepStarterChibi() {
         val stages=RobotTier.entries.map{KageCatalog.of(it)}
-        assertTrue(stages.all{it.headScale in 0.88f..0.94f})
+        assertTrue(stages.all{it.headScale in 0.73f..0.85f})
         assertTrue(stages.zipWithNext().all{(a,b)->a.headScale>=b.headScale})
-        assertEquals(.88f,KageCatalog.of(RobotTier.MK4).headScale,.001f)
+        assertEquals(.73f,KageCatalog.of(RobotTier.MK4).headScale,.001f)
+        assertTrue(KageRig.ground(RobotTier.MK4)>KageRig.ground(RobotTier.MK1))
+        assertEquals(18f*1.72f,KageRig.knee(100f,133f,0f,RobotTier.MK4).y-133f,.001f)
     }
     @Test fun switchingSeriesPreservesEquipment() {
         val original=RobotLoadout(equipment=RobotEquipment().equip(RobotGear.TOOL_R),tier=RobotTier.MK4)

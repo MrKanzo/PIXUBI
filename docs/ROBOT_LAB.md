@@ -33,3 +33,6 @@ Refined hood, face mask, panel highlights, articulated two-segment legs and armo
 
 ## 0.37.6 KAGE proportion polish
 Hood, face and head gear scale about their fixed neck anchor by tier (94%, 91%, 89%, 88%, 88% of previous geometry); neck, mask seams, chest plate edges, shoulder highlights and thigh details refined. KAGE neutral head socket follows scale. Existing dash timeline and limb pivots unchanged. Classic and Companion unchanged. Device visual review still required.
+
+## 0.37.7 KAGE reference silhouette
+Reference-led full-body proportion pass: elongated independently articulated thigh/shin segments, longer arms with attached gear, smaller hood, inset mask, luminous hex core, layered hip plates, waist tab and shin accents. Tier-specific ground and knee math; dash lowering adjusted to the longer rig. Earlier series untouched. Still a procedural vector adaptation, not a direct layered image import; review the stance, animation and gear on device.
