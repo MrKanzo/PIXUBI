@@ -12,7 +12,7 @@ internal object PixubiLore {
     const val creator = "Микола (MrKanzo)"
     const val creatorRole = "Автор ідеї, керівник проєкту, творчий напрям, тестування та ігрові рішення."
     const val assistant = "Аліса (ChatGPT)"
-    const val assistantRole = "ШІ-співавторка: розробка концепції, сценарії та історії світу, дизайн персонажів, генерація графіки й допомога з програмуванням та анімаціями."
+    const val assistantRole = "ШІ-співавторка: розробка концепції, сценарії та історії світу, допомога з програмуванням."
     fun story(species:Species):SpeciesStory=when(species) {
         Species.LISYK -> SpeciesStory("Охоронець тихих стежок","Допитливий, спритний і відданий.",
             "Шукає знахідки під листям і серед кущів, досліджує стежки.",

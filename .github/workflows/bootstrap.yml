@@ -29,50 +29,11 @@ jobs:
           gradle-version: '9.6.0'
       - name: Compile and test debug APK
         run: gradle --no-daemon testDebugUnitTest assembleDebug
-      - name: Publish real-sprite blink preview
-        if: success()
-        shell: bash
-        run: |
-          test -f app/build/eye-preview/lisyk-eye-frames.png
-          mkdir -p docs/eye-previews
-          cp app/build/eye-preview/lisyk-eye-frames.png docs/eye-previews/lisyk-eye-frames.png
-          cp app/build/eye-preview/all-young-eye-frames.png docs/eye-previews/all-young-eye-frames.png
-          cp app/build/eye-preview/*-young-grid.png docs/eye-previews/
-          cp app/build/eye-preview/all-face-expressions.png docs/eye-previews/
-          cp app/build/eye-preview/illustrated-motion-frames.png docs/eye-previews/
-          cp app/build/eye-preview/rig-layer-review.png docs/eye-previews/
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/eye-previews
-          if ! git diff --cached --quiet; then
-            git commit -m "docs: real original-sprite eye blink frames [skip ci]"
-            git push
-          fi
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PIXUBI-v0.33.7-test-debug-APK
+          name: PIXUBI-clean-test-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-      - uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: PIXUBI-v0.33.7-native-model-review
-          path: app/build/eye-preview/active-native-forms.png
-      - uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: PIXUBI-v0.33.7-lisyk-pose-review
-          path: app/build/eye-preview/lisyk-mature-poses.png
-      - uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: PIXUBI-v0.33.7-original-female-review
-          path: app/build/eye-preview/original-female-poses.png
-      - uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: PIXUBI-v0.33.7-young-male-review
-          path: app/build/eye-preview/original-young-male-poses.png
       - name: Detect release signing secrets
         id: signing
         env:
@@ -89,7 +50,7 @@ jobs:
             echo '::notice::PIXUBI release needs PIXUBI_KEYSTORE_BASE64, PIXUBI_STORE_PASSWORD, PIXUBI_KEY_ALIAS and PIXUBI_KEY_PASSWORD secrets.'
           fi
       - name: Restore private signing keystore
-        if: steps.signing.outputs.ready == 'true'
+        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.PIXUBI_KEYSTORE_BASE64 }}
         shell: bash
@@ -97,7 +58,7 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pixubi-release.jks"
           chmod 600 "$RUNNER_TEMP/pixubi-release.jks"
       - name: Build signed release APK
-        if: steps.signing.outputs.ready == 'true'
+        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
         env:
           PIXUBI_KEYSTORE_PATH: ${{ runner.temp }}/pixubi-release.jks
           PIXUBI_STORE_PASSWORD: ${{ secrets.PIXUBI_STORE_PASSWORD }}
@@ -105,7 +66,7 @@ jobs:
           PIXUBI_KEY_PASSWORD: ${{ secrets.PIXUBI_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
       - name: Publish signed stable release
-        if: steps.signing.outputs.ready == 'true'
+        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

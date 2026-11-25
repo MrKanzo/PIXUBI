@@ -245,10 +245,6 @@ fun PixuCollectionScreen(
                         )
                     }
                 }
-                val sample = Pet(
-                    species=species,sex=sex,region=species.native,name=species.title,
-                    geneA=color,geneB=0,bornAt=0L,lastUpdatedAt=0L
-                )
                 GrowthStage.playable.forEach { stage ->
                     val exact = CollectionRules.hasForm(library, species, sex, color, stage)
                     // A baby is shown as an early teaser only for the active pet's exact genes.
@@ -262,10 +258,7 @@ fun PixuCollectionScreen(
                         Row(Modifier.fillMaxWidth().padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             if (visible) {
-                                GrowthSprite(
-                                    pet=sample,previewStage=stage,
-                                    modifier=Modifier.size(92.dp)
-                                )
+                                Text(stage.title, modifier = Modifier.width(92.dp))
                             } else {
                                 Box(Modifier.size(92.dp).background(
                                     Color(0xFF101A2E), RoundedCornerShape(14.dp)

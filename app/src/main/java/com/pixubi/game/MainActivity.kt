@@ -254,7 +254,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             currentRegion = current?.region ?: Region.FOREST,
-                            developerPet = current,
                             previewRegion = auditionRegion,
                             onSettingsChange = { saveSound(it) },
                             onPreviewRegion = {
@@ -464,12 +463,6 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    GrowthSprite(
-                        pet = Pet(choice, sex, choice.native, choice.title, 0, 0, 0L, 0L),
-                        previewStage = GrowthStage.BABY,
-                        modifier = Modifier.size(63.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(choice.title, fontWeight = FontWeight.Bold)
                         Text(choice.personality, style = MaterialTheme.typography.bodySmall)
@@ -559,7 +552,7 @@ private fun HomeScreen(
                     style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
             }
         }
-        WorldScene(pet, reaction, onPetTap)
+        PetStatusCard(pet, reaction, onPetTap)
         if (pet.expeditionStartedAt > 0L && pet.mode == Mode.AWAKE) {
             SearchProgressCard(pet)
         }
@@ -686,331 +679,21 @@ private fun StatLine(name: String, value: Double) {
 
 
 @Composable
-internal fun WorldScene(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit, developer: DevScene? = null) {
-    val searching = pet.alive && pet.mode == Mode.AWAKE && pet.expeditionStartedAt > 0L
-    val emotion = if(searching) PetEmotion.IDLE else EmotionResolver.resolve(pet, reaction)
-    val landscape = when (pet.region) {
-        Region.FOREST -> Color(0xFF61BA9D) to Color(0xFF245C56)
-        Region.MOUNTAINS -> Color(0xFF7997CD) to Color(0xFF394E78)
-        Region.LAKES -> Color(0xFF79CEEA) to Color(0xFF315E9A)
-        Region.DESERT -> Color(0xFFFFD294) to Color(0xFFB96F59)
-        Region.SKY -> Color(0xFFA2C8FF) to Color(0xFF7476BF)
-    }
-    val loop = rememberInfiniteTransition(label = "pixubi-life")
-    val liveBob by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(760), RepeatMode.Reverse), label = "bob"
-    )
-    val liveBlinkCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(3300, easing = LinearEasing)), label = "blink"
-    )
-    val sway by loop.animateFloat(
-        initialValue = -1.5f, targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "sway"
-    )
-    val liveScoutCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 4f,
-        animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing)),
-        label = "species-search"
-    )
-    val liveMovementCycle by loop.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing)),
-        label = "pixubi-body-motion"
-    )
-    val bob = developer?.bob ?: liveBob
-    val blinkCycle = developer?.blinkCycle ?: liveBlinkCycle
-    val scoutCycle = developer?.scoutCycle ?: liveScoutCycle
-    val movementCycle = developer?.movementCycle ?: liveMovementCycle
-    val sleeping = emotion == PetEmotion.SLEEPING || emotion == PetEmotion.HIBERNATING
-    val searchFrame = if (searching)
-        PixubiSearch.frame(pet.species, scoutCycle, pet.geneA + pet.geneB * 3)
-    else null
-    val searchPose = searchFrame?.pose ?: SearchPose()
-    val stage = PetGrowth.stage(pet)
-    val isPishchanyk=pet.species==Species.PISHCHANYK
-    val isKhmaryk=pet.species==Species.KHMARYK
-    val homePhase=scoutCycle%1f
-    val wandering=(stage in GrowthStage.playable)&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
-        (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in 0.16f..0.48f
-    val homeFlight=pet.species==Species.KHMARYK&&!searching&&(developer==null||developer.action==DevAction.AUTO)&&reaction==null&&pet.alive&&pet.mode==Mode.AWAKE&&
-        (emotion==PetEmotion.IDLE||emotion==PetEmotion.HAPPY)&&homePhase in .56f.. .88f
-    val flightProgress=((homePhase-.56f)/.32f).coerceIn(0f,1f)
-    val flightArc=if(homeFlight)kotlin.math.sin(kotlin.math.PI*flightProgress).toFloat() else 0f
-    val walkProgress=((homePhase-.16f)/.32f).coerceIn(0f,1f)
-    val sign=if((scoutCycle.toInt()+pet.geneA)%2==0)1f else -1f
-    val wanderX=if(wandering)sign*32f*kotlin.math.sin(kotlin.math.PI*walkProgress).toFloat() else 0f
-    val manualWalkDirection=developer?.action==DevAction.WALK
-    val searchDirection=if(searching) {
-        val before=PixubiSearch.frame(pet.species,scoutCycle-.001f,pet.geneA+pet.geneB*3)
-        val after=PixubiSearch.frame(pet.species,scoutCycle+.001f,pet.geneA+pet.geneB*3)
-        val dx=after.pose.xDp-before.pose.xDp
-        if(kotlin.math.abs(dx)>.001f) dx<0f else (searchFrame?.entryXDp?:0f)<0f
-    }else false
-    val facingLeft=if(developer!=null&&!searching&&developer.action!=DevAction.AUTO)
-        if(manualWalkDirection&&movementCycle>.5f)!developer.left else developer.left
-        else if(searching)searchDirection
-        else if(homeFlight) (if(flightProgress<.5f)sign<0f else sign>0f)
-        else wandering&&(if(walkProgress<.5f)sign<0f else sign>0f)
-    val motion=when {
-        developer?.action?.motion!=null -> developer.action.motion!!
-        homeFlight -> PetMotion.FLOAT
-        wandering -> PetMotion.WALK
-        isKhmaryk&&searching -> PetMotion.FLOAT
-        isPishchanyk&&searching&&searchFrame!=null -> PishchanykBabyArtwork.searchMotion(searchFrame.phase)
-        searching&&searchFrame?.phase==SearchPhase.HIDING&&
-            PixuAnimationPolicy.supports(pet.species,stage,SpriteClip.DIG) -> PetMotion.DIG
-        else -> MotionResolver.resolve(pet,emotion,searching)
-    }
-    val clip = PixuAnimationPolicy.clip(pet.species,stage,motion,emotion)
-    val hasMovementArt = PixuFrameLibrary.moves(pet.species,stage,clip)
-    val bodyMotion = MotionResolver.pose(motion,movementCycle)
-    val manualWalk=developer?.action==DevAction.WALK&&hasMovementArt
-    val manualX=if(manualWalk)(if(developer?.left==true)-1f else 1f)*35f*
-        kotlin.math.sin(kotlin.math.PI*movementCycle).toFloat() else 0f
-    val worldX=when {
-        manualWalk -> manualX
-        homeFlight -> sign*42f*flightArc
-        searching&&hasMovementArt -> searchPose.xDp
-        wandering&&hasMovementArt -> wanderX
-        else -> 0f
-    }
-    val worldY=when {
-        homeFlight -> -42f*flightArc
-        searching&&isPishchanyk&&searchFrame!=null -> 67f*searchFrame.concealment
-        searching&&isKhmaryk -> searchPose.yDp
-        searching -> searchPose.yDp + if(clip==SpriteClip.HOP) PixuAnimationPolicy.hopOffset(pet.species,stage,movementCycle) else 0f
-        clip==SpriteClip.FLY&&isKhmaryk -> -35f+bodyMotion.yDp
-        clip==SpriteClip.HOP -> PixuAnimationPolicy.hopOffset(pet.species,stage,movementCycle)
-        clip==SpriteClip.SWIM -> bodyMotion.yDp
-        emotion==PetEmotion.HAPPY||emotion==PetEmotion.SURPRISED -> bodyMotion.yDp
-        else -> 0f
-    }
-    val eyeClosure = if(sleeping)1f else if(developer?.action==DevAction.BLINK)
-        NativeEyeMotion.blinkAt(((developer?.seconds?:0f)%1.2f)/1.2f) else NativeEyeMotion.blinkAt(blinkCycle)
-    val speech = if (searching) null else EmotionResolver.bubble(pet, emotion)
-    val frame = RoundedCornerShape(24.dp)
-    Box(Modifier.fillMaxWidth().height(286.dp).clip(frame)) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawRect(brush = Brush.verticalGradient(listOf(landscape.first, landscape.second)))
-            val sunColor = if (sleeping) Color(0xFFE8EDFF) else Color(0xFFFFE6A1)
-            drawCircle(sunColor.copy(alpha = .88f), size.minDimension * .105f,
-                Offset(size.width * .83f, size.height * .18f))
-            drawCircle(Color.White.copy(alpha = .12f), size.minDimension * .33f,
-                Offset(size.width * .5f, size.height * .62f))
-            when (pet.region) {
-                Region.FOREST -> {
-                    drawRect(Color(0xFF28654E), Offset(0f, size.height * .76f),
-                        Size(size.width, size.height * .24f))
-                    for (i in 0..4) {
-                        val x = size.width * (.04f + i * .23f)
-                        drawRect(Color(0xFF624735), Offset(x, size.height * .47f),
-                            Size(13f, size.height * .30f))
-                        drawCircle(Color(0xFF22644B), size.width * .10f,
-                            Offset(x + 7f, size.height * .48f))
-                        drawCircle(Color(0xFF3F9872), size.width * .065f,
-                            Offset(x - 10f, size.height * .43f))
-                    }
-                }
-                Region.MOUNTAINS -> {
-                    for (i in 0..2) {
-                        val left = size.width * (i * .39f - .10f)
-                        val peak = Path().apply {
-                            moveTo(left, size.height * .79f)
-                            lineTo(left + size.width * .26f, size.height * (.23f + i * .06f))
-                            lineTo(left + size.width * .59f, size.height * .79f)
-                            close()
-                        }
-                        drawPath(peak, Color(0xFF475B7E).copy(alpha = .7f))
-                    }
-                    drawRect(Color(0xFF52688E), Offset(0f, size.height * .78f),
-                        Size(size.width, size.height * .22f))
-                }
-                Region.LAKES -> {
-                    drawRect(Color(0xFF3C95B9), Offset(0f, size.height * .74f),
-                        Size(size.width, size.height * .26f))
-                    for (i in 0..5) {
-                        val x = size.width * (i + .3f) / 6f
-                        drawRect(Color(0xFFBDEEF3).copy(alpha = .55f),
-                            Offset(x, size.height * (.81f + (i % 2) * .07f)),
-                            Size(size.width * .085f, 4f))
-                    }
-                }
-                Region.DESERT -> {
-                    drawOval(Color(0xFFF9C781), Offset(-size.width * .15f, size.height * .68f),
-                        Size(size.width * .85f, size.height * .45f))
-                    drawOval(Color(0xFFDC9D65), Offset(size.width * .42f, size.height * .72f),
-                        Size(size.width * .85f, size.height * .38f))
-                }
-                Region.SKY -> {
-                    for (i in 0..4) {
-                        val x = size.width * (i * .26f - .06f)
-                        val y = size.height * (.70f + (i % 2) * .10f)
-                        drawCircle(Color.White.copy(alpha = .70f), size.width * .085f, Offset(x,y))
-                        drawCircle(Color.White.copy(alpha = .62f), size.width * .07f,
-                            Offset(x + size.width * .09f,y))
-                    }
-                }
-            }
-            // Pixel-style objects purchased with coins; drawn into each regional world.
-            if (pet.hasHome) {
-                val x = size.width * .07f
-                val y = size.height * .61f
-                val w = size.width * .22f
-                val h = size.height * .19f
-                drawRect(Color(0xFF27364C), Offset(x - 4f, y - 4f), Size(w + 8f, h + 8f))
-                drawRect(Color(0xFFDCA777), Offset(x, y), Size(w, h))
-                val roof = Path().apply {
-                    moveTo(x - w * .13f, y)
-                    lineTo(x + w * .50f, y - h * .66f)
-                    lineTo(x + w * 1.13f, y)
-                    close()
-                }
-                drawPath(roof, Color(0xFF7D527D))
-                drawRect(Color(0xFF4A3C58), Offset(x + w * .35f, y + h * .36f),
-                    Size(w * .30f, h * .64f))
-                drawRect(Color(0xFFFFE8A0), Offset(x + w * .70f, y + h * .19f),
-                    Size(w * .15f, h * .20f))
-            }
-            if (pet.hasBowl) {
-                val x = size.width * .14f
-                val y = size.height * .85f
-                drawOval(Color(0xFF263855), Offset(x - 5f, y - 4f),
-                    Size(size.width * .135f + 10f, size.height * .073f + 7f))
-                drawOval(Color(0xFFFFBD77), Offset(x, y),
-                    Size(size.width * .135f, size.height * .064f))
-                drawOval(Color(0xFFAE6473), Offset(x + 8f, y + 3f),
-                    Size(size.width * .09f, size.height * .028f))
-            }
-            if (pet.hasCup) {
-                val x = size.width * .32f
-                val y = size.height * .84f
-                drawRect(Color(0xFFE0F7FF), Offset(x, y),
-                    Size(size.width * .045f, size.height * .081f))
-                drawRect(Color(0xFF63CBEA), Offset(x + 3f, y + size.height * .03f),
-                    Size(size.width * .045f - 6f, size.height * .045f))
-                drawRect(Color(0xFFDFEEFF), Offset(x - 3f, y - 3f),
-                    Size(size.width * .06f, 5f))
-            }
-            if (pet.hasCharger) {
-                val x = size.width * .81f
-                val y = size.height * .68f
-                val w = size.width * .12f
-                val h = size.height * .18f
-                drawRect(Color(0xFF172641), Offset(x - 4f, y - 4f), Size(w + 8f, h + 8f))
-                drawRect(Color(0xFF76BEC9), Offset(x, y), Size(w, h))
-                drawRect(Color(0xFF203C5A), Offset(x + w * .18f, y + h * .19f),
-                    Size(w * .64f, h * .45f))
-                val bolt = Path().apply {
-                    moveTo(x + w * .53f, y + h * .24f)
-                    lineTo(x + w * .35f, y + h * .46f)
-                    lineTo(x + w * .50f, y + h * .46f)
-                    lineTo(x + w * .44f, y + h * .60f)
-                    lineTo(x + w * .70f, y + h * .38f)
-                    lineTo(x + w * .54f, y + h * .38f)
-                    close()
-                }
-                drawPath(bolt, Color(0xFFFFE58B))
-            }
-            if (sleeping) drawRect(Color(0xFF101A37).copy(alpha = .24f))
-            for (i in 0..12) {
-                val x = size.width * ((i * 37 + 17) % 97) / 97f
-                val y = size.height * ((i * 29 + 11) % 73) / 100f
-                drawRect(Color.White.copy(alpha = .22f), Offset(x, y), Size(4f, 4f))
+private fun PetStatusCard(pet: Pet, reaction: PetEmotion?, onPetTap: () -> Unit) {
+    val searching = pet.expeditionStartedAt > 0L
+    Card(colors = CardDefaults.cardColors(containerColor = navy)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(pet.region.title, style = MaterialTheme.typography.titleMedium)
+            Text(pet.name, fontWeight = FontWeight.Bold)
+            Text(EmotionResolver.label(EmotionResolver.resolve(pet, reaction)))
+            Button(onClick = onPetTap, enabled = pet.mode == Mode.AWAKE && !searching) {
+                Text("Погратися з вихованцем")
             }
         }
-        Surface(
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-            color = Color(0xFF15253B).copy(alpha = .7f),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(pet.region.icon + " " + pet.region.title,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                style = MaterialTheme.typography.labelMedium, color = Color.White)
-        }
-        if (!(searching && pet.species == Species.KRAPLYK) &&
-            searchFrame?.phase!=SearchPhase.HIDDEN &&
-            !(isKhmaryk && clip==SpriteClip.FLY)) Box(
-            Modifier.align(Alignment.BottomCenter).offset(x=worldX.dp,y = (-35).dp)
-                .size(width = 112.dp, height = 16.dp)
-                .clip(CircleShape).background(Color(0xFF142237).copy(alpha = .25f))
-        )
-        if (searchFrame != null) {
-            SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = false)
-        }
-        // No sliding a seated portrait; no partial alpha on the character.
-        if(searchFrame?.phase != SearchPhase.HIDDEN) GrowthSprite(
-            pet = pet,
-            modifier = Modifier.align(Alignment.Center)
-                .offset(
-                    x = worldX.dp,
-                    y = (17f + worldY).dp
-                )
-                .size(194.dp)
-                .clickable(enabled = pet.mode == Mode.AWAKE && !searching) { onPetTap() },
-            emotion = emotion,
-            eyeClosure = eyeClosure,
-            chewOpen = movementCycle > .5f,
-            motion = motion,
-            motionPhase = movementCycle,
-            facingLeft = facingLeft
-        )
-        if (searching && searchFrame != null) {
-            // Draw over the character: it goes behind foliage, rock, water, sand or cloud.
-            SearchCover(pet.species, searchFrame, Modifier.fillMaxSize(), abovePet = true)
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp),
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xFFFDF9F1),
-                shadowElevation = 5.dp
-            ) {
-                Text(PixubiSearch.icon(pet.species) + " Шукаю!",
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    color = Color(0xFF253149), fontWeight = FontWeight.Bold)
-            }
-        }
-        if (speech != null) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 49.dp)
-                    .offset(y = (-5f * bob).dp),
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xFFFDF9F1),
-                shadowElevation = 5.dp
-            ) {
-                Text(speech, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    color = Color(0xFF253149), fontWeight = FontWeight.Bold)
-            }
-        }
-        Text(
-            when {
-                searching -> "🔎 Досліджую світ…"
-                sleeping -> "Тихенько, відпочиваю…"
-                else -> "Торкнись мене ✨"
-            },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 11.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = .90f)
-        )
     }
 }
 
-/** PIXUBI v0.4 draws the ten original cyber pets from a bundled sprite atlas. */
-@Composable
-private fun PetSprite(
-    species: Species,
-    coatIndex: Int,
-    modifier: Modifier = Modifier,
-    emotion: PetEmotion = PetEmotion.IDLE,
-    blink: Boolean = false,
-    chewOpen: Boolean = false,
-    sex: Sex = Sex.BOY
-) {
-    PixelPetSprite(
-        species = species, sex = sex, coatIndex = coatIndex,
-        modifier = modifier, emotion = emotion, blink = blink, chewOpen = chewOpen
-    )
-}
 
 @Composable
 private fun CatchStarsScreen(

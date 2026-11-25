@@ -49,18 +49,11 @@ fun PixubiSettingsScreen(
     onCheckUpdates: () -> Unit,
     isStableInstall: Boolean,
     checkingForUpdates: Boolean,
-    onBack: () -> Unit,
-    developerPet: Pet? = null
+    onBack: () -> Unit
 ) {
     val context=LocalContext.current
     val version=remember(context){context.packageManager.getPackageInfo(context.packageName,0).versionName ?: "?"}
     var showAbout by rememberSaveable { mutableStateOf(false) }
-    var showDeveloper by remember { mutableStateOf(false) }
-    BackHandler(enabled=showDeveloper){showDeveloper=false;onBack()}
-    if(showDeveloper){
-        PixubiDeveloperScreen(developerPet){showDeveloper=false;onBack()}
-        return
-    }
     BackHandler(enabled=showAbout){showAbout=false}
     if(showAbout) {
         PixubiAboutScreen(version){showAbout=false}
@@ -77,9 +70,6 @@ fun PixubiSettingsScreen(
                 Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
-        }
-        OutlinedButton(onClick={showDeveloper=true},modifier=Modifier.fillMaxWidth()) {
-            Text("🛠 Режим розробника")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
             Text("📖 Про PIXUBI · Світ, види та автори")

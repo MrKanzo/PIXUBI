@@ -113,8 +113,7 @@ fun GrowthGalleryDialog(
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     if (revealed) {
-                        GrowthSprite(pet = pet, previewStage = selected,
-                            modifier = Modifier.size(175.dp))
+                        Text(selected.title, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Box(Modifier.size(175.dp)
                             .background(Color(0xFF13213A), RoundedCornerShape(18.dp)),
@@ -130,7 +129,7 @@ fun GrowthGalleryDialog(
                     when {
                         !revealed -> "Цей образ засекречений. Вирощуй Піксубі й відкривай нові стадії."
                         opened -> "✅ Відкрито назавжди! Форма збереглася в твоїй колекції."
-                        selected == GrowthStage.BABY -> "🐣 Ось яким буде твій малюк!"
+                        selected == GrowthStage.BABY -> "Початкова стадія розвитку."
                         else -> "Продовжуй турбуватися про Піксубі."
                     },
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
