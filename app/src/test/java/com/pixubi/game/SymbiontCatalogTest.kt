@@ -29,6 +29,21 @@ class SymbiontCatalogTest {
             assertTrue((0..3).count{SymbiontCatalog.foot(p,it,false).y==0f}>=2)
         }
     }
+    @Test fun omegaWingGirdleAndFlightCycle(){
+        val f=SymbiontCatalog.of(RobotTier.OMEGA)
+        val left=SymbiontCatalog.wingRoot(f,false,true)
+        val right=SymbiontCatalog.wingRoot(f,false,false)
+        assertEquals(-left.x,right.x,.001f)
+        assertEquals(left.y,right.y,.001f)
+        for(far in listOf(false,true)){
+            val root=SymbiontCatalog.wingRoot(f,true,far)
+            assertTrue(root.x>0f&&root.x<f.length*.67f)
+            assertTrue(root.y<0f&&root.y> -f.depth-f.shoulderRise)
+        }
+        assertTrue(SymbiontCatalog.wingOpening(RobotAction.BIO_FLIGHT)>SymbiontCatalog.wingOpening(RobotAction.IDLE))
+        assertEquals(SymbiontCatalog.wingAngle(0f,RobotAction.BIO_FLIGHT),SymbiontCatalog.wingAngle(1f,RobotAction.BIO_FLIGHT),.001f)
+        assertTrue(SymbiontCatalog.wingAngle(.25f,RobotAction.BIO_FLIGHT)>SymbiontCatalog.wingAngle(.75f,RobotAction.BIO_FLIGHT))
+    }
     @Test fun anatomyAndGates(){
         val f=RobotTier.entries.map(SymbiontCatalog::of)
         assertEquals(listOf("MITE","CRAWLER","STALKER","SYMBIONT","LEVIATHAN"),f.map{it.title})
