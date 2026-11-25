@@ -48,3 +48,6 @@ MK4 reference-style adult is the base for five separately authored shell designs
 
 ## 0.37.11 Early KAGE visual identities
 MK1 has rounded capsule chest, circular core, round visor eyes, short scarf and rounded shin guards. MK2 uses angular hood, horizontal visor eyes, diagonal chest armor and offset core, straight shin lights and shorter angular scarf. Grades 2–4 retain their existing graphics. Shared articulated joints and equipment remain. Device visual review required.
+
+## 0.37.12 KAGE gait fix
+Walk/run automatically use a side view; selecting front returns to idle. Separate cyclical foot stance/swing targets drive two-link leg inverse kinematics, with opposite arm swing, level feet and forward torso lean. Lab locomotion is an in-place gait preview, not world traversal. Applies to all five KAGE forms. Other series and ninja dash rendering retained. Tests cover foot target reconstruction and view selection; on-device review pending.

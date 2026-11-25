@@ -1131,11 +1131,11 @@ internal fun RobotLab(onBack:()->Unit) {
                 Modifier.fillMaxWidth().height(300.dp))
         }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v},label={Text(v.title)}) }
+            RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v;if(series==RobotSeries.KAGE&&v==RobotView.FRONT&&KageGait.isLocomotion(action)){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(v.title)}) }
         }
         Text("Рухи")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            RobotAction.entries.filter{it!=RobotAction.NINJA_DASH||series==RobotSeries.KAGE}.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;if(a==RobotAction.NINJA_DASH){if(view==RobotView.FRONT)view=RobotView.RIGHT;running=true}},label={Text(a.title)}) }
+            RobotAction.entries.filter{it!=RobotAction.NINJA_DASH||series==RobotSeries.KAGE}.forEach { a -> FilterChip(selected=action==a,onClick={action=a;phase=0f;running=true;if(a==RobotAction.NINJA_DASH||(series==RobotSeries.KAGE&&KageGait.isLocomotion(a))){if(view==RobotView.FRONT)view=RobotView.RIGHT}},label={Text(a.title)}) }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Button(onClick={if(action==RobotAction.NINJA_DASH&&phase>=1f)phase=0f;running=!running}){Text(if(running)"Пауза" else "Відтворити")}

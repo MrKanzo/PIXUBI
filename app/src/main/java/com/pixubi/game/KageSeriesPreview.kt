@@ -338,8 +338,10 @@ private fun DrawScope.backPack(a:Color,gear:RobotGear?) {
     }
 }
 @Composable
-internal fun KageSeriesPreview(view:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,showSockets:Boolean,modifier:Modifier=Modifier) {
+internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,showSockets:Boolean,modifier:Modifier=Modifier) {
     val form=KageForms.of(loadout.tier)
+    val view=KageGait.view(requestedView,action)
+    val gait=if(KageGait.isLocomotion(action))KageGait.pose(form,action,phase) else null
     val pose=RobotMotion.pose(action,phase)
     val dash=if(action==RobotAction.NINJA_DASH)KageDashMotion.pose(phase) else null
     val bends=KageJointMotion.of(action,phase)
@@ -355,10 +357,10 @@ internal fun KageSeriesPreview(view:RobotView,action:RobotAction,face:RobotFace,
         drawOval(outline.copy(alpha=.22f),Offset(size.width/2+travel*fit-36f*fit,ground-2f*fit),Size(72f*fit,7f*fit))
         translate(size.width/2+travel*fit,ground){
             scale(fscale*dir,fscale,Offset.Zero){
-                val nearT=dash?.nearThigh?:pose.nearLeg
-                val farT=dash?.farThigh?:pose.farLeg
-                val nearS=nearT+bends.nearKnee
-                val farS=farT+bends.farKnee
+                val nearT=gait?.near?.thigh?:dash?.nearThigh?:pose.nearLeg
+                val farT=gait?.far?.thigh?:dash?.farThigh?:pose.farLeg
+                val nearS=gait?.near?.shin?:nearT+bends.nearKnee
+                val farS=gait?.far?.shin?:farT+bends.farKnee
                 val nt=if(side)nearT else nearT*.18f
                 val ft=if(side)farT else farT*.18f
                 val ns=if(side)nearS else nearS*.18f
@@ -366,15 +368,15 @@ internal fun KageSeriesPreview(view:RobotView,action:RobotAction,face:RobotFace,
                 val hips=64f
                 val base=hips+form.thigh+form.shin+13f
                 fun extent(t:Float,s:Float)=form.thigh*cos(t*PI.toFloat()/180f)+form.shin*cos(s*PI.toFloat()/180f)+13f
-                val drop=if(dash!=null||action==RobotAction.WALK||action==RobotAction.RUN)(form.thigh+form.shin+13f-max(extent(nt,ns),extent(ft,fs))).coerceAtLeast(0f) else 0f
-                val lean=if(side)dash?.lean?:0f else -(dash?.lean?:0f)*.2f
-                translate(0f,-base+drop+pose.lift){
+                val drop=gait?.drop?:if(dash!=null)(form.thigh+form.shin+13f-max(extent(nt,ns),extent(ft,fs))).coerceAtLeast(0f) else 0f
+                val lean=if(side)gait?.lean?:dash?.lean?:0f else -(dash?.lean?:0f)*.2f
+                translate(0f,-base+drop+if(gait==null)pose.lift else 0f){
                     if(dash!=null&&dash.trail>0f&&side)for(i in 0..4)led(-110f-i*4f,30f+i*20f,-65f-i*4f,30f+i*20f,a.copy(alpha=dash.trail*.6f),1.5f)
                     val boots=e.equipped(RobotSlot.FEET)
                     val nearX=if(side)5f else 16f
                     val farX=if(side)-5f else -16f
-                    val nearA=dash?.nearArm?:pose.nearArm
-                    val farA=dash?.farArm?:pose.farArm
+                    val nearA=gait?.nearArm?:dash?.nearArm?:pose.nearArm
+                    val farA=gait?.farArm?:dash?.farArm?:pose.farArm
                     val swordReady=action==RobotAction.ATTACK&&g>=1&&e.equipped(RobotSlot.LEFT_HAND)==null
                     fun DrawScope.rear(){
                         scarfTail(form,side,a,phase,action,dash?.trail?:0f)
