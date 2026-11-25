@@ -1,0 +1,4 @@
+# 0.33.3 model review
+Reviewed existing reference atlas, illustrated pose packs and prior face/motion contact sheets.
+The 14 generated forms now use one stage-specific proportional fit, common baseline, and nearest-neighbor native pixel blocks. Their walking motion uses an additional middle pose and slightly greater paw lift; existing authored poses are preserved. The animation matrix blink cell now opens and closes repeatedly rather than showing a permanent closed eye. The developer screen now identifies the active atlas correctly.
+Added a host-JVM review sheet (14 generated forms x 2 sexes; four gait poses, one special-action pose, one closed-eye pose). This is a sprite review, not Android device validation. Full independent sleep and side-view pose packs, detailed sex-specific art, and stronger swim/flight articulation still require authoring. No claim that all visual defects are fixed.

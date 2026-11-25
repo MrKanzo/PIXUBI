@@ -110,11 +110,8 @@ internal fun PixubiDeveloperScreen(realPet:Pet?,onExit:()->Unit) {
             if(spec.species==Species.KRAPLYK && spec.stage==GrowthStage.BABY)
                 Text("Краплик: оригінальні ходьба й плавання; сон поки використовує позу із заплющеними очима.",
                     color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
-            else if(LisykStandardArtwork.matches(spec.species,spec.stage))
-                Text("16 поз у тимчасовому піксельному атласі; художню якість ще не затверджено.",
-                    color=Color(0xFF98E6CD),style=MaterialTheme.typography.bodySmall)
-            else if(PetPosePack.forPet(spec.species,spec.stage)==null)
-                Text("Для цієї форми деякі рухи ще не мають готових художніх кадрів. Режим покаже поточну реалізацію, а не вигадану анімацію.",
+            else if(PixuArtRouting.source(spec.species,spec.stage)!=PixuArtSource.POSE_PACK)
+                Text("Власний видовий спрайт; рухи створені з його пікселів. Окремі художні пози сну, ходьби та особливих дій ще потребують перевірки.",
                     color=Color(0xFFFFD58A),style=MaterialTheme.typography.bodySmall)
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Text("Рух ліворуч",modifier=Modifier.weight(1f))

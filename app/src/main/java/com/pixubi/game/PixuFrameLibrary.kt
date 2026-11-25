@@ -18,6 +18,7 @@ internal object PixuFrameLibrary {
     private data class Model(val species:Species,val stage:GrowthStage,val sex:Sex)
     private data class FaceKey(val model:Model,val emotion:PetEmotion)
     private val originals=mutableMapOf<Model,IntArray>()
+    private val layouts=mutableMapOf<Model,NativeSpriteLayout.Fit>()
     private val faces=object:LruCache<FaceKey,List<IntArray>>(8*1024*1024){
         override fun sizeOf(key:FaceKey,value:List<IntArray>)=value.sumOf{it.size*4}
     }
@@ -54,12 +55,11 @@ internal object PixuFrameLibrary {
                 k.species==Species.KHMARYK,k.emotion).also{faces.put(fk,it)}
             frames[idx]
         }
-        val moved=if(older)IllustratedMotionFrames.frameWithParts(pixels,CELL,k.species,
-            ReferenceOlderFrames.anatomy(k.species,k.stage),k.clip,k.frame,older=true)
-        else IllustratedMotionFrames.frame(pixels,CELL,k.species,k.stage,k.clip,k.frame)
-        // Young reference faces left; older reference faces right.
-        val oriented=if(!older&&directional(k.clip))PixuRaster.mirror(moved,CELL) else moved
-        return Bitmap.createBitmap(PixuRaster.pixelate(oriented,CELL),CELL,CELL,Bitmap.Config.ARGB_8888)
+        val moved=NativeSpriteLayout.nativeMotion(pixels,k.species,k.stage,k.clip,k.frame)
+        val fit=layouts.getOrPut(model){NativeSpriteLayout.fit(src,k.stage)}
+        // Preserve the source orientation at rest; normalize travel to right.
+        val oriented=NativeSpriteLayout.render(moved,fit,mirror=!older&&directional(k.clip))
+        return Bitmap.createBitmap(oriented,CELL,CELL,Bitmap.Config.ARGB_8888)
     }
 
     @Synchronized fun get(context:Context,k:PixuFrameKey):Bitmap {

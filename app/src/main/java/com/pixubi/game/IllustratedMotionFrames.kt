@@ -125,21 +125,21 @@ internal object IllustratedMotionFrames {
 
     /** The new atlas supplies its own measured per-character attachment map. */
     fun frameWithParts(src:IntArray,n:Int,s:Species,parts:Parts,clip:SpriteClip,index:Int,
-                       older:Boolean=false):IntArray {
+                       older:Boolean=false,enhanced:Boolean=false):IntArray {
         require(n>0 && src.size==n*n)
         val out=src.copyOf()
         if(clip==SpriteClip.SLEEP || clip==SpriteClip.SAD || clip==SpriteClip.TIRED || index==0)return out
-        val wag=when(index%4){1->-.075f;2->0f;3->.075f;else->0f}
+        val wag=when(index%4){1->-.075f;2->if(enhanced).04f else 0f;3->.075f;else->0f}
         val strong=clip in listOf(SpriteClip.HAPPY,SpriteClip.SWIM,SpriteClip.FLY)
         for((i,t) in parts.tips.withIndex()) {
             val angle=wag*(if(strong)1.5f else 1f)*(if(older).65f else 1f)*(if(s==Species.KHMARYK&&i%2==1)-1f else 1f)
             turn(out,src,n,t,angle)
         }
         if(clip in listOf(SpriteClip.WALK,SpriteClip.DIG,SpriteClip.HOP) || (!older && clip in listOf(SpriteClip.SWIM,SpriteClip.FLY))) {
-            val i=when(index%4){1->0;3->1;else->-1}
+            val i=when(index%4){1->0;2->if(enhanced&&parts.paws.size>2)2 else -1;3->1;else->-1}
             if(i>=0 && parts.paws.isNotEmpty()) {
                 // Lift alternating intact paws by just a few source pixels.
-                lift(out,src,n,parts.paws[i%parts.paws.size],if(clip==SpriteClip.DIG)5 else 3)
+                lift(out,src,n,parts.paws[i%parts.paws.size],if(clip==SpriteClip.DIG)5 else if(enhanced)5 else 3)
                 if(parts.paws.size>2 && i==0)lift(out,src,n,parts.paws[2],2)
             }
         }

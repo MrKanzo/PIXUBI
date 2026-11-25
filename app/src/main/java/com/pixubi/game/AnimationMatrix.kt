@@ -43,7 +43,8 @@ internal fun AnimationMatrix(spec:DevSpec,seconds:Float,left:Boolean,modifier:Mo
                                     val x=if(action==DevAction.WALK)(if(left)-1f else 1f)*
                                         12f*kotlin.math.sin(kotlin.math.PI*phase).toFloat() else 0f
                                     FramePetSprite(spec.species,spec.stage,spec.sex,spec.color,emotion,motion,phase,
-                                        false,if(action==DevAction.BLINK)1f else NativeEyeMotion.blinkAt(scene.blinkCycle),
+                                        false,if(action==DevAction.BLINK)NativeEyeMotion.blinkAt((seconds%1.2f)/1.2f)
+                                        else NativeEyeMotion.blinkAt(scene.blinkCycle),
                                         Modifier.offset(x=x.dp,y=y.dp).size(78.dp),
                                         if(action==DevAction.WALK&&phase>.5f)!left else left)
                                 } else Text("Не властиво виду",style=MaterialTheme.typography.labelSmall,
