@@ -24,3 +24,6 @@ Five new female companion chassis rendered procedurally from the approved concep
 
 ## 0.37.3 Companion visual rebuild
 Reference-led procedural rebuild of the female head, face bezel, shoulders, chest, hip plating, articulated arms, hands, knees and boots, with layered metal shading and tinted hair tips. Independent limb renderer uses shared action angles and gear IDs. Classic series unchanged. Concept is three-quarter artwork rather than a layered orthographic animation asset; runtime is a hand-built approximation, not a pixel-identical import. Check all tiers and gear combinations on device. Main pet screen remains separate.
+
+## 0.37.4 PX-N7 KAGE
+Third series, five preview stages with independent hood/mask, angular eyes, articulated dark metal limbs, hex core, scarf and tier-dependent armor. Default cyan accent stored separately; animated scarf follows shared action phase. Cosmetic sheathed katana from MK2 when back slot is empty, drawn in attack if left hand is free; not a new combat mechanic or inventory item. Existing gear slots, stats, XP and motion shared. Existing Classic and Companion render paths preserved. Concept-inspired vector recreation, not exact artwork; visual checks on device required. No new main-screen integration.
