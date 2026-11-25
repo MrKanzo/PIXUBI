@@ -62,9 +62,13 @@ private fun DrawScope.facePixels(a:Color,g:Int,side:Boolean,f:RobotFace,blink:Bo
             for(i in 0..2)drawRect(a,Offset(x-4f+i*3f,-8f+i*(if(f==RobotFace.SAD)1f else 0f)),Size(2f,12f-i))
         }else{
             val sign=if(side)1f else if(x<0)-1f else 1f
-            val dy=if(f==RobotFace.SAD)2f else if(f==RobotFace.ANGRY)-5f else -2f
-            glowLine(a,x-7f*sign,-7f,x+4f*sign,dy,2.6f)
-            if(g>=3)glowLine(a,x+4f*sign,dy,x+1f*sign,10f,1.7f)
+            val outer=x+7f*sign
+            val inner=x-6f*sign
+            val oy=if(f==RobotFace.SAD)1f else if(f==RobotFace.ANGRY)-9f else -5f
+            val iy=if(f==RobotFace.SAD)-7f else if(f==RobotFace.ANGRY)-1f else -3f
+            poly("M $outer $oy L $inner $iy L ${inner+sign*2f} ${iy+5f} L ${outer-sign*3f} ${oy+5f} Z",a,.55f)
+            glowLine(a,outer,oy,inner,iy,1.8f)
+            if(g>=3&&f==RobotFace.NEUTRAL)glowLine(a,inner+sign*2f,iy+5f,inner+sign*4f,8f,1.5f)
         }
     }
 }
@@ -74,21 +78,32 @@ private fun DrawScope.glitchHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Bo
             0->"M -30 -14 Q -32 -41 0 -42 Q 33 -41 35 -13 L 32 13 Q 12 27 -20 20 Z"
             1->"M -34 -17 L -27 -39 L -9 -45 L 18 -38 L 37 -16 L 30 14 L 13 24 L -25 17 Z"
             2->"M -38 -17 L -24 -35 L -40 -39 L -10 -46 L 18 -39 L 40 -15 L 29 15 L 9 25 L -25 15 Z"
-            else->"M -38 -18 L -23 -39 L -36 -46 L -9 -49 L 15 -43 L 42 -15 L 31 10 L 12 26 L -25 15 Z"
+            3->"M -36 -18 Q -37 -33 -23 -40 L -31 -45 L -8 -48 Q 22 -47 39 -17 L 31 -9 L 27 10 L 12 26 Q -20 25 -32 6 Z"
+            else->"M -37 -18 Q -38 -36 -20 -43 L -27 -49 L -7 -48 Q 24 -46 42 -17 L 34 -10 L 28 11 L 14 27 Q -22 24 -33 6 Z"
         }
         plate(hood,if(g<2)pale else slate)
-        poly("M 6 -29 L 33 -15 L 27 9 L 13 20 L 2 6 Z",visor)
-        if(g>=2)plate("M 7 4 L 27 0 L 22 14 L 13 20 Z",slate)
-        glowLine(a,13f,-30f,29f,-18f,2.4f)
-        translate(-14f,-1f){hinge(a,if(g<2)10f else 7f)}
-        if(g<2)plate("M -21 -31 L -25 -48 L -8 -37 Z",slate)
-        else poly("M -26 -34 L -34 -48 L -13 -40 Z",dark)
+        if(g>=3){
+            poly("M 11 -30 Q 28 -24 36 -15 L 31 -6 L 28 9 L 14 23 L 4 10 L 1 -8 Z",visor)
+            plate("M 10 3 L 28 -2 L 26 10 L 14 23 L 6 11 Z",slate)
+            plate("M -7 -45 Q 24 -46 42 -17 L 34 -10 Q 24 -24 11 -30 L 3 -33 Z",slate)
+            poly("M -36 -18 Q -21 -10 -11 8 Q -1 20 14 27 Q -21 24 -33 6 Z",dark,.9f)
+            glowLine(a,22f,-29f,33f,-18f,2.5f)
+            drawLine(slate,Offset(-23f,-7f),Offset(-9f,15f),1.1f)
+            translate(-15f,-10f){hinge(a,5f)}
+        }else{
+            poly("M 6 -29 L 33 -15 L 27 9 L 13 20 L 2 6 Z",visor)
+            if(g>=2)plate("M 7 4 L 27 0 L 22 14 L 13 20 Z",slate)
+            glowLine(a,13f,-30f,29f,-18f,2.4f)
+            translate(-14f,-1f){hinge(a,if(g<2)10f else 7f)}
+            if(g<2)plate("M -21 -31 L -25 -48 L -8 -37 Z",slate)
+            else poly("M -26 -34 L -34 -48 L -13 -40 Z",dark)
+        }
     }else{
         val hood=when(g){
             0->"M -34 -11 Q -35 -42 0 -42 Q 35 -42 34 -11 Q 35 24 0 25 Q -35 24 -34 -11 Z"
             1->"M 0 -45 Q 25 -43 36 -16 L 37 8 L 23 23 L -23 23 L -37 8 L -36 -16 Q -25 -43 0 -45 Z"
             2->"M 0 -47 L 19 -40 L 38 -12 L 35 13 L 0 27 L -35 13 L -38 -12 L -19 -40 Z"
-            else->"M 0 -49 L 20 -42 L 40 -12 L 35 14 L 0 28 L -35 14 L -40 -12 L -20 -42 Z"
+            else->"M 0 -49 Q 23 -46 35 -24 L 40 -12 L 35 14 Q 17 25 0 28 Q -17 25 -35 14 L -40 -12 L -35 -24 Q -23 -46 0 -49 Z"
         }
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
             plate("M 19 -32 L 26 -48 L 36 -25 Z",slate)
@@ -100,9 +115,12 @@ private fun DrawScope.glitchHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Bo
             if(g<=1)translate(34f,-1f){hinge(a,7f)}
             else{plate("M 27 4 L 35 -1 L 27 17 L 16 21 Z",slate);glowLine(a,28f,-20f,34f,-10f)}
         }
-        if(g>=3)glowLine(a,0f,-22f,0f,-13f,1.3f)
+        if(g>=3){
+            for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){plate("M 0 -49 Q 23 -46 35 -24 L 40 -12 L 33 -9 L 27 -22 Q 13 -36 0 -38 Z",slate)}
+            glowLine(a,0f,-24f,0f,-18f,1.3f)
+        }
     }
-    facePixels(a,g,side,f,blink)
+    if(side&&g>=3)translate(3f,-1f){scale(.86f,1f,Offset(15f,0f)){facePixels(a,g,true,f,blink)}} else facePixels(a,g,side,f,blink)
     when(gear){
         RobotGear.SCANNER->{poly("M -11 -47 L 12 -47 L 15 -39 L -12 -39 Z",dark);glowLine(a,-6f,-43f,8f,-43f)}
         RobotGear.HELMET->plate("M -27 -30 Q 0 -53 27 -30 L 20 -27 Q 0 -44 -20 -27 Z")
@@ -216,6 +234,8 @@ private fun DrawScope.wings(a:Color,side:Boolean,action:RobotAction,phase:Float)
                 scale(1f,(100f-i*9f)/100f,Offset.Zero){
                     plate("M -8 0 L 6 -6 L 17 15 L 12 43 L 2 75 L -6 97 L -10 62 Z",slate)
                     poly("M 5 28 L 12 20 L 10 54 L -6 97 L -2 57 Z",a,.7f)
+                    plate("M -6 7 L 5 1 L 12 16 L 6 32 L -5 48 L -8 30 Z",slate)
+                    poly("M -5 48 L 5 32 L 0 64 L -6 77 Z",dark,.65f)
                     glowLine(a,6f,38f,-3f,79f,2f)
                 }
             }

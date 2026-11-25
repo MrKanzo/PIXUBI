@@ -69,3 +69,6 @@ Fourth lab series: BYTE, PROXY, GHOST, GLITCH, OVERLORD. Independent vector shel
 
 ## 0.39.0 GENESIS
 Separate Robot Lab incubation screen with random hidden or manual series choice, four original MK-0 vessels (cube, orb, pod, seed), randomized saved color and trait, 8% golden chance for mystery mode. Charge, sync and touch; 100% energy plus all care types unlock the hatch animation. Interrupted hatch can be restarted; progress, newborn identity and name persist locally. Adopt previews the selected MK-1 in the lab. No changes to main game save, real-time incubation or actual trait-driven behavior. Test reset requires confirmation.
+
+## 0.39.1 GLITCH polish
+Refined MK-4/MK-X hood front/profile, recessed face and eye expression for MK-3 and later, extra articulated wing panel details on OVERLORD. Drone rendering, flight orbit, counts, all action timelines, GENESIS and other series unchanged. Device visual verification pending.
