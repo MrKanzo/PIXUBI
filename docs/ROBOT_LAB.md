@@ -39,3 +39,6 @@ Reference-led full-body proportion pass: elongated independently articulated thi
 
 ## 0.37.8 KAGE reference artwork
 Actual front/profile crops from the approved KAGE character sheet, transparent local PNG atlas (137x140, reduced palette), MK4 only. Reference artwork is the default when selecting KAGE in Robot Lab; modular mode is available for equipment, other skins and socket inspection. Reference animation uses separately clipped limb polygons, shared action pose and dash timing, approximate visor overlays; requires device review. No new art for other evolution stages, no main pet integration. Existing procedural renderer and loadout persistence retained.
+
+## 0.37.9 Unified KAGE series
+All five KAGE forms now use a single new layered vector rig, with distinct stage dimensions and armor packages, a reference-style hood, inset visor, scarf, hip armor, limb plating, and OMEGA energy fins. Modular gear is rendered on its own anchors in every stage; all motions and dash remain accessible. The single cropped MK4 reference mode is removed. This is new hand-authored 2D art inspired by the reference, not a pixel-perfect reproduction. Needs on-device visual and motion review. Classic and Companion unchanged; lab only.
