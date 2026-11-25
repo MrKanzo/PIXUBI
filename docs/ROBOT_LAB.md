@@ -30,3 +30,6 @@ Third series, five preview stages with independent hood/mask, angular eyes, arti
 
 ## 0.37.5 KAGE detail and ninja dash
 Refined hood, face mask, panel highlights, articulated two-segment legs and armor details. KAGE-only one-shot 1250 ms dash, kneel preparation, forward translation, recovery and speed lines; side direction mirrors with view, front uses depth scale. Frame controls support pause, stepping and replay. This is a lab animation, not movement in the actual pet world. Concept remains a procedural interpretation; visual fit and foot contact need device verification. Other two series are unchanged.
+
+## 0.37.6 KAGE proportion polish
+Hood, face and head gear scale about their fixed neck anchor by tier (94%, 91%, 89%, 88%, 88% of previous geometry); neck, mask seams, chest plate edges, shoulder highlights and thigh details refined. KAGE neutral head socket follows scale. Existing dash timeline and limb pivots unchanged. Classic and Companion unchanged. Device visual review still required.

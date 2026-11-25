@@ -14,13 +14,13 @@ internal object CompanionCatalog {
     }
 }
 
-internal data class KageDesign(val title:String,val scale:Float,val armor:Float,val scarfLength:Float)
+internal data class KageDesign(val title:String,val scale:Float,val armor:Float,val scarfLength:Float,val headScale:Float)
 internal object KageCatalog {
     fun of(tier:RobotTier):KageDesign=when(tier) {
-        RobotTier.MK1->KageDesign("Учень",.78f,0f,34f)
-        RobotTier.MK2->KageDesign("Розвідник",.87f,1f,48f)
-        RobotTier.MK3->KageDesign("Тінь",.95f,2f,63f)
-        RobotTier.MK4->KageDesign("Майстер тіней",1f,3f,78f)
-        RobotTier.OMEGA->KageDesign("KAGE · OMEGA",1.04f,4f,90f)
+        RobotTier.MK1->KageDesign("Учень",.78f,0f,34f,.94f)
+        RobotTier.MK2->KageDesign("Розвідник",.87f,1f,48f,.91f)
+        RobotTier.MK3->KageDesign("Тінь",.95f,2f,63f,.89f)
+        RobotTier.MK4->KageDesign("Майстер тіней",1f,3f,78f,.88f)
+        RobotTier.OMEGA->KageDesign("KAGE · OMEGA",1.04f,4f,90f,.88f)
     }
 }
