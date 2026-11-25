@@ -51,8 +51,7 @@ internal fun PixubiAboutScreen(version:String,onBack:()->Unit) {
                             colors=CardDefaults.cardColors(containerColor=loreCard)) {
                             Column(Modifier.padding(15.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment=Alignment.CenterVertically) {
-                                    IllustratedYoungPixu(s,Sex.BOY,0,GrowthStage.BABY,
-                                        modifier=Modifier.size(86.dp))
+                                    Text(s.icon, style=MaterialTheme.typography.headlineLarge, modifier=Modifier.size(86.dp))
                                     Column(Modifier.weight(1f).padding(start=8.dp)){
                                         Text(s.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=loreMint)
                                         Text(story.epithet,color=loreGold,style=MaterialTheme.typography.bodySmall)
