@@ -1184,8 +1184,21 @@ internal fun RobotLab(onBack:()->Unit) {
             RobotChassisCatalog.unlocked(tier,progress.level)->"Доступний за рівнем"
             else->"Тестовий перегляд · відкриття з рівня ${tier.requiredLevel}"
         },style=MaterialTheme.typography.bodySmall)
+        var showHabitat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+        val habitat=HabitatCatalog.of(series)
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){
+                Text(habitat.title,style=MaterialTheme.typography.titleMedium)
+                Text(habitat.description,style=MaterialTheme.typography.bodySmall)
+            }
+            FilterChip(selected=showHabitat,onClick={showHabitat=!showHabitat},label={Text("Фон")})
+        }
         Card {
-            RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,
+            if(showHabitat){
+                HabitatScene(series,phase,Modifier.fillMaxWidth().height(300.dp)){
+                    RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,Modifier.fillMaxSize())
+                }
+            }else RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,
                 Modifier.fillMaxWidth().height(300.dp))
         }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {

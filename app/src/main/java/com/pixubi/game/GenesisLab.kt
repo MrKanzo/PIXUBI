@@ -183,7 +183,9 @@ internal fun GenesisLab(onBack:()->Unit,onAdopt:(GenesisState)->Unit){
             Text(if(s.born)"MK-1 · Народження завершено" else if(reveal)GenesisRules.vessel(s.series) else "Невідомий цифровий зародок",style=MaterialTheme.typography.titleLarge)
             Card{
                 if(s.born||opening&&hatch.value>.84f){
-                    RobotPreview(RobotView.FRONT,RobotAction.WAVE,RobotFace.HAPPY,RobotLoadout(s.skin.accent,RobotEquipment(),RobotTier.MK1,s.series),phase,false,Modifier.fillMaxWidth().height(270.dp))
+                    HabitatScene(s.series,phase,Modifier.fillMaxWidth().height(270.dp)){
+                        RobotPreview(RobotView.FRONT,RobotAction.WAVE,RobotFace.HAPPY,RobotLoadout(s.skin.accent,RobotEquipment(),RobotTier.MK1,s.series),phase,false,Modifier.fillMaxSize())
+                    }
                 }else GenesisVessel(s,phase,if(opening)hatch.value else 0f,Modifier.fillMaxWidth().height(270.dp))
             }
             if(!s.born){
