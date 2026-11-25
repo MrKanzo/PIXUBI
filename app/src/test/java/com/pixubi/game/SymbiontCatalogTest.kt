@@ -2,6 +2,11 @@ package com.pixubi.game
 import org.junit.Assert.*
 import org.junit.Test
 class SymbiontCatalogTest {
+    @Test fun predatorProportions(){
+        val forms=RobotTier.entries.map(SymbiontCatalog::of)
+        assertTrue(forms.all{it.frontBulk>it.rearBulk&&it.shoulderRise>it.rumpDrop})
+        assertTrue(forms.zipWithNext().all{(a,b)->b.frontBulk/b.rearBulk>a.frontBulk/a.rearBulk&&b.clawReach>a.clawReach})
+    }
     @Test fun anatomyAndGates(){
         val f=RobotTier.entries.map(SymbiontCatalog::of)
         assertEquals(listOf("MITE","CRAWLER","STALKER","SYMBIONT","LEVIATHAN"),f.map{it.title})
