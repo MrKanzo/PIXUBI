@@ -82,29 +82,31 @@ private fun DrawScope.kageMask(side:Boolean,f:RobotFace,blink:Boolean,a:Color) {
 }
 private fun DrawScope.omegaHood(side:Boolean,a:Color,f:RobotFace,blink:Boolean) {
     val silhouette=if(side)
-        "M -35 -16 Q -38 -35 -13 -43 L 7 -46 Q 25 -44 33 -30 L 43 -17 L 34 -11 L 29 7 L 16 22 L -4 26 L -22 17 Q -34 5 -35 -16 Z"
+        "M -36 -17 C -36 -36 -16 -46 5 -46 C 22 -45 34 -32 40 -18 L 34 -12 Q 31 9 18 21 L 4 27 L -18 21 Q -32 8 -36 -17 Z"
     else "M 0 -49 C 17 -48 29 -34 38 -10 L 41 2 Q 27 21 0 25 Q -27 21 -41 2 L -38 -10 C -29 -34 -17 -48 0 -49 Z"
     val hood=PathParser().parsePathString(silhouette).toPath()
     drawPath(hood,Brush.linearGradient(listOf(Color(0xFF656173),Color(0xFF454357),Color(0xFF242633)),Offset(-28f,-44f),Offset(29f,24f)))
     drawPath(hood,outline,style=Stroke(1.6f,join=StrokeJoin.Round))
     if(side){
-        // True right-facing profile: the hood projects above the brow,
-        // its rear drape wraps behind the neck, and the face sits inside the rim.
-        shape("M 16 -30 L 43 -17 L 34 -10 L 31 4 L 19 20 L 8 13 L 3 -5 Z",black)
-        metal("M 14 -24 L 34 -15 L 30 -7 L 15 -8 L 9 -13 Z",carbon,black)
-        shape("M 13 1 L 31 -5 L 29 8 L 19 20 L 9 10 Z",graphite)
-        metal("M 26 0 L 32 -4 L 29 9 L 19 20 L 18 12 Z",steel,graphite)
-        translate(4f,-1f){kageMask(true,f,blink,a)}
-        // Hood fabric lies over the visor edge, instead of a floating forehead plate.
-        shape("M 7 -46 Q 25 -44 33 -30 L 43 -17 L 34 -11 L 16 -30 L 7 -34 Z",Color(0xFF454357))
-        line(15f,-32f,34f,-13f,Color(0xFF777284),1.1f)
-        led(23f,-29f,31f,-21f,a,2.6f)
-        shape("M -31 -17 Q -19 -11 -6 5 L 8 18 L 16 22 L -4 26 L -22 17 Q -34 5 -35 -16 Z",Color(0xFF353747))
-        line(-29f,-27f,-9f,-40f,steel,.8f)
-        line(-21f,-3f,-8f,16f,Color(0xFF57596B),1f)
-        // Small fabric insignia rather than a mechanical ear on the hood.
-        shape("M -19 -23 L -15 -25 L -11 -22 L -7 -24 L -5 -20 L -8 -15 L -15 -14 L -19 -18 Z",steel,.45f)
-        drawCircle(a,1.3f,Offset(-12f,-20f))
+        // Continuous cloth contour over an inset, single-eye profile.
+        shape("M 13 -30 Q 28 -24 36 -15 L 32 -6 L 29 8 L 18 21 L 7 13 L 3 -6 Z",black)
+        metal("M 13 -24 Q 25 -20 31 -14 L 28 -8 L 16 -10 L 9 -15 Z",carbon,black)
+        shape("M 12 0 L 29 -5 L 29 6 L 21 17 L 17 20 L 9 10 Z",graphite)
+        metal("M 24 2 L 30 -4 L 28 9 L 19 19 L 18 12 Z",steel,graphite)
+        // The eye follows the sloping visor rather than extending beyond its edge.
+        translate(3f,-1f){scale(.86f,1f,Offset(18f,-3f)){kageMask(true,f,blink,a)}}
+        val rim=PathParser().parsePathString("M -5 -43 Q 22 -46 40 -18 L 34 -12 Q 23 -25 13 -30 L 6 -31 Z").toPath()
+        drawPath(rim,Brush.linearGradient(listOf(Color(0xFF6A6579),Color(0xFF3D3B4D)),Offset(2f,-43f),Offset(34f,-12f)))
+        drawPath(rim,outline,style=Stroke(1f))
+        led(24f,-28f,31f,-21f,a,2.5f)
+        // Soft drape around the cheek; no hard diagonal seam across the hood.
+        val fold=PathParser().parsePathString("M -35 -17 Q -22 -10 -12 6 Q -4 19 17 22 L 4 27 L -18 21 Q -32 8 -35 -17 Z").toPath()
+        drawPath(fold,Brush.linearGradient(listOf(Color(0xFF454558),Color(0xFF2B2D3C)),Offset(-30f,-14f),Offset(7f,25f)))
+        drawPath(fold,outline,style=Stroke(.8f))
+        line(-26f,-29f,-7f,-39f,Color(0xFF777284),.9f)
+        line(-20f,-4f,-8f,14f,Color(0xFF57596B),.9f)
+        shape("M -18 -23 L -14 -25 L -10 -22 L -6 -24 L -4 -20 L -8 -16 L -14 -15 L -18 -19 Z",steel,.45f)
+        drawCircle(a,1.2f,Offset(-11f,-20f))
     }else{
         shape("M 0 -28 Q 23 -20 32 -1 Q 25 17 0 22 Q -25 17 -32 -1 Q -23 -20 0 -28 Z",black)
         metal("M -22 -8 L -12 -19 L 0 -25 L 12 -19 L 22 -8 L 0 3 Z",carbon,black)
@@ -382,10 +384,11 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
         joint(0f,0f,6.7f,a)
         scale(1f,v/47f,Offset.Zero){
             if(side&&g==4){
-                metal("M -11 8 L -2 8 L 9 14 L 12 24 L 6 36 L 5 47 L -7 47 L -9 34 L -13 20 Z",carbon,black)
+                metal("M -11 8 L -2 8 L 9 14 L 12 24 L 6 36 L 5 47 L -7 47 L -9 34 L -13 20 Z",if(far)graphite else carbon,black)
                 metal("M 0 -7 L 9 -6 L 15 1 L 10 13 L 3 17 L -2 10 Z",if(far)steel else silver,graphite)
-                drawCircle(steel,4.7f,Offset(-3f,2f));drawCircle(graphite,3.1f,Offset(-3f,2f))
-                led(7f,16f,4f,27f,a,2.7f);led(4f,27f,1f,38f,a,2.5f)
+                drawCircle(if(far)carbon else steel,4.7f,Offset(-3f,2f));drawCircle(graphite,3.1f,Offset(-3f,2f))
+                val shinLight=if(far)a.copy(alpha=.45f) else a
+                led(7f,16f,4f,27f,shinLight,2.7f);led(4f,27f,1f,38f,shinLight,2.5f)
             }else{
             metal(KageShells.of(g).knee,if(far)steel else silver,graphite)
             metal(KageShells.of(g).shin,carbon,black)
@@ -403,9 +406,9 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
         translate(0f,v){rotate(if(plant)-shin else ankle,Offset.Zero){
             joint(0f,0f,5.2f,a)
             val toe=if(side)20 else 12
-            metal("M -8 -4 L 8 -4 L $toe 8 L $toe 13 L -11 13 L -12 8 Z",steel,graphite)
-            metal("M -7 -5 L 5 -5 L 9 3 L 5 6 L -6 3 Z",silver,graphite)
-            led(-7f,10f,toe-2f,10f,a,2f)
+            metal("M -8 -4 L 8 -4 L $toe 8 L $toe 13 L -11 13 L -12 8 Z",if(side&&g==4&&far)carbon else steel,graphite)
+            metal("M -7 -5 L 5 -5 L 9 3 L 5 6 L -6 3 Z",if(side&&g==4&&far)steel else silver,graphite)
+            led(-7f,10f,toe-2f,10f,if(side&&g==4&&far)a.copy(alpha=.45f) else a,2f)
             if(boots==RobotGear.BOOTS||boots==RobotGear.SPEED_BOOTS){
                 metal("M -12 -2 L 9 -2 L ${toe+3} 8 L ${toe+3} 14 L -14 14 Z",steel,black)
                 led(-9f,11f,toe.toFloat(),11f,a,if(boots==RobotGear.SPEED_BOOTS)3f else 1.8f)
@@ -500,8 +503,8 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                 translate(0f,-base+drop+if(gait==null)pose.lift else 0f){
                     if(dash!=null&&dash.trail>0f&&side)for(i in 0..4)led(-110f-i*4f,30f+i*20f,-65f-i*4f,30f+i*20f,a.copy(alpha=dash.trail*.6f),1.5f)
                     val boots=e.equipped(RobotSlot.FEET)
-                    val nearX=if(side&&g==4)3f else if(side)5f else 16f
-                    val farX=if(side&&g==4)-7f else if(side)-5f else -16f
+                    val nearX=if(side&&g==4)1f else if(side)5f else 16f
+                    val farX=if(side&&g==4)1f else if(side)-5f else -16f
                     val nearA=gait?.nearArm?:dash?.nearArm?:pose.nearArm
                     val farA=gait?.farArm?:dash?.farArm?:pose.farArm
                     val swordReady=action==RobotAction.ATTACK&&g>=1&&e.equipped(RobotSlot.LEFT_HAND)==null
@@ -514,7 +517,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                     }
                     if(side){
                         leg(form,farX,hips,ft,fs,true,true,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
-                        rotate(lean,Offset(0f,hips)){rear();arm(form,if(g==4)-5f else -4f,4f,farA,true,a,e.equipped(view.farHand()),swordReady&&view.farHand()==RobotSlot.LEFT_HAND,bends.farElbow,bends.wrist,showSockets,profile=true)}
+                        rotate(lean,Offset(0f,hips)){rear();arm(form,if(g==4)-3f else -4f,4f,farA,true,a,e.equipped(view.farHand()),swordReady&&view.farHand()==RobotSlot.LEFT_HAND,bends.farElbow,bends.wrist,showSockets,profile=true)}
                         leg(form,nearX,hips,nt,ns,true,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
                         rotate(lean,Offset(0f,hips)){
                             torso(form,true,a,e)

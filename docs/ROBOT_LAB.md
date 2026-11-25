@@ -60,3 +60,6 @@ Dedicated side torso, neck, shoulder, forearm, thigh and knee/shin armor replace
 
 ## 0.37.15 OMEGA hood profile
 Refined actual side silhouette: forward fabric brow, recessed single-eye visor, aligned jaw and draped rear hood, fabric insignia and adjusted neck anchor. Front artwork and all other models, wings and motion remain unchanged. Device review pending.
+
+## 0.37.16 OMEGA profile finishing
+Softer continuous hood rim and cheek drape, inset narrower eye, no hard diagonal fabric division. Aligns projected hip and shoulder pivots in strict side view so idle legs overlap instead of showing double knee joints; separate movement angles retained. Darker far-side shin and foot shading improves depth while moving. Front view, wings and other stages unchanged. Device verification pending.
