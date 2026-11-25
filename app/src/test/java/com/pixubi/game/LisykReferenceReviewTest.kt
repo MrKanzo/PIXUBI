@@ -22,6 +22,23 @@ class LisykReferenceReviewTest {
             }
         }
     }
+    @Test fun blinkCandidatePreservesSilhouetteAndAllPixelsOutsideEyeArea(){
+        val root=listOf(File("src/main/assets"),File("app/src/main/assets")).first{it.isDirectory}
+        val neutral=ImageIO.read(File(root,"imported_v2/pixubi_lisyk_male_young.png")).getRGB(0,0,128,128,null,0,128)
+        val atlas=ImageIO.read(File(root,LisykReferenceReview.BLINK))
+        assertEquals(640,atlas.width);assertEquals(128,atlas.height)
+        val frames=(0..4).map{atlas.getRGB(it*128,0,128,128,null,0,128)}
+        assertArrayEquals(neutral,frames.first())
+        for((n,f) in frames.withIndex()){
+            for(i in f.indices){
+                val x=i%128;val y=i/128
+                assertEquals(neutral[i] ushr 24,f[i] ushr 24)
+                if(!(y in 52..68 && (x in 70..91||x in 98..108)))assertEquals(neutral[i],f[i])
+            }
+            for(j in 0 until n)assertFalse(f.contentEquals(frames[j]))
+        }
+        assertEquals((0..4).toSet(),(0..119).map{LisykReferenceReview.blinkFrame(it/100f)}.toSet())
+    }
     @Test fun onlyOneFormExposesReferenceComparison(){
         assertEquals(1,Species.entries.sumOf{s->GrowthStage.playable.sumOf{g->Sex.entries.count{LisykReferenceReview.matches(s,g,it)}}})
     }

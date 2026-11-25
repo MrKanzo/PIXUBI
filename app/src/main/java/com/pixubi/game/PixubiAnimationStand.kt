@@ -103,7 +103,7 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
         }
         if(referenceAvailable&&form!=null){
             Button(onClick={compareReference=!compareActive;automatic=false;focused=-1;seconds=0f;finished=false;running=true},modifier=Modifier.fillMaxWidth()){
-                Text(if(compareActive)"← Усі анімації" else "🦊 Лісик: порівняти нові пози v4/v2")
+                Text(if(compareActive)"← Усі анімації" else "🦊 Лісик: порівняти рухи й очі")
             }
         }
         if(automatic&&!compareActive){
