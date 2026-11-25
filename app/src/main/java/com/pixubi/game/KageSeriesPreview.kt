@@ -82,24 +82,29 @@ private fun DrawScope.kageMask(side:Boolean,f:RobotFace,blink:Boolean,a:Color) {
 }
 private fun DrawScope.omegaHood(side:Boolean,a:Color,f:RobotFace,blink:Boolean) {
     val silhouette=if(side)
-        "M -34 -12 C -37 -33 -18 -46 2 -46 Q 24 -44 37 -18 L 40 -8 L 28 15 Q 16 24 2 24 L -22 15 Q -34 9 -34 -12 Z"
+        "M -35 -16 Q -38 -35 -13 -43 L 7 -46 Q 25 -44 33 -30 L 43 -17 L 34 -11 L 29 7 L 16 22 L -4 26 L -22 17 Q -34 5 -35 -16 Z"
     else "M 0 -49 C 17 -48 29 -34 38 -10 L 41 2 Q 27 21 0 25 Q -27 21 -41 2 L -38 -10 C -29 -34 -17 -48 0 -49 Z"
     val hood=PathParser().parsePathString(silhouette).toPath()
     drawPath(hood,Brush.linearGradient(listOf(Color(0xFF656173),Color(0xFF454357),Color(0xFF242633)),Offset(-28f,-44f),Offset(29f,24f)))
     drawPath(hood,outline,style=Stroke(1.6f,join=StrokeJoin.Round))
     if(side){
-        // One visible visor and cheek plate, recessed under the forward rim.
-        shape("M 11 -29 L 36 -12 L 28 6 L 16 19 L 5 8 L 1 -7 Z",black)
-        metal("M 9 -24 L 28 -14 L 20 -7 L 8 -7 Z",carbon,black)
-        shape("M 9 1 L 27 -1 L 24 10 L 16 18 L 7 9 Z",graphite)
-        metal("M 19 3 L 29 -1 L 24 12 L 16 18 Z",steel,graphite)
-        kageMask(true,f,blink,a)
-        line(-22f,-29f,3f,-43f,steel,.9f)
-        line(-24f,-8f,-11f,13f,carbon,1.4f)
-        led(17f,-30f,27f,-22f,a,3f)
-        metal("M -17 -19 L -10 -23 L -4 -17 L -8 -11 L -16 -12 Z",steel,graphite)
-        drawCircle(a,1.7f,Offset(-11f,-17f))
-        shape("M 1 19 L 16 22 L 9 27 L -12 23 Z",cloth,.8f)
+        // True right-facing profile: the hood projects above the brow,
+        // its rear drape wraps behind the neck, and the face sits inside the rim.
+        shape("M 16 -30 L 43 -17 L 34 -10 L 31 4 L 19 20 L 8 13 L 3 -5 Z",black)
+        metal("M 14 -24 L 34 -15 L 30 -7 L 15 -8 L 9 -13 Z",carbon,black)
+        shape("M 13 1 L 31 -5 L 29 8 L 19 20 L 9 10 Z",graphite)
+        metal("M 26 0 L 32 -4 L 29 9 L 19 20 L 18 12 Z",steel,graphite)
+        translate(4f,-1f){kageMask(true,f,blink,a)}
+        // Hood fabric lies over the visor edge, instead of a floating forehead plate.
+        shape("M 7 -46 Q 25 -44 33 -30 L 43 -17 L 34 -11 L 16 -30 L 7 -34 Z",Color(0xFF454357))
+        line(15f,-32f,34f,-13f,Color(0xFF777284),1.1f)
+        led(23f,-29f,31f,-21f,a,2.6f)
+        shape("M -31 -17 Q -19 -11 -6 5 L 8 18 L 16 22 L -4 26 L -22 17 Q -34 5 -35 -16 Z",Color(0xFF353747))
+        line(-29f,-27f,-9f,-40f,steel,.8f)
+        line(-21f,-3f,-8f,16f,Color(0xFF57596B),1f)
+        // Small fabric insignia rather than a mechanical ear on the hood.
+        shape("M -19 -23 L -15 -25 L -11 -22 L -7 -24 L -5 -20 L -8 -15 L -15 -14 L -19 -18 Z",steel,.45f)
+        drawCircle(a,1.3f,Offset(-12f,-20f))
     }else{
         shape("M 0 -28 Q 23 -20 32 -1 Q 25 17 0 22 Q -25 17 -32 -1 Q -23 -20 0 -28 Z",black)
         metal("M -22 -8 L -12 -19 L 0 -25 L 12 -19 L 22 -8 L 0 3 Z",carbon,black)
@@ -514,7 +519,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                         rotate(lean,Offset(0f,hips)){
                             torso(form,true,a,e)
                             arm(form,if(g==4)-3f else 0f,4f,nearA,false,a,e.equipped(view.nearHand()),swordReady&&view.nearHand()==RobotSlot.LEFT_HAND,bends.nearElbow,bends.wrist,showSockets,profile=true)
-                            translate(if(g==4)-4f else 0f,if(g==4)-36f else -32f){scale(if(g==4)form.head*.94f else form.head,if(g==4)form.head*.94f else form.head,Offset(0f,22f)){hood(true,g,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,phase>.95f&&action==RobotAction.IDLE,e.equipped(RobotSlot.HEAD))}}
+                            translate(if(g==4)-5f else 0f,if(g==4)-34f else -32f){scale(if(g==4)form.head*.94f else form.head,if(g==4)form.head*.94f else form.head,Offset(0f,22f)){hood(true,g,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,phase>.95f&&action==RobotAction.IDLE,e.equipped(RobotSlot.HEAD))}}
                         }
                     }else{
                         leg(form,farX,hips,ft,fs,false,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)

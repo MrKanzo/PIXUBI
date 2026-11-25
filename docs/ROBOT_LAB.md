@@ -57,3 +57,6 @@ KAGE OMEGA alone receives a new dark hood with an inset visor, separate profile 
 
 ## 0.37.14 OMEGA side silhouette polish
 Dedicated side torso, neck, shoulder, forearm, thigh and knee/shin armor replaces compressed frontal plating in OMEGA profile. Slightly smaller, rearward head, closer-to-spine shoulders, more compact hip armor, offset wing anchors and reduced profile scarf overlap. Shared joint transforms, dash and front artwork retained. Other forms unchanged. Device visual inspection pending.
+
+## 0.37.15 OMEGA hood profile
+Refined actual side silhouette: forward fabric brow, recessed single-eye visor, aligned jaw and draped rear hood, fabric insignia and adjusted neck anchor. Front artwork and all other models, wings and motion remain unchanged. Device review pending.
