@@ -47,9 +47,17 @@ internal object RobotMotion {
             else -> RobotPose(0f,0f,0f,0f,0f)
         }
     }
+    // Front-facing shoulders swing away from the torso, not through it.
+    fun frontArmAngle(motion:Float, right:Boolean):Float {
+        val outward = when {
+            right && abs(motion)>45f -> abs(motion).coerceIn(50f,165f)
+            else -> 8f+motion.coerceIn(0f,36f)*0.55f
+        }
+        return if(right) -outward else outward
+    }
     fun sockets(view:RobotView): Map<RobotSlot,Offset> {
         val front = view == RobotView.FRONT
-        val points = if(front) listOf(Offset(100f,32f),Offset(100f,105f),Offset(58f,133f),Offset(142f,133f),Offset(100f,100f),Offset(100f,180f))
+        val points = if(front) listOf(Offset(100f,32f),Offset(100f,105f),Offset(59f,140f),Offset(141f,140f),Offset(100f,100f),Offset(100f,180f))
         else listOf(Offset(98f,32f),Offset(125f,105f),Offset(100f,133f),Offset(97f,133f),Offset(74f,100f),Offset(111f,180f))
         return RobotSlot.entries.zip(points.map { if(view==RobotView.LEFT) Offset(200f-it.x,it.y) else it }).toMap()
     }
@@ -131,10 +139,17 @@ private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boo
 private fun DrawScope.robotFront(p:RobotPose,a:Color,m:RobotModule,f:RobotFace,blink:Boolean) {
     leg(85f,133f,p.farLeg*0.12f,false,false,a)
     leg(115f,133f,p.nearLeg*0.12f,false,false,a)
-    arm(60f,91f,p.farArm,false,a,RobotModule.NONE)
-    arm(140f,91f,-p.nearArm,false,a,m)
+    // Fixed shoulder mounts overlap the torso shell; the arm pivots stay at their centers.
+    panel(63f,87f,22f,13f,5f,joint)
+    panel(115f,87f,22f,13f,5f,joint)
     panel(74f,78f,52f,60f,14f,shell)
     panel(80f,126f,40f,9f,4f,shade)
+    arm(65f,94f,RobotMotion.frontArmAngle(p.farArm,false),false,a,RobotModule.NONE)
+    arm(135f,94f,RobotMotion.frontArmAngle(p.nearArm,true),false,a,m)
+    // Stationary bearing caps sit over the rotating arm roots.
+    drawCircle(ink,9f,Offset(65f,94f));drawCircle(shade,7.5f,Offset(65f,94f))
+    drawCircle(ink,9f,Offset(135f,94f));drawCircle(shade,7.5f,Offset(135f,94f))
+    bolt(65f,94f,4f);bolt(135f,94f,4f)
     drawCircle(ink,13f,Offset(100f,104f));drawCircle(a,10f,Offset(100f,104f));drawCircle(glow,6f,Offset(100f,104f))
     panel(94f,70f,12f,13f,4f,joint)
     panel(56f,42f,12f,27f,5f,amber);panel(132f,42f,12f,27f,5f,amber)
