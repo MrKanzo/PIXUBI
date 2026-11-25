@@ -83,7 +83,7 @@ private fun DrawScope.bolt(x:Float,y:Float,r:Float=4f) {
     drawCircle(ink,r+1,Offset(x,y));drawCircle(amber,r,Offset(x,y));drawCircle(joint,r*0.45f,Offset(x,y))
 }
 // Faceted plating, drawn inside the same limb rotation as existing equipment.
-private fun DrawScope.omegaPlate(fill:Color,vararg vertices:Offset) {
+private fun DrawScope.omegaPlate(fill:Color,vertices:List<Offset>) {
     if(vertices.size<3)return
     val shape=Path().apply {
         moveTo(vertices[0].x,vertices[0].y)
@@ -112,8 +112,8 @@ private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a
             drawRoundRect(accent,Offset(x-9,y+37),Size(18f,6f),CornerRadius(2f))
         }
         if(tier==RobotTier.OMEGA) {
-            omegaPlate(c,Offset(x-12,y+19),Offset(x+12,y+19),Offset(x+14,y+29),Offset(x+8,y+36),Offset(x-8,y+36),Offset(x-14,y+29))
-            omegaPlate(accent,Offset(x-5,y+22),Offset(x+5,y+22),Offset(x+6,y+30),Offset(x,y+34),Offset(x-6,y+30))
+            omegaPlate(c,listOf(Offset(x-12,y+19),Offset(x+12,y+19),Offset(x+14,y+29),Offset(x+8,y+36),Offset(x-8,y+36),Offset(x-14,y+29)))
+            omegaPlate(accent,listOf(Offset(x-5,y+22),Offset(x+5,y+22),Offset(x+6,y+30),Offset(x,y+34),Offset(x-6,y+30)))
             drawLine(glow,Offset(x,y+23),Offset(x,y+30),2.6f,StrokeCap.Round)
         }
         if(gear==RobotGear.BOOTS || gear==RobotGear.SPEED_BOOTS) {
@@ -139,8 +139,8 @@ private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,g
         drawRoundRect(accent,Offset(x-6,y+26),Size(12f,5f),CornerRadius(2f))
         panel(x-7,y+39,14f,10f,4f,joint)
         if(tier==RobotTier.OMEGA) {
-            omegaPlate(c,Offset(x-10,y+3),Offset(x+10,y+3),Offset(x+13,y+12),Offset(x+5,y+18),Offset(x-5,y+18),Offset(x-13,y+12))
-            omegaPlate(c,Offset(x-13,y+23),Offset(x+13,y+23),Offset(x+15,y+32),Offset(x+9,y+39),Offset(x-9,y+39),Offset(x-15,y+32))
+            omegaPlate(c,listOf(Offset(x-10,y+3),Offset(x+10,y+3),Offset(x+13,y+12),Offset(x+5,y+18),Offset(x-5,y+18),Offset(x-13,y+12)))
+            omegaPlate(c,listOf(Offset(x-13,y+23),Offset(x+13,y+23),Offset(x+15,y+32),Offset(x+9,y+39),Offset(x-9,y+39),Offset(x-15,y+32)))
             panel(x-6,y+25,12f,9f,2f,accent)
             drawLine(glow,Offset(x-3,y+29),Offset(x+3,y+29),2.5f,StrokeCap.Round)
         }
@@ -248,14 +248,14 @@ private fun DrawScope.robotSide(p:RobotPose,a:Color,e:RobotEquipment,view:RobotV
 }
 private fun DrawScope.omegaCore(side:Boolean,a:Color,upgraded:Boolean) {
     if(side) {
-        omegaPlate(shell,Offset(114f,88f),Offset(126f,94f),Offset(132f,104f),Offset(126f,116f),Offset(114f,121f))
+        omegaPlate(shell,listOf(Offset(114f,88f),Offset(126f,94f),Offset(132f,104f),Offset(126f,116f),Offset(114f,121f)))
         drawCircle(ink,7f,Offset(125f,104f))
         drawCircle(if(upgraded)amber else a,5f,Offset(125f,104f))
         drawCircle(glow,3f,Offset(126f,104f))
     } else {
-        omegaPlate(shell,Offset(77f,84f),Offset(94f,91f),Offset(100f,96f),Offset(106f,91f),Offset(123f,84f),Offset(123f,112f),Offset(100f,127f),Offset(77f,112f))
-        omegaPlate(joint,Offset(81f,91f),Offset(91f,96f),Offset(91f,111f),Offset(81f,106f))
-        omegaPlate(joint,Offset(119f,91f),Offset(109f,96f),Offset(109f,111f),Offset(119f,106f))
+        omegaPlate(shell,listOf(Offset(77f,84f),Offset(94f,91f),Offset(100f,96f),Offset(106f,91f),Offset(123f,84f),Offset(123f,112f),Offset(100f,127f),Offset(77f,112f)))
+        omegaPlate(joint,listOf(Offset(81f,91f),Offset(91f,96f),Offset(91f,111f),Offset(81f,106f)))
+        omegaPlate(joint,listOf(Offset(119f,91f),Offset(109f,96f),Offset(109f,111f),Offset(119f,106f)))
         drawCircle(ink,16f,Offset(100f,104f))
         drawCircle(if(upgraded)amber else a,14f,Offset(100f,104f))
         drawCircle(glow,11f,Offset(100f,104f),style=Stroke(3f))
@@ -266,15 +266,15 @@ private fun DrawScope.omegaCore(side:Boolean,a:Color,upgraded:Boolean) {
 }
 private fun DrawScope.omegaCrown(side:Boolean,a:Color) {
     if(side) {
-        omegaPlate(shell,Offset(71f,37f),Offset(49f,17f),Offset(75f,25f),Offset(91f,36f))
-        omegaPlate(a,Offset(70f,34f),Offset(59f,23f),Offset(81f,33f))
+        omegaPlate(shell,listOf(Offset(71f,37f),Offset(49f,17f),Offset(75f,25f),Offset(91f,36f)))
+        omegaPlate(a,listOf(Offset(70f,34f),Offset(59f,23f),Offset(81f,33f)))
         drawCircle(glow,5f,Offset(87f,54f),style=Stroke(2f))
     } else {
         for(sign in listOf(-1f,1f)) {
-            omegaPlate(shell,Offset(100f+25f*sign,37f),Offset(100f+47f*sign,15f),Offset(100f+38f*sign,38f),Offset(100f+31f*sign,43f))
-            omegaPlate(a,Offset(100f+31f*sign,36f),Offset(100f+41f*sign,23f),Offset(100f+35f*sign,38f))
+            omegaPlate(shell,listOf(Offset(100f+25f*sign,37f),Offset(100f+47f*sign,15f),Offset(100f+38f*sign,38f),Offset(100f+31f*sign,43f)))
+            omegaPlate(a,listOf(Offset(100f+31f*sign,36f),Offset(100f+41f*sign,23f),Offset(100f+35f*sign,38f)))
         }
-        omegaPlate(amber,Offset(93f,31f),Offset(107f,31f),Offset(104f,40f),Offset(100f,43f),Offset(96f,40f))
+        omegaPlate(amber,listOf(Offset(93f,31f),Offset(107f,31f),Offset(104f,40f),Offset(100f,43f),Offset(96f,40f)))
     }
 }
 private fun DrawScope.omegaWings(side:Boolean,a:Color,phase:Float,action:RobotAction) {
@@ -287,8 +287,8 @@ private fun DrawScope.omegaWings(side:Boolean,a:Color,phase:Float,action:RobotAc
         drawCircle(glow.copy(alpha=power),18f,Offset(69f,86f),style=Stroke(2f))
         for(i in 0..2) {
             rotate((-12f+i*34f)+(pulse-0.5f)*6f,Offset(66f,86f)) {
-                omegaPlate(joint,Offset(68f,76f),Offset(37f,47f),Offset(11f,40f),Offset(27f,68f),Offset(66f,91f))
-                omegaPlate(glow.copy(alpha=power),Offset(61f,79f),Offset(19f,45f),Offset(31f,66f),Offset(62f,87f))
+                omegaPlate(joint,listOf(Offset(68f,76f),Offset(37f,47f),Offset(11f,40f),Offset(27f,68f),Offset(66f,91f)))
+                omegaPlate(glow.copy(alpha=power),listOf(Offset(61f,79f),Offset(19f,45f),Offset(31f,66f),Offset(62f,87f)))
                 drawLine(glow.copy(alpha=power),Offset(24f,48f),Offset(61f,83f),1.4f)
             }
         }
@@ -300,8 +300,8 @@ private fun DrawScope.omegaWings(side:Boolean,a:Color,phase:Float,action:RobotAc
             val root=Offset(100f+26f*sign,87f)
             for(i in 0..2) {
                 rotate(sign*(i*29f+(pulse-.5f)*6f),root) {
-                    omegaPlate(joint,Offset(root.x,root.y-8f),Offset(100f+63f*sign,47f),Offset(100f+88f*sign,35f),Offset(100f+74f*sign,65f),Offset(root.x,root.y+8f))
-                    omegaPlate(glow.copy(alpha=power),Offset(root.x+5f*sign,root.y),Offset(100f+81f*sign,42f),Offset(100f+67f*sign,64f))
+                    omegaPlate(joint,listOf(Offset(root.x,root.y-8f),Offset(100f+63f*sign,47f),Offset(100f+88f*sign,35f),Offset(100f+74f*sign,65f),Offset(root.x,root.y+8f)))
+                    omegaPlate(glow.copy(alpha=power),listOf(Offset(root.x+5f*sign,root.y),Offset(100f+81f*sign,42f),Offset(100f+67f*sign,64f)))
                     drawLine(glow.copy(alpha=power),Offset(100f+76f*sign,46f),Offset(root.x+7f*sign,root.y-2f),1.5f)
                 }
             }
