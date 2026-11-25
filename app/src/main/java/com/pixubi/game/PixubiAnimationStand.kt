@@ -39,16 +39,21 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
     var automatic by remember{mutableStateOf(recordingFirst)}
     var finished by remember{mutableStateOf(false)}
     var left by remember{mutableStateOf(false)}
+    var compareReference by remember{mutableStateOf(false)}
+    val referenceAvailable=LisykReferenceReview.matches(spec.species,spec.stage,spec.sex)
+    val compareActive=compareReference&&referenceAvailable
+    LaunchedEffect(referenceAvailable){if(!referenceAvailable)compareReference=false}
     val items=AnimationStandPlan.items
     BackHandler {
-        if(focused>=0||automatic){focused=-1;automatic=false;seconds=0f}
+        if(compareActive){compareReference=false;seconds=0f}
+        else if(focused>=0||automatic){focused=-1;automatic=false;seconds=0f}
         else onExit()
     }
-    LaunchedEffect(running,speed,focused,automatic,spec){
+    LaunchedEffect(running,speed,focused,automatic,spec,compareActive){
         if(running){
             var previous=withFrameNanos{it}
             var accumulated=seconds
-            val fps=if(focused>=0||automatic)32f else 16f
+            val fps=if(focused>=0||automatic||compareActive)32f else 16f
             while(true){
                 val now=withFrameNanos{it}
                 accumulated+=((now-previous)/1_000_000_000f).coerceIn(0f,.1f)*speed
@@ -88,13 +93,20 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
             StandButton("+1/16",{running=false;seconds=(seconds+1f/16f)%(if(automatic)AnimationStandPlan.duration else 48f)},Modifier.weight(1f))
             StandButton("${speed}×",{speed=when(speed){1f->.5f;.5f->.25f;.25f->2f;else->1f}},Modifier.weight(.9f))
             StandButton(if(left)"←" else "→",{left=!left},Modifier.weight(.6f))
-            StandButton(if(automatic||focused>=0)"Сітка" else "Автопоказ",{
+            StandButton(if(compareActive||automatic||focused>=0)"Сітка" else "Автопоказ",{
+                if(compareActive){compareReference=false;automatic=false;focused=-1;reset()}else{
                 if(automatic||focused>=0){automatic=false;focused=-1}
                 else {automatic=true;focused=0}
                 reset()
+                }
             },Modifier.weight(1.4f))
         }
-        if(automatic){
+        if(referenceAvailable&&form!=null){
+            Button(onClick={compareReference=!compareActive;automatic=false;focused=-1;seconds=0f;finished=false;running=true},modifier=Modifier.fillMaxWidth()){
+                Text(if(compareActive)"← Усі анімації" else "🦊 Лісик: порівняти нові пози v4/v2")
+            }
+        }
+        if(automatic&&!compareActive){
             Button(onClick={seconds=0f;finished=false;running=true},modifier=Modifier.fillMaxWidth()){
                 Text(if(finished)"↺ Повторити всі рухи" else "▶ ПОЧАТИ ПОКАЗ УСІХ РУХІВ")
             }
@@ -105,7 +117,9 @@ internal fun PixubiAnimationStand(spec:DevSpec,onSpec:(DevSpec)->Unit,onExit:()-
         }
         Text("${spec.species.title} • ${spec.sex.title} • ${spec.stage.title} • колір ${spec.color+1} • ${if(form!=null)"новий арт" else "старий арт"}",
             color=Color(0xFFBFD0E7),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-        if(automatic||focused>=0){
+        if(compareActive){
+            LisykReferenceComparison(seconds,left,spec.color,Modifier.weight(1f).fillMaxWidth())
+        }else if(automatic||focused>=0){
             val item=items[chosen.index.coerceIn(items.indices)]
             Text("${chosen.index+1}/${items.size}  ${item.title}   ${(chosen.seconds*10).toInt()/10f} с",
                 fontWeight=FontWeight.Bold,color=Color.White,fontSize=18.sp)
