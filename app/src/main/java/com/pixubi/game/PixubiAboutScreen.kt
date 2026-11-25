@@ -25,7 +25,7 @@ internal fun PixubiAboutScreen(version:String,onBack:()->Unit) {
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("PIXUBI",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black,color=loreMint)
+                Text("PIXUBI LAB",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black,color=loreMint)
                 Text("Версія $version",style=MaterialTheme.typography.labelMedium,color=loreMuted)
             }
             OutlinedButton(onClick=onBack){Text("← Назад")}

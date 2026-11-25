@@ -447,7 +447,7 @@ private fun HatchScreen(onHatch: (Pet) -> Unit, onSettings: () -> Unit,
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("PIXUBI 🐣", style = MaterialTheme.typography.headlineLarge,
+            Text("PIXUBI LAB", style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
             OutlinedButton(onClick = onProfile) { Text("👤") }
             Spacer(Modifier.width(5.dp))

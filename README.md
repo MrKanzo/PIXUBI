@@ -1,4 +1,4 @@
-# PIXUBI
+# PIXUBI LAB
 
 Офлайн Android-гра про цифрових вихованців. Kotlin + Jetpack Compose.
 

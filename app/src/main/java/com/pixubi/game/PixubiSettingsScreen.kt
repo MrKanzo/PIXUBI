@@ -80,7 +80,7 @@ fun PixubiSettingsScreen(
             Text("Robot Lab · MK-1")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
-            Text("📖 Про PIXUBI · Світ, види та автори")
+            Text("📖 Про PIXUBI LAB · Світ, види та автори")
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
@@ -190,7 +190,7 @@ fun PixubiSettingsScreen(
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("🔄 Оновлення PIXUBI", style = MaterialTheme.typography.titleMedium,
+                Text("🔄 Оновлення PIXUBI LAB", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
                 Text("Поточна версія: $version" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
