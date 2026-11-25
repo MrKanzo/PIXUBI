@@ -88,6 +88,15 @@ private fun GenesisVessel(s:GenesisState,phase:Float,opening:Float,modifier:Modi
                         drawCircle(energy,18f,Offset.Zero,style=Stroke(3f))
                         drawCircle(energy,7f,Offset.Zero)
                     }
+                    RobotSeries.NEXUS->{
+                        for(i in 0..2)rotate(phase*360f+i*60f,Offset.Zero){
+                            val r=48f+open*28f
+                            drawOval(energy,Offset(-r,-r*.52f),Size(r*2,r*1.04f),style=Stroke(2.5f))
+                            translate(r,0f){shell("M 0 -12 L 10 0 L 0 12 L -10 0 Z",a)}
+                        }
+                        shell("M 0 -22 L 22 0 L 0 22 L -22 0 Z",a)
+                        drawCircle(energy,9f,Offset.Zero)
+                    }
                     RobotSeries.GLITCH->{
                         for(side in listOf(-1f,1f))scale(side,1f,Offset.Zero){translate(open*55f,-open*18f){
                             shell("M 0 -77 L 42 -30 L 53 7 L 0 73 L 0 22 L 19 1 L 0 -29 Z",a)

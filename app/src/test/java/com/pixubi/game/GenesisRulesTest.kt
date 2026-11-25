@@ -15,7 +15,7 @@ class GenesisRulesTest{
         assertEquals(RobotSeries.GLITCH,GenesisRules.create(RobotSeries.GLITCH,Random(2)).series)
         assertFalse(GenesisRules.create(RobotSeries.GLITCH,Random(2)).mystery)
         assertTrue(GenesisRules.create(null,Random(2)).mystery)
-        assertEquals(5,RobotSeries.entries.map(GenesisRules::vessel).distinct().size)
+        assertEquals(6,RobotSeries.entries.map(GenesisRules::vessel).distinct().size)
     }
     @Test fun nameOnlyAfterBirth(){
         val s=GenesisRules.create(null,Random(3))
