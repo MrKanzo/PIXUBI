@@ -1067,6 +1067,7 @@ internal fun RobotLab(onBack:()->Unit) {
     var classicSkin by remember { mutableStateOf(initial.second) }
     var companionSkin by remember(context) { mutableStateOf(RobotLabStorage.loadCompanionSkin(context)) }
     var series by remember { mutableStateOf(RobotSeries.CLASSIC) }
+    var kageReference by remember { mutableStateOf(true) }
     var ninjaSkin by remember(context){mutableStateOf(RobotLabStorage.loadKageSkin(context))}
     val skin=when(series){RobotSeries.CLASSIC->classicSkin;RobotSeries.COMPANION->companionSkin;RobotSeries.KAGE->ninjaSkin}
     var selectedSlot by remember { mutableStateOf(RobotSlot.HEAD) }
@@ -1106,7 +1107,7 @@ internal fun RobotLab(onBack:()->Unit) {
         Text("Серія робота")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotSeries.entries.forEach { item ->
-                FilterChip(selected=series==item,onClick={series=item;if(item!=RobotSeries.KAGE&&action==RobotAction.NINJA_DASH){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(item.title)})
+                FilterChip(selected=series==item,onClick={series=item;if(item==RobotSeries.KAGE){tier=RobotTier.MK4;kageReference=true;action=RobotAction.IDLE;phase=0f;running=true};if(item!=RobotSeries.KAGE&&action==RobotAction.NINJA_DASH){action=RobotAction.IDLE;phase=0f;running=true}},label={Text(item.title)})
             }
         }
         Text("Еволюції · вільний перегляд")
@@ -1122,8 +1123,19 @@ internal fun RobotLab(onBack:()->Unit) {
             RobotChassisCatalog.unlocked(tier,progress.level)->"Доступний за рівнем"
             else->"Тестовий перегляд · відкриття з рівня ${tier.requiredLevel}"
         },style=MaterialTheme.typography.bodySmall)
-        Card { RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,
-            Modifier.fillMaxWidth().height(300.dp)) }
+        if(series==RobotSeries.KAGE && tier==RobotTier.MK4) {
+            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                FilterChip(selected=kageReference,onClick={kageReference=true},label={Text("Оригінальна графіка")})
+                FilterChip(selected=!kageReference,onClick={kageReference=false},label={Text("Модульна модель")})
+            }
+            if(kageReference)Text("Спрайт із концепту · анімація суглобів. Скіни та встановлені модулі переглядай у модульному режимі.",style=MaterialTheme.typography.bodySmall)
+        }
+        Card {
+            if(series==RobotSeries.KAGE && tier==RobotTier.MK4 && kageReference)
+                KageReferencePreview(view,action,face,phase,Modifier.fillMaxWidth().height(300.dp))
+            else RobotPreview(view,action,face,RobotLoadout(skin.accent,equipment,tier,series),phase,sockets,
+                Modifier.fillMaxWidth().height(300.dp))
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             RobotView.entries.forEach { v -> FilterChip(selected=view==v,onClick={view=v},label={Text(v.title)}) }
         }

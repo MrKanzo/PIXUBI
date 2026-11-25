@@ -36,3 +36,6 @@ Hood, face and head gear scale about their fixed neck anchor by tier (94%, 91%, 
 
 ## 0.37.7 KAGE reference silhouette
 Reference-led full-body proportion pass: elongated independently articulated thigh/shin segments, longer arms with attached gear, smaller hood, inset mask, luminous hex core, layered hip plates, waist tab and shin accents. Tier-specific ground and knee math; dash lowering adjusted to the longer rig. Earlier series untouched. Still a procedural vector adaptation, not a direct layered image import; review the stance, animation and gear on device.
+
+## 0.37.8 KAGE reference artwork
+Actual front/profile crops from the approved KAGE character sheet, transparent local PNG atlas (137x140, reduced palette), MK4 only. Reference artwork is the default when selecting KAGE in Robot Lab; modular mode is available for equipment, other skins and socket inspection. Reference animation uses separately clipped limb polygons, shared action pose and dash timing, approximate visor overlays; requires device review. No new art for other evolution stages, no main pet integration. Existing procedural renderer and loadout persistence retained.
