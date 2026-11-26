@@ -17,7 +17,8 @@ internal data class WorldPet(val series:RobotSeries,val skin:RobotSkin,val name:
     val equipment:RobotEquipment=RobotEquipment(),val owned:Set<RobotGear> = emptySet(),
     val skills:RobotSkills=RobotSkills(),val wins:Int=0,val expeditions:Int=0,val last:Long=0,
     val mission:WorldMission?=null,val message:String="GENESIS завершено. Системи активні!",
-    val supplies:Map<WorldSupply,Int> = mapOf(WorldSupply.PULSE to 12,WorldSupply.ION to 4,WorldSupply.ARC to 2)){
+    val supplies:Map<WorldSupply,Int> = mapOf(WorldSupply.PULSE to 12,WorldSupply.ION to 4,WorldSupply.ARC to 2),
+    val adventure:AdventureState=AdventureState()){
     fun stock(kind:WorldSupply)=(supplies[kind]?:0).coerceIn(0,99)
     val level get()=RobotProgress(xp).level
     val tier get()=if(level>=30&&wins>=10&&expeditions>=10)RobotTier.OMEGA else RobotProgress(xp).nextTier
@@ -64,12 +65,12 @@ internal object WorldRules{
         return WorldPet(s.series,s.skin,s.name.trim().take(24),s.trait,last=now,
             message=if(s.rare)"GENESIS завершено. Рідкісне золоте ядро активоване!" else "GENESIS завершено. Системи активні!")
     }
-    private fun gain(p:WorldPet,skill:RobotSkill,xp:Int,points:Int,coins:Int):WorldPet=
+    internal fun gain(p:WorldPet,skill:RobotSkill,xp:Int,points:Int,coins:Int):WorldPet=
         p.copy(xp=RobotProgress(p.xp).gain(xp).safeXp,coins=(p.coins+coins).coerceAtMost(999999),
             skills=p.skills.copy(points=p.skills.points+(skill to (p.skills.xp(skill)+points).coerceAtMost(RobotSkills.MAX_XP))))
     fun tick(p:WorldPet,now:Long):WorldPet{
         val safeNow=now.coerceAtLeast(p.last)
-        if(p.mode==WorldMode.HIBERNATE)return p
+        if(p.mode==WorldMode.HIBERNATE||p.adventure.battle!=null)return p
         val minutes=((safeNow-p.last)/60000L).coerceIn(0L,10080L).toInt()
         val blocks=minutes/15
         var q=if(p.mode==WorldMode.SLEEP&&minutes>0)p.copy(energy=(p.energy+minutes*2).coerceAtMost(100),last=p.last+minutes*60000L)
@@ -170,7 +171,8 @@ internal object WorldStorage{
             mode=WorldMode.entries.firstOrNull{it.name==p.getString("mode",null)}?:WorldMode.AWAKE,equipment=equipment,owned=owned,
             skills=RobotSkills.decode(p.getString("skills","").orEmpty()),wins=p.getInt("wins",0).coerceAtLeast(0),expeditions=p.getInt("expeditions",0).coerceAtLeast(0),
             last=p.getLong("last",System.currentTimeMillis()),mission=mission,message=p.getString("message","").orEmpty(),
-            supplies=WorldSupply.entries.associateWith{kind->p.getInt("supply_"+kind.name,when(kind){WorldSupply.PULSE->12;WorldSupply.ION->4;WorldSupply.ARC->2;else->0}).coerceIn(0,99)})
+            supplies=WorldSupply.entries.associateWith{kind->p.getInt("supply_"+kind.name,when(kind){WorldSupply.PULSE->12;WorldSupply.ION->4;WorldSupply.ARC->2;else->0}).coerceIn(0,99)},
+            adventure=AdventureCodec.decode(p.getString("adventure","").orEmpty()))
     }
     fun save(c:Context,p:WorldPet){
         val editor=prefs(c).edit().putString("series",p.series.name).putString("skin",p.skin.name).putString("name",p.name).putString("trait",p.trait.name)
@@ -180,6 +182,7 @@ internal object WorldStorage{
             .putInt("wins",p.wins).putInt("expeditions",p.expeditions).putLong("last",p.last).putString("task",p.mission?.task?.name)
             .putLong("until",p.mission?.until?:0).putInt("power",p.mission?.power?:0).putString("message",p.message)
         WorldSupply.entries.forEach{editor.putInt("supply_"+it.name,p.stock(it))}
+        editor.putString("adventure",AdventureCodec.encode(p.adventure))
         editor.apply()
     }
 }

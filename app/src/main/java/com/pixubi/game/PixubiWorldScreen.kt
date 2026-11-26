@@ -46,6 +46,10 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         },world=true,onSound=onSound)
         return
     }
+    if(page=="adventure"||p.adventure.battle!=null){
+        AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound)
+        return
+    }
     val loop=rememberInfiniteTransition(label="world")
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
     val period=WorldMotion.period(p.series,RobotAction.IDLE)
@@ -61,7 +65,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             Text("${p.tier.title} · Рівень ${p.level} · 🪙 ${p.coins} · ${p.trait.title}")
             LinearProgressIndicator(progress={prog.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(prog.remaining==0)"Максимальний рівень · OMEGA: 10 перемог і 10 експедицій" else "${p.xp} XP · До рівня ${prog.remaining} XP",style=MaterialTheme.typography.bodySmall)
-            val navigation=listOf(listOf("home" to "База","missions" to "Місії","shop" to "Магазин"),
+            val navigation=listOf(listOf("home" to "База","missions" to "Місії","adventure" to "Карта","shop" to "Магазин"),
                 listOf("inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
             navigation.forEach{group->Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 group.forEach{(id,label)->FilterChip(page==id,{page=id;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
@@ -93,7 +97,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                             OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;effect(when(i){0->WorldFx.CHARGE;1->WorldFx.REPAIR;else->WorldFx.SYNC});onSound(if(i==0)PixubiSound.HAPPY else PixubiSound.TAP)}},enabled=m==null){Text(label)}
                         }
                     }
-                    Button(onClick={page="missions"},modifier=Modifier.fillMaxWidth()){Text("Відкрити центр місій")}
+                    Button(onClick={page="adventure"},modifier=Modifier.fillMaxWidth()){Text("🗺 Дослідити карту")}
+                    OutlinedButton(onClick={page="missions"},modifier=Modifier.fillMaxWidth()){Text("Відкрити центр місій")}
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(onClick={save(WorldRules.mode(p,WorldMode.SLEEP,System.currentTimeMillis()))},enabled=m==null){Text("Сон")}
                         OutlinedButton(onClick={save(WorldRules.mode(p,WorldMode.HIBERNATE,System.currentTimeMillis()))},enabled=m==null){Text("Сплячка")}
