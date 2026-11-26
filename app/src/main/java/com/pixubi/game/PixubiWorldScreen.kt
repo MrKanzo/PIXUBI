@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,onSound:(PixubiSound)->Unit){
+internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,onSound:(PixubiSound)->Unit,onMusicScene:(MusicScene)->Unit={}){
     val context=LocalContext.current
     var pet by remember(context){mutableStateOf(WorldStorage.load(context)?.let{WorldRules.tick(it,System.currentTimeMillis())})}
     var page by remember{mutableStateOf("home")}
@@ -34,6 +34,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
     BackHandler(enabled=page!="home"){page="home"}
     val p=pet
+    val musicScene=when{p?.adventure?.battle!=null->MusicScene.BATTLE;page=="adventure"&&p!=null->MusicScene.EXPEDITION;else->MusicScene.BASE}
+    LaunchedEffect(musicScene){onMusicScene(musicScene)}
     if(p==null){
         GenesisLab(onBack=onSettings,onAdopt={ newborn->
             if(WorldStorage.load(context)==null){
