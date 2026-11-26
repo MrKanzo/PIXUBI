@@ -22,7 +22,7 @@ class AdventureRulesTest{
         val p=pet().copy(equipment=RobotEquipment().equip(RobotGear.RIFLE_L),adventure=AdventureState(pos=GridPoint(3,2)))
         val q=AdventureRules.move(p,GridPoint(3,1),1000)
         val b=q.adventure.battle!!
-        val ready=q.copy(adventure=q.adventure.copy(battle=b.copy(pos=GridPoint(4,2),enemies=listOf(b.enemies.first().copy(hp=1)))))
+        val ready=q.copy(adventure=q.adventure.copy(battle=b.copy(deploying=false,pos=GridPoint(4,1),enemies=listOf(b.enemies.first().copy(hp=1)))))
         val win=AdventureRules.strike(ready,0,RobotGear.RIFLE_L,2000)
         assertNull(win.adventure.battle);assertEquals(1,win.wins);assertEquals(ready.stock(WorldSupply.PULSE)-1,win.stock(WorldSupply.PULSE))
         assertEquals(win,AdventureRules.strike(win,0,RobotGear.RIFLE_L,2000))
@@ -40,13 +40,13 @@ class AdventureRulesTest{
             assertEquals(0,AdventureRules.arenaDistance(p,p))
         }
     }
-    @Test fun alternatingColumnsHave37ConnectedCells(){
-        assertEquals(listOf(5,3,5,3,5,3,5,3,5),(0 until AdventureRules.ARENA_W).map{x->AdventureRules.arenaCells.count{it.x==x}})
-        assertEquals(37,AdventureRules.arenaCells.size)
+    @Test fun alternatingColumnsHave18ConnectedCells(){
+        assertEquals(listOf(3,2,3,2,3,2,3),(0 until AdventureRules.ARENA_W).map{x->AdventureRules.arenaCells.count{it.x==x}})
+        assertEquals(18,AdventureRules.arenaCells.size)
         for(q in AdventureRules.arenaCells)assertNotNull(AdventureRules.path(GridPoint(0,2),q,emptySet()))
-        assertFalse(AdventureRules.inArena(GridPoint(1,0)))
+        assertFalse(AdventureRules.inArena(GridPoint(1,2)))
         assertFalse(AdventureRules.inArena(GridPoint(3,4)))
-        assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,0),emptySet()))
+        assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,2),emptySet()))
     }
     @Test fun oldBattleMovesToNewArenaWithoutLosingHealthOrTurns(){
         val start=AdventureRules.move(pet().copy(adventure=AdventureState(pos=GridPoint(3,2))),GridPoint(3,1),1000)
@@ -57,12 +57,12 @@ class AdventureRulesTest{
         assertEquals(old.hp,restored.hp)
         assertEquals(old.turn,restored.turn)
         assertEquals(old.enemies.first().hp,restored.enemies.first().hp)
-        assertEquals(GridPoint(8,2),restored.enemies.first().pos)
+        assertEquals(GridPoint(6,1),restored.enemies.first().pos)
         assertTrue(AdventureRules.inArena(restored.pos))
         assertNotEquals(restored.pos,restored.enemies.first().pos)
     }
     @Test fun pathAvoidsOccupiedCells(){
-        assertEquals(2,AdventureRules.path(GridPoint(0,2),GridPoint(2,2),setOf(GridPoint(1,2))))
-        assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,2),setOf(GridPoint(1,2))))
+        assertEquals(2,AdventureRules.path(GridPoint(0,1),GridPoint(2,1),setOf(GridPoint(1,1))))
+        assertNull(AdventureRules.path(GridPoint(0,1),GridPoint(1,1),setOf(GridPoint(1,1))))
     }
 }
