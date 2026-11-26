@@ -36,7 +36,7 @@ class SquadRulesTest{
     }
     @Test fun rangedUnitConsumesOwnCharges(){
         val p=battle();val b=p.adventure.battle!!
-        val q=p.copy(adventure=p.adventure.copy(battle=b.copy(allies=b.allies.mapIndexed{i,u->if(i==0)u.copy(pos=GridPoint(3,2))else u})))
+        val q=p.copy(adventure=p.adventure.copy(battle=b.copy(allies=b.allies.mapIndexed{i,u->if(i==0)u.copy(pos=GridPoint(5,2))else u})))
         val shot=AdventureRules.allyStrike(q,0,0,1000L)
         assertEquals(7,shot.adventure.battle!!.allies[0].charges)
         assertEquals(p.supplies,shot.supplies)
