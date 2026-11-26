@@ -29,8 +29,7 @@ class AdventureRulesTest{
         assertTrue(AdventureRules.id(GridPoint(3,1)) in win.adventure.cleared)
     }
     @Test fun hexNeighborsAndRangeAgree(){
-        for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
-            val p=GridPoint(x,y)
+        for(p in AdventureRules.arenaCells){
             val neighbors=AdventureRules.arenaNeighbors(p)
             assertEquals(6,neighbors.toSet().size)
             for(q in neighbors.filter{AdventureRules.inArena(it)}){
@@ -41,8 +40,29 @@ class AdventureRulesTest{
             assertEquals(0,AdventureRules.arenaDistance(p,p))
         }
     }
+    @Test fun alternatingColumnsHave37ConnectedCells(){
+        assertEquals(listOf(5,3,5,3,5,3,5,3,5),(0 until AdventureRules.ARENA_W).map{x->AdventureRules.arenaCells.count{it.x==x}})
+        assertEquals(37,AdventureRules.arenaCells.size)
+        for(q in AdventureRules.arenaCells)assertNotNull(AdventureRules.path(GridPoint(0,2),q,emptySet()))
+        assertFalse(AdventureRules.inArena(GridPoint(1,0)))
+        assertFalse(AdventureRules.inArena(GridPoint(3,4)))
+        assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,0),emptySet()))
+    }
+    @Test fun oldBattleMovesToNewArenaWithoutLosingHealthOrTurns(){
+        val start=AdventureRules.move(pet().copy(adventure=AdventureState(pos=GridPoint(3,2))),GridPoint(3,1),1000)
+        val b=start.adventure.battle!!
+        val old=b.copy(pos=GridPoint(1,0),enemies=b.enemies.map{it.copy(pos=GridPoint(6,2))},turn=3)
+        val oldSave=AdventureCodec.encode(start.adventure.copy(battle=old)).substringBeforeLast("|")
+        val restored=AdventureCodec.decode(oldSave).battle!!
+        assertEquals(old.hp,restored.hp)
+        assertEquals(old.turn,restored.turn)
+        assertEquals(old.enemies.first().hp,restored.enemies.first().hp)
+        assertEquals(GridPoint(8,2),restored.enemies.first().pos)
+        assertTrue(AdventureRules.inArena(restored.pos))
+        assertNotEquals(restored.pos,restored.enemies.first().pos)
+    }
     @Test fun pathAvoidsOccupiedCells(){
-        assertEquals(3,AdventureRules.path(GridPoint(0,2),GridPoint(2,2),setOf(GridPoint(1,2))))
+        assertEquals(2,AdventureRules.path(GridPoint(0,2),GridPoint(2,2),setOf(GridPoint(1,2))))
         assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,2),setOf(GridPoint(1,2))))
     }
 }
