@@ -2,12 +2,12 @@ package com.pixubi.game
 import org.junit.Assert.*
 import org.junit.Test
 class ArenaFormationTest{
-    @Test fun fiveUnitsFitInOneBackLine(){
+    @Test fun fiveUnitsFitInDeploymentZone(){
         val kinds=listOf(SquadKind.RANGER,SquadKind.ASSAULT,SquadKind.GUARD,SquadKind.MEDIC)
         val units=SquadRules.deploy(kinds.associateWith{it.hp},limit=4)
-        val cells=units.map{it.pos}+GridPoint(0,2)
+        val cells=units.map{it.pos}+GridPoint(0,1)
         assertEquals(5,cells.distinct().size)
-        assertEquals((0..4).toSet(),cells.map{it.y}.toSet())
-        assertTrue(cells.all{it.x==0&&AdventureRules.inArena(it)})
+        assertEquals(setOf(0,1,2),cells.map{it.y}.toSet())
+        assertTrue(cells.all{AdventureRules.deploymentCell(it)})
     }
 }
