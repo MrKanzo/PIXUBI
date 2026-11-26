@@ -20,7 +20,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var selected by remember{mutableStateOf(RobotSeries.CLASSIC)}
     var name by remember{mutableStateOf("")}
     var page by remember{mutableStateOf("home")}
-    var tab by remember{mutableStateOf(RobotSlot.HEAD)}
+    var tab by remember{mutableStateOf<RobotSlot?>(null)}
+    var category by remember{mutableStateOf<WorldCategory?>(null)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     var careAnimation by remember{mutableStateOf<RobotAction?>(null)}
     var careEvent by remember{mutableIntStateOf(0)}
@@ -96,6 +97,10 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 }
                 if(p.mode==WorldMode.AWAKE){
                     Text("Технічне обслуговування")
+                    val extras=WorldSupply.entries.filter{!it.isAmmo&&p.stock(it)>0}
+                    if(extras.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                        extras.forEach{kind->OutlinedButton(onClick={save(WorldRules.useSupply(p,kind));onSound(PixubiSound.HAPPY)},enabled=m==null){Text(kind.title+" "+p.stock(kind))}}
+                    }
                     Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         listOf("Заряд ${p.cells}","Ремонт ${p.repair}","Синхронізація ${p.snacks}").forEachIndexed{i,label->
                             OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;onSound(if(i==0)PixubiSound.HAPPY else PixubiSound.TAP)}},enabled=m==null){Text(label)}
@@ -119,6 +124,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                             RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
                     }
                 }
+                val ammoCost=WorldGearCatalog.ammoCost(p.equipment)
+                if(ammoCost.isNotEmpty())Text("Арена · "+ammoCost.entries.joinToString(" · "){(kind,n)->kind.title+" "+p.stock(kind)+"/"+n})
                 WorldTask.entries.forEach{task->
                     Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                         Text(task.title,style=MaterialTheme.typography.titleMedium)
@@ -166,13 +173,30 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     }
                 }
                 Text(if(page=="shop")"Модулі для ${p.series.title}" else "Інвентар · ${p.series.title}")
+                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    FilterChip(category==null,{category=null;tab=null},label={Text("Усі")})
+                    WorldCategory.entries.forEach{c->FilterChip(category==c,{category=c;tab=null},label={Text(c.title)})}
+                }
+                val consumables=WorldSupply.entries.filter{(category==null||category==it.category)&&(page=="shop"||p.stock(it)>0)}
+                if(consumables.isNotEmpty())Text("Боєприпаси й витратні модулі",style=MaterialTheme.typography.titleMedium)
+                consumables.forEach{kind->
+                    Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                        Text(kind.title+" · "+p.stock(kind)+" шт.",style=MaterialTheme.typography.titleMedium)
+                        Text(kind.description)
+                        if(page=="shop")Button(onClick={save(WorldRules.buySupply(p,kind))},enabled=p.coins>=kind.price&&p.level>=kind.level&&p.stock(kind)+kind.pack<=99){
+                            Text("+${kind.pack} шт. · ${kind.price} 🪙 · рівень ${kind.level}")
+                        }
+                        else if(!kind.isAmmo)OutlinedButton(onClick={save(WorldRules.useSupply(p,kind));onSound(PixubiSound.HAPPY)},enabled=p.mode==WorldMode.AWAKE&&p.mission==null){Text("Використати")}
+                    }}
+                }
                 HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(215.dp)){
                     RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    FilterChip(tab==null,{tab=null},label={Text("Усі слоти")})
                     RobotSlot.entries.forEach{slot->FilterChip(tab==slot,{tab=slot},label={Text(WorldCatalog.slots(p.series,slot))})}
                 }
-                val offers=WorldRules.shop.filter{it.gear.slot==tab&&(page=="shop"||it.gear in p.owned)}
+                val offers=WorldRules.shop.filter{(tab==null||it.gear.slot==tab)&&(category==null||WorldGearCatalog.category(it.gear)==category)&&(page=="shop"||it.gear in p.owned)}
                 if(offers.isEmpty())Text("Поки порожньо.")
                 offers.forEach{o->
                     val g=o.gear
@@ -182,6 +206,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                         Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                             Text(g.title,style=MaterialTheme.typography.titleMedium)
                             Text(RobotBalance.spec(g).delta.summary(),style=MaterialTheme.typography.bodySmall)
+                            Text(WorldCatalog.slots(p.series,g.slot)+" · "+WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
                             if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,g))},enabled=p.mission==null){Text(if(equipped)"Зняти" else "Одягнути")}
                             else Button(onClick={save(WorldRules.buy(p,g))},enabled=p.level>=o.level&&p.coins>=o.price){Text("${o.price} 🪙 · рівень ${o.level}")}
                         }

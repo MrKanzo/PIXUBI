@@ -393,7 +393,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
                         val x=if(side)f.length*.63f+(if(far)-10f else 4f) else f.length*.46f*(if(far)-1f else 1f)
                         translate(x,if(side&&far)4f else 14f){
                             scale(if(side&&far).76f else 1f,if(side&&far).76f else 1f,Offset.Zero){
-                                if(gear==RobotGear.BLADE_L||gear==RobotGear.BLADE_R||gear==RobotGear.CANNON_L||gear==RobotGear.CANNON_R) rotate(if(side)-75f else 0f,Offset.Zero){drawWorldWeapon(gear,a)}
+                                if(gear in listOf(RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R,RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R,RobotGear.REPAIR_L,RobotGear.REPAIR_R)) rotate(if(side)-75f else 0f,Offset.Zero){drawWorldWeapon(gear,a)}
                                 else if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R){plate("M -10 -10 L 10 -10 L 13 3 L 0 14 L -13 3 Z",shade);line(a,-5f,-2f,5f,-2f)}
                                 else if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R){plate("M -7 -7 L 9 -7 L 14 1 L 9 9 L -7 9 Z",shade);line(a,8f,0f,15f,0f)}
                                 else {plate("M -7 -6 L 7 -6 L 9 10 L -9 10 Z",shade);line(a,0f,-2f,0f,7f)}

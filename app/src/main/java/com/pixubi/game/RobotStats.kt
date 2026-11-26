@@ -50,6 +50,16 @@ internal object RobotBalance {
         RobotGear.BOOSTER->RobotStats(speed=16,energy=-10,heat=-6)
         RobotGear.BOOTS->RobotStats(durability=10,defense=6,speed=-4)
         RobotGear.SPEED_BOOTS->RobotStats(speed=12,energy=-4,defense=-2)
+        RobotGear.VISOR->RobotStats(intelligence=18,defense=3,energy=-4)
+        RobotGear.LIGHT_ARMOR->RobotStats(durability=18,defense=10,speed=4)
+        RobotGear.HEAVY_ARMOR->RobotStats(durability=52,defense=30,speed=-18,heat=-6)
+        RobotGear.POWERBANK_MINI->RobotStats(energy=22,speed=4)
+        RobotGear.POWERBANK_MAX->RobotStats(energy=80,speed=-12)
+        RobotGear.REPAIR_DRONE->RobotStats(durability=20,intelligence=12,energy=-6)
+        RobotGear.MAG_BOOTS->RobotStats(defense=10,speed=5,heat=4)
+        RobotGear.RIFLE_L,RobotGear.RIFLE_R->RobotStats(attack=26,energy=-11,heat=-4)
+        RobotGear.ARC_L,RobotGear.ARC_R->RobotStats(attack=42,energy=-21,heat=-12)
+        RobotGear.REPAIR_L,RobotGear.REPAIR_R->RobotStats(durability=8,intelligence=9,energy=-3)
     })
     fun compatible(gear:RobotGear,tier:RobotTier)=tier.ordinal>=spec(gear).minTier.ordinal
     fun total(tier:RobotTier,equipment:RobotEquipment,level:Int=1,skillBonus:RobotStats=RobotStats()):RobotStats {

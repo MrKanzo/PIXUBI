@@ -16,7 +16,9 @@ internal data class WorldPet(val series:RobotSeries,val skin:RobotSkin,val name:
     val cells:Int=4,val repair:Int=3,val snacks:Int=4,val mode:WorldMode=WorldMode.AWAKE,
     val equipment:RobotEquipment=RobotEquipment(),val owned:Set<RobotGear> = emptySet(),
     val skills:RobotSkills=RobotSkills(),val wins:Int=0,val expeditions:Int=0,val last:Long=0,
-    val mission:WorldMission?=null,val message:String="GENESIS завершено. Системи активні!"){
+    val mission:WorldMission?=null,val message:String="GENESIS завершено. Системи активні!",
+    val supplies:Map<WorldSupply,Int> = mapOf(WorldSupply.PULSE to 12,WorldSupply.ION to 4,WorldSupply.ARC to 2)){
+    fun stock(kind:WorldSupply)=(supplies[kind]?:0).coerceIn(0,99)
     val level get()=RobotProgress(xp).level
     val tier get()=if(level>=30&&wins>=10&&expeditions>=10)RobotTier.OMEGA else RobotProgress(xp).nextTier
     val stats get()=RobotBalance.total(tier,equipment,level,skills.bonuses())+WorldRules.innate(series)
@@ -35,6 +37,16 @@ internal object WorldRules{
     }
     val shop=RobotGear.entries.map{g->
         when(g){
+            RobotGear.VISOR->WorldOffer(g,160,3)
+            RobotGear.LIGHT_ARMOR->WorldOffer(g,145,3)
+            RobotGear.HEAVY_ARMOR->WorldOffer(g,480,12)
+            RobotGear.POWERBANK_MINI->WorldOffer(g,90,1)
+            RobotGear.POWERBANK_MAX->WorldOffer(g,360,8)
+            RobotGear.REPAIR_DRONE->WorldOffer(g,330,8)
+            RobotGear.MAG_BOOTS->WorldOffer(g,220,5)
+            RobotGear.RIFLE_L,RobotGear.RIFLE_R->WorldOffer(g,280,6)
+            RobotGear.ARC_L,RobotGear.ARC_R->WorldOffer(g,580,16)
+            RobotGear.REPAIR_L,RobotGear.REPAIR_R->WorldOffer(g,150,3)
             RobotGear.BLADE_L,RobotGear.BLADE_R->WorldOffer(g,220,5)
             RobotGear.CANNON_L,RobotGear.CANNON_R->WorldOffer(g,410,12)
             RobotGear.BLASTER_L,RobotGear.BLASTER_R->WorldOffer(g,140,2)
@@ -66,7 +78,7 @@ internal object WorldRules{
         if(t==WorldTask.TRAIN){
             val target=24+q.level*5
             val win=m.power>=target
-            val damage=if(win)5 else 16
+            val damage=((if(win)5 else 16)-(q.stats.defense/30)).coerceAtLeast(1)
             q=q.copy(integrity=(q.integrity-damage).coerceAtLeast(1),wins=q.wins+if(win)1 else 0,
                 message=if(win)"Перемога! +${t.xp} XP · +${t.coins} монет" else "Арена: поразка. Покращ спорядження й відремонтуй корпус.")
             return gain(q,t.skill,if(win)t.xp else 15,if(win)30 else 10,if(win)t.coins else 0)
@@ -79,17 +91,22 @@ internal object WorldRules{
         val p=tick(source,now)
         if(p.mission!=null||p.mode!=WorldMode.AWAKE)return p.copy(message="Спочатку заверши дію або розбуди персонажа.")
         if(p.energy<t.energy||p.integrity<20)return p.copy(message="Потрібна зарядка або ремонт.")
+        val ammo=if(t==WorldTask.TRAIN)WorldGearCatalog.ammoCost(p.equipment) else emptyMap()
+        val shortage=ammo.entries.firstOrNull{p.stock(it.key)<it.value}
+        if(shortage!=null)return p.copy(message="Недостатньо боєприпасів: ${shortage.key.title}. Поповни запас або зніми зброю.")
+        val paidAmmo=p.supplies.toMutableMap()
+        ammo.forEach{(type,count)->paidAmmo[type]=p.stock(type)-count}
         val bonus=if(t==WorldTask.TRAIN)p.stats.attack+p.stats.defense/2+p.stats.speed/5 else 0
         val cost=(t.energy-(p.stats.energy-100).coerceAtLeast(0)/35).coerceAtLeast(3)
         val duration=(t.seconds-(p.stats.speed-50).coerceAtLeast(0)/10).coerceAtLeast(8)
-        return p.copy(energy=p.energy-cost,mood=(p.mood+t.mood).coerceIn(0,100),
+        return p.copy(energy=p.energy-cost,mood=(p.mood+t.mood).coerceIn(0,100),supplies=paidAmmo,
             mission=WorldMission(t,now+duration*1000L,bonus),message="${t.title} розпочато")
     }
     fun care(p:WorldPet,kind:Int):WorldPet{
         if(p.mode!=WorldMode.AWAKE||p.mission!=null)return p.copy(message="Спочатку заверши дію або розбуди персонажа.")
         return when(kind){
-            0->if(p.cells>0&&p.energy<100)gain(p.copy(cells=p.cells-1,energy=(p.energy+45).coerceAtMost(100),message="Заряд поповнено"),RobotSkill.ENERGY,10,15,0) else p.copy(message="Немає комірок або заряд повний.")
-            1->if(p.repair>0&&p.integrity<100)gain(p.copy(repair=p.repair-1,integrity=(p.integrity+40).coerceAtMost(100),message="Корпус відновлено"),RobotSkill.ENGINEERING,10,15,0) else p.copy(message="Немає ремонтних наборів або корпус цілий.")
+            0->if(p.cells>0&&p.energy<100)gain(p.copy(cells=p.cells-1,energy=(p.energy+45+WorldGearCatalog.energyBonus(p.equipment)).coerceAtMost(100),message="Заряд поповнено"),RobotSkill.ENERGY,10,15,0) else p.copy(message="Немає комірок або заряд повний.")
+            1->if(p.repair>0&&p.integrity<100)gain(p.copy(repair=p.repair-1,integrity=(p.integrity+40+WorldGearCatalog.repairBonus(p.equipment)).coerceAtMost(100),message="Корпус відновлено"),RobotSkill.ENGINEERING,10,15,0) else p.copy(message="Немає ремонтних наборів або корпус цілий.")
             else->if(p.snacks>0&&p.mood<100)p.copy(snacks=p.snacks-1,mood=(p.mood+40).coerceAtMost(100),message="Настрій покращено") else p.copy(message="Немає модулів синхронізації або настрій повний.")
         }
     }
@@ -107,6 +124,21 @@ internal object WorldRules{
     fun equip(p:WorldPet,g:RobotGear):WorldPet{
         if(p.mission!=null||g !in p.owned)return p.copy(message="Спорядження недоступне під час завдання або не куплене.")
         return p.copy(equipment=if(p.equipment.equipped(g.slot)==g)p.equipment.remove(g.slot)else p.equipment.equip(g),message="Спорядження змінено")
+    }
+    fun buySupply(p:WorldPet,kind:WorldSupply):WorldPet{
+        if(p.level<kind.level||p.coins<kind.price||p.stock(kind)+kind.pack>99)return p.copy(message="Не вистачає монет, рівня або місця.")
+        return p.copy(coins=p.coins-kind.price,supplies=p.supplies+(kind to p.stock(kind)+kind.pack),message="Придбано: ${kind.title} ×${kind.pack}")
+    }
+    fun useSupply(p:WorldPet,kind:WorldSupply):WorldPet{
+        if(kind.isAmmo||p.mode!=WorldMode.AWAKE||p.mission!=null||p.stock(kind)==0)return p.copy(message="Модуль зараз недоступний.")
+        val value=when(kind.category){WorldCategory.ENERGY->p.energy;WorldCategory.REPAIR->p.integrity;else->p.mood}
+        if(value==100)return p.copy(message="Показник уже повний.")
+        val q=p.copy(supplies=p.supplies+(kind to p.stock(kind)-1),message="Використано: ${kind.title}")
+        return when(kind.category){
+            WorldCategory.ENERGY->gain(q.copy(energy=(p.energy+kind.amount+WorldGearCatalog.energyBonus(p.equipment)).coerceAtMost(100)),RobotSkill.ENERGY,10,15,0)
+            WorldCategory.REPAIR->gain(q.copy(integrity=(p.integrity+kind.amount+WorldGearCatalog.repairBonus(p.equipment)).coerceAtMost(100)),RobotSkill.ENGINEERING,10,15,0)
+            else->q.copy(mood=(p.mood+kind.amount).coerceAtMost(100))
+        }
     }
     fun supplies(p:WorldPet,kind:Int):WorldPet{
         val stock=when(kind){0->p.cells;1->p.repair;else->p.snacks}
@@ -132,14 +164,17 @@ internal object WorldStorage{
             cells=p.getInt("cells",4).coerceIn(0,30),repair=p.getInt("repair",3).coerceIn(0,30),snacks=p.getInt("snacks",4).coerceIn(0,30),
             mode=WorldMode.entries.firstOrNull{it.name==p.getString("mode",null)}?:WorldMode.AWAKE,equipment=equipment,owned=owned,
             skills=RobotSkills.decode(p.getString("skills","").orEmpty()),wins=p.getInt("wins",0).coerceAtLeast(0),expeditions=p.getInt("expeditions",0).coerceAtLeast(0),
-            last=p.getLong("last",System.currentTimeMillis()),mission=mission,message=p.getString("message","").orEmpty())
+            last=p.getLong("last",System.currentTimeMillis()),mission=mission,message=p.getString("message","").orEmpty(),
+            supplies=WorldSupply.entries.associateWith{kind->p.getInt("supply_"+kind.name,when(kind){WorldSupply.PULSE->12;WorldSupply.ION->4;WorldSupply.ARC->2;else->0}).coerceIn(0,99)})
     }
     fun save(c:Context,p:WorldPet){
-        prefs(c).edit().putString("series",p.series.name).putString("skin",p.skin.name).putString("name",p.name).putString("trait",p.trait.name)
+        val editor=prefs(c).edit().putString("series",p.series.name).putString("skin",p.skin.name).putString("name",p.name).putString("trait",p.trait.name)
             .putInt("xp",p.xp).putInt("coins",p.coins).putInt("energy",p.energy).putInt("integrity",p.integrity).putInt("mood",p.mood)
             .putInt("cells",p.cells).putInt("repair",p.repair).putInt("snacks",p.snacks).putString("mode",p.mode.name)
             .putString("owned",p.owned.joinToString(","){it.name}).putString("gear",p.equipment.encode()).putString("skills",p.skills.encode())
             .putInt("wins",p.wins).putInt("expeditions",p.expeditions).putLong("last",p.last).putString("task",p.mission?.task?.name)
-            .putLong("until",p.mission?.until?:0).putInt("power",p.mission?.power?:0).putString("message",p.message).apply()
+            .putLong("until",p.mission?.until?:0).putInt("power",p.mission?.power?:0).putString("message",p.message)
+        WorldSupply.entries.forEach{editor.putInt("supply_"+it.name,p.stock(it))}
+        editor.apply()
     }
 }

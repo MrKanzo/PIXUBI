@@ -1007,6 +1007,11 @@ private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipm
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
+    RobotPreviewVisual(view,action,face,loadout.copy(equipment=WorldGearCatalog.visual(loadout.equipment)),phase,showSockets,modifier)
+}
+@Composable
+private fun RobotPreviewVisual(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
+                          phase:Float, showSockets:Boolean, modifier:Modifier) {
     if(loadout.series==RobotSeries.MYCELIA) {
         MyceliaPreview(view,action,face,loadout,phase,showSockets,modifier)
         return

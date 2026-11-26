@@ -21,7 +21,20 @@ internal enum class RobotGear(val title:String,val slot:RobotSlot) {
     BATTERY("Батарея",RobotSlot.BACK),
     BOOSTER("Прискорювач",RobotSlot.BACK),
     BOOTS("Захисні черевики",RobotSlot.FEET),
-    SPEED_BOOTS("Швидкісні черевики",RobotSlot.FEET);
+    SPEED_BOOTS("Швидкісні черевики",RobotSlot.FEET),
+    VISOR("Тактичний візор",RobotSlot.HEAD),
+    LIGHT_ARMOR("Легка композитна броня",RobotSlot.CHEST),
+    HEAVY_ARMOR("Важка екзоброня",RobotSlot.CHEST),
+    POWERBANK_MINI("Павербанк MINI",RobotSlot.BACK),
+    POWERBANK_MAX("Павербанк TITAN",RobotSlot.BACK),
+    REPAIR_DRONE("Ремонтний дрон",RobotSlot.BACK),
+    MAG_BOOTS("Магнітні опори",RobotSlot.FEET),
+    RIFLE_L("Імпульсна гвинтівка",RobotSlot.LEFT_HAND),
+    RIFLE_R("Імпульсна гвинтівка",RobotSlot.RIGHT_HAND),
+    ARC_L("Дуговий випромінювач",RobotSlot.LEFT_HAND),
+    ARC_R("Дуговий випромінювач",RobotSlot.RIGHT_HAND),
+    REPAIR_L("Мультитул ремонту",RobotSlot.LEFT_HAND),
+    REPAIR_R("Мультитул ремонту",RobotSlot.RIGHT_HAND);
     companion object {
         fun forSlot(slot:RobotSlot)=entries.filter { it.slot==slot }
     }
