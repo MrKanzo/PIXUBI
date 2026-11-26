@@ -15,7 +15,7 @@ class SquadTacticsTest{
     @Test fun pendingEnemyTurnSurvivesSaveAndOnlyOneEnemyMoves(){
         val p=WorldRules.hatch(RobotSeries.CLASSIC,"X",1000L).copy(adventure=AdventureState(pos=GridPoint(7,1)))
         val started=AdventureRules.move(p,GridPoint(7,0),1000L)
-        val pending=AdventureRules.guard(started,1000L)
+        val pending=AdventureRules.guard(AdventureRules.startBattle(started),1000L)
         val b=pending.adventure.battle!!
         assertTrue(b.enemyPending)
         assertTrue(SquadRules.available(b).isEmpty())
