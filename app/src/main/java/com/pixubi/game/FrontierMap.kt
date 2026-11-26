@@ -42,7 +42,7 @@ internal object FrontierProjection{
 }
 private data class FrontierPalette(val name:String,val grass:Color,val light:Color,val dark:Color,val water:Color,val leaves:Color,val glow:Color)
 private fun palette(stage:Int)=when((stage-1)%4){
-    0->FrontierPalette("Неонова долина",Color(0xFF697D43),Color(0xFF9AAB59),Color(0xFF3C543B),Color(0xFF187A91),Color(0xFFB84D99),Color(0xFF6CE7FB))
+    0->FrontierPalette("Неонова долина",Color(0xFF648B3C),Color(0xFFA7BC65),Color(0xFF344E31),Color(0xFF187A91),Color(0xFFB84D99),Color(0xFF6CE7FB))
     1->FrontierPalette("Кристалові руїни",Color(0xFF5F7184),Color(0xFF8A9DA2),Color(0xFF38465F),Color(0xFF25589C),Color(0xFF6C87C6),Color(0xFF85E8FF))
     2->FrontierPalette("Спорові острови",Color(0xFF536B4F),Color(0xFF88A564),Color(0xFF304D49),Color(0xFF255F68),Color(0xFF8B5CB4),Color(0xFFB7FC9B))
     else->FrontierPalette("Золотий каньйон",Color(0xFF97704A),Color(0xFFC49B60),Color(0xFF604937),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
@@ -142,6 +142,12 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
     drawRect(Brush.verticalGradient(listOf(p.light,p.grass,p.dark),endY=FrontierProjection.H))
     // Uneven meadow patches, no visible gameplay grid.
     val random=Random(a.stage*271)
+    // Stable pixel clusters: vegetation, stone chips and meadow texture.
+    repeat(1800){i->
+        val x=(random.nextInt(230)*4).toFloat();val y=(random.nextInt(163)*4).toFloat()
+        val tone=when(i%5){0->p.dark.copy(alpha=.37f);1->p.light.copy(alpha=.46f);2->Color(0xFFDFD99A).copy(alpha=.22f);else->p.grass.copy(alpha=.62f)}
+        drawRect(tone,Offset(x,y),Size((1+random.nextInt(3))*4f,4f))
+    }
     repeat(230){
         val x=random.nextFloat()*920;val y=random.nextFloat()*650
         oval(if(it%2==0)p.light.copy(alpha=.20f)else p.dark.copy(alpha=.16f),x,y,7f+random.nextFloat()*32,4f+random.nextFloat()*15)
@@ -149,6 +155,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
     drawPath(water,Color(0xFF233A3D),style=Stroke(92f,cap=StrokeCap.Round))
     drawPath(water,p.water,style=Stroke(69f,cap=StrokeCap.Round))
     drawPath(water,p.glow.copy(alpha=.17f),style=Stroke(33f,cap=StrokeCap.Round))
+    drawPath(water,Color(0xFFB5E8DE).copy(alpha=.24f),style=Stroke(3f,cap=StrokeCap.Round))
     for(i in 0..13){
         val t=(phase+i/14f)%1f;val y=t*650f
         val x=when{y<160f->526f-25f*sin(y*.025f);y<340f->505f+34f*sin((y-160f)*.02f);else->467f-(y-340f)*.34f}
@@ -181,7 +188,15 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             if((x+y+i)%3==0)drawCircle(p.leaves,2.2f,o+Offset(0f,-6f))
         }
         if(t==AdventureTile.WALL&&x!=4){
-            translate(c.x,c.y){if((x+y)%2==0)tree(p,phase,x+y)else ruins(p)}
+            translate(c.x,c.y){
+                if((x+y)%2==0){
+                    translate(-27f,-13f){scale(.65f,.65f,Offset.Zero){tree(p,phase,x+y+4)}}
+                    translate(24f,-4f){scale(.75f,.75f,Offset.Zero){tree(p,phase,x+y+7)}}
+                    tree(p,phase,x+y)
+                }else ruins(p)
+            }
+        }else if(t==AdventureTile.EMPTY&&x!=4&&(x+y)%3==0){
+            translate(c.x+34f,c.y-28f){scale(.46f,.46f,Offset.Zero){tree(p,phase,x+y)}}
         }
     }
     // The bridges are navigable map nodes, not decorative obstacles.
@@ -217,7 +232,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         val q=GridPoint(x,y)
         if(!AdventureRules.visible(a,q)){
             val points=FrontierProjection.corners(q)
-            poly(points,Color(0xFF111E2B).copy(alpha=.94f))
+            poly(points,Color(0xFF111E2B).copy(alpha=.69f))
             val c=FrontierProjection.center(q)
             drawCircle(Brush.radialGradient(listOf(Color(0xFF2A3B50).copy(alpha=.35f),Color.Transparent),c,55f),55f,c)
         }
@@ -236,7 +251,11 @@ private fun DrawScope.tree(p:FrontierPalette,phase:Float,seed:Int){
     for(i in 0..6){
         val t=i*2.399f+seed;val x=cos(t)*20f;val y=-38f+sin(t)*12f
         drawLine(Color(0xFF594436),Offset(0f,-18f),Offset(x,y),4f,StrokeCap.Round)
-        oval(p.dark,x,y+5f,17f,12f);oval(p.leaves,x,y,16f,11f);oval(p.leaves.copy(alpha=.55f),x-3f,y-5f,11f,6f)
+        val px=(x/4f).roundToInt()*4f;val py=(y/4f).roundToInt()*4f
+        for(row in -3..3){val w=if(abs(row)==3)12f else if(abs(row)==2)24f else 32f
+            drawRect(p.dark,Offset(px-w/2,py+row*4f+4f),Size(w,4f))
+            drawRect(if(row<0)p.light else p.leaves,Offset(px-w/2,py+row*4f),Size(w,4f))}
+        drawRect(p.glow.copy(alpha=.25f),Offset(px-8f,py-8f),Size(8f,4f))
         if(i%2==0)drawCircle(p.glow.copy(alpha=.5f+.25f*sin(phase*6.283f+i)),2.2f,Offset(x,y+6f))
     }
 }
@@ -247,6 +266,11 @@ private fun DrawScope.ruins(p:FrontierPalette){
         shape(Color(0xFF626C70),x-7f,3f,x+7f,3f,x+7f,-h,x-7f,-h)
         shape(Color(0xFF414C55),x+7f,3f,x+14f,-3f,x+14f,-h-5f,x+7f,-h)
         shape(Color(0xFFA3A9A0),x-7f,-h,x+7f,-h,x+14f,-h-5f,x,-h-5f)
+        for(j in 0 until (h/7f).toInt()){
+            val y=-h+j*7f
+            drawLine(Color(0xFF424E52),Offset(x-7f,y),Offset(x+7f,y),1.5f)
+            drawRect(Color(0xFFB2B8A4).copy(alpha=.65f),Offset(x-5f+(j%2)*4f,y+2f),Size(5f,3f))
+        }
         drawLine(p.glow.copy(alpha=.65f),Offset(x,-h+5),Offset(x,-h+16),2f)
     }
     drawArc(Color(0xFF788482),190f,155f,false,Offset(-27f,-65f),Size(64f,62f),style=Stroke(9f))
