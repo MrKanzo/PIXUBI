@@ -5,6 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -25,9 +29,9 @@ import kotlin.random.Random
 
 // Three-quarter projection. All art and input share the exact same logical coordinates.
 internal object FrontierProjection{
-    const val W=920f
-    const val H=650f
-    fun center(q:GridPoint)=Offset(78f+q.x*100f+(5-q.y)*17f,80f+q.y*91f)
+    const val W=1820f
+    const val H=970f
+    fun center(q:GridPoint)=Offset(78f+q.x*100f+(9-q.y)*17f,80f+q.y*91f)
     fun corners(q:GridPoint):List<Offset>{
         val c=center(q)
         return listOf(c+Offset(-41.5f,-45.5f),c+Offset(58.5f,-45.5f),c+Offset(41.5f,45.5f),c+Offset(-58.5f,45.5f))
@@ -35,7 +39,7 @@ internal object FrontierProjection{
     fun at(x:Float,y:Float):GridPoint?{
         val ry=(y-80f)/91f
         val row=ry.roundToInt()
-        val col=((x-78f-(5f-ry)*17f)/100f).roundToInt()
+        val col=((x-78f-(9f-ry)*17f)/100f).roundToInt()
         val q=GridPoint(col,row)
         return q.takeIf{AdventureRules.inMap(it)&&abs(ry-row)<=.5f}
     }
@@ -54,7 +58,9 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     val change by rememberUpdatedState(onChange)
     val sound by rememberUpdatedState(onSound)
     var target by remember(a.stage){mutableStateOf<GridPoint?>(null)}
-    var zoom by remember{mutableIntStateOf(0)}
+    var zoom by remember{mutableIntStateOf(1)}
+    var follow by remember{mutableStateOf(true)}
+    var centerRequest by remember{mutableIntStateOf(0)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
     val loop=rememberInfiniteTransition(label="frontier scenery")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(7000,easing=LinearEasing)),label="river")
@@ -83,16 +89,38 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             Text(colors.name,style=MaterialTheme.typography.titleLarge)
             Text(if(target!=null)"Робот прямує до цілі" else "Сектор ${a.stage} · відкрий територію",style=MaterialTheme.typography.labelSmall)
             val explored=(0 until AdventureRules.MAP_W*AdventureRules.MAP_H).count{AdventureRules.visible(a,GridPoint(it%AdventureRules.MAP_W,it/AdventureRules.MAP_W))}
-            Text("Відкрито ${explored*100/(AdventureRules.MAP_W*AdventureRules.MAP_H)}%",style=MaterialTheme.typography.labelSmall,color=Color(0xFF9CE2C7))
+            Text("Відкрито ${explored*100/(AdventureRules.MAP_W*AdventureRules.MAP_H)}% · $explored/160 зон",style=MaterialTheme.typography.labelSmall,color=Color(0xFF9CE2C7))
         }
-        OutlinedButton(onClick={zoom=(zoom+1)%3}){Text(listOf("Огляд 1×","Масштаб 1,5×","Масштаб 2×")[zoom])}
+        OutlinedButton(onClick={zoom=(zoom+1)%3}){Text(listOf("Огляд","2,5×","3,5×")[zoom])}
+    }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+        FilterChip(follow,{follow=!follow},label={Text("Стежити за роботом")})
+        OutlinedButton(onClick={centerRequest++}){Text("До робота")}
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
-        val mapWidth=maxWidth*listOf(1f,1.5f,2f)[zoom]
+        val mapWidth=maxWidth*listOf(1f,2.5f,3.5f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
         val route=target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())){
-            Box(Modifier.width(mapWidth).height(mapHeight).clip(RoundedCornerShape(14.dp)).background(Color(0xFF182E36))){
+        val viewportHeight=minOf(mapHeight,maxWidth*1.05f)
+        val hScroll=rememberScrollState()
+        val vScroll=rememberScrollState()
+        val density=LocalDensity.current
+        val center=FrontierProjection.center(a.pos)
+        val cx=with(density){(mapWidth*(center.x/FrontierProjection.W)-maxWidth/2).toPx().roundToInt()}
+        val cy=with(density){(mapHeight*(center.y/FrontierProjection.H)-viewportHeight/2).toPx().roundToInt()}
+        LaunchedEffect(a.pos,zoom,follow,centerRequest){
+            if(follow||centerRequest>0){
+                delay(35)
+                coroutineScope{
+                    launch{hScroll.animateScrollTo(cx.coerceIn(0,hScroll.maxValue),tween(240))}
+                    launch{vScroll.animateScrollTo(cy.coerceIn(0,vScroll.maxValue),tween(240))}
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(viewportHeight).clip(RoundedCornerShape(14.dp)).background(Color(0xFF182E36))){
+          Column(Modifier.fillMaxSize().verticalScroll(vScroll)){
+            Row(Modifier.fillMaxWidth().horizontalScroll(hScroll)){
+            Box(Modifier.width(mapWidth).height(mapHeight)){
                 Canvas(Modifier.fillMaxSize().pointerInput(a, target, p.energy, p.integrity,p.mode,p.mission){
                     detectTapGestures{tap->
                         if(target==null&&AdventureRules.canExplore(p)){
@@ -105,7 +133,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                         landscape(a,colors,phase,route)
                     }
                 }
-                val actorSize=mapWidth*.105f
+                val actorSize=mapWidth*(96f/FrontierProjection.W)
                 for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
                     val q=GridPoint(x,y)
                     if(AdventureRules.knownTile(a,q)==AdventureTile.ENEMY){
@@ -131,6 +159,8 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                     scale(size.width/FrontierProjection.W,size.height/FrontierProjection.H,Offset.Zero){fogOfWar(a)}
                 }
             }
+            }
+          }
         }
     }
     Text("Темне — невідоме · приглушене — розвідане · яскраве — зона сканера",style=MaterialTheme.typography.labelSmall)
@@ -145,18 +175,27 @@ private fun DrawScope.poly(points:List<Offset>,color:Color){
 }
 private fun DrawScope.oval(c:Color,x:Float,y:Float,rx:Float,ry:Float)=drawOval(c,Offset(x-rx,y-ry),Size(rx*2,ry*2))
 private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,route:List<GridPoint>){
-    val water=Path().apply{moveTo(526f,-10f);cubicTo(440f,140f,610f,230f,467f,340f);cubicTo(410f,430f,470f,530f,350f,660f)}
+    val water=Path().apply{
+        val first=FrontierProjection.center(GridPoint(4,0))
+        moveTo(first.x+15f,0f)
+        for(y in 0 until AdventureRules.MAP_H){
+            val c=FrontierProjection.center(GridPoint(4,y))
+            quadraticBezierTo(c.x+(if(y%2==0)21f else -21f),c.y-42f,c.x,c.y)
+        }
+        val last=FrontierProjection.center(GridPoint(4,AdventureRules.MAP_H-1))
+        lineTo(last.x-18f,FrontierProjection.H)
+    }
     drawRect(Brush.verticalGradient(listOf(p.light,p.grass,p.dark),endY=FrontierProjection.H))
     // Uneven meadow patches, no visible gameplay grid.
     val random=Random(a.stage*271)
     // Stable pixel clusters: vegetation, stone chips and meadow texture.
-    repeat(1800){i->
-        val x=(random.nextInt(230)*4).toFloat();val y=(random.nextInt(163)*4).toFloat()
+    repeat(4600){i->
+        val x=(random.nextInt((FrontierProjection.W/4).toInt())*4).toFloat();val y=(random.nextInt((FrontierProjection.H/4).toInt())*4).toFloat()
         val tone=when(i%5){0->p.dark.copy(alpha=.37f);1->p.light.copy(alpha=.46f);2->Color(0xFFDFD99A).copy(alpha=.22f);else->p.grass.copy(alpha=.62f)}
         drawRect(tone,Offset(x,y),Size((1+random.nextInt(3))*4f,4f))
     }
-    repeat(230){
-        val x=random.nextFloat()*920;val y=random.nextFloat()*650
+    repeat(530){
+        val x=random.nextFloat()*FrontierProjection.W;val y=random.nextFloat()*FrontierProjection.H
         oval(if(it%2==0)p.light.copy(alpha=.20f)else p.dark.copy(alpha=.16f),x,y,7f+random.nextFloat()*32,4f+random.nextFloat()*15)
     }
     drawPath(water,p.dark.copy(alpha=.82f),style=Stroke(108f,cap=StrokeCap.Round))
@@ -166,13 +205,13 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
     drawPath(water,p.glow.copy(alpha=.17f),style=Stroke(33f,cap=StrokeCap.Round))
     drawPath(water,Color(0xFFB5E8DE).copy(alpha=.24f),style=Stroke(3f,cap=StrokeCap.Round))
     drawPath(water,p.glow.copy(alpha=.20f),style=Stroke(57f,cap=StrokeCap.Round))
-    for(i in 0..13){
-        val t=(phase+i/14f)%1f;val y=t*650f
-        val x=when{y<160f->526f-25f*sin(y*.025f);y<340f->505f+34f*sin((y-160f)*.02f);else->467f-(y-340f)*.34f}
-        drawLine(p.glow.copy(alpha=.18f),Offset(x-13f,y),Offset(x+12f,y+5f),2f,StrokeCap.Round)
+    val riverMeasure=PathMeasure().apply{setPath(water,false)}
+    for(i in 0..23){
+        val at=riverMeasure.getPosition(((phase+i/24f)%1f)*riverMeasure.length)
+        drawLine(p.glow.copy(alpha=.25f),at+Offset(-13f,-2f),at+Offset(12f,5f),2f,StrokeCap.Round)
     }
     // Stepped cliffs and the animated river gorge; only on blocked river cells.
-    for(y in 2..4){
+    for(y in listOf(2,3,4,7,8)){
         val c=FrontierProjection.center(GridPoint(4,y))
         translate(c.x,c.y){
             for(side in listOf(-1f,1f)){
@@ -182,7 +221,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
                 for(j in 0..7){val yy=-15f+j*5f
                     drawLine(Color(0xFF7C8774).copy(alpha=.5f),Offset(x-11f,yy),Offset(x+12f,yy-4f),2f)}
             }
-            if(y==3){
+            if(y==3||y==8){
                 for(i in 0..9){
                     val t=(phase*2f+i*.1f)%1f
                     val x=-17f+i*4f
@@ -193,12 +232,17 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         }
     }
     // Road network and bridges on passable crossings.
-    val roads=listOf(
+    val roads=mutableListOf(
         listOf(GridPoint(0,2),GridPoint(1,2),GridPoint(2,2),GridPoint(3,2),GridPoint(3,1),GridPoint(3,0),GridPoint(4,0),GridPoint(5,0),GridPoint(6,0),GridPoint(7,0)),
         listOf(GridPoint(3,2),GridPoint(3,3),GridPoint(3,4),GridPoint(3,5),GridPoint(4,5),GridPoint(5,5),GridPoint(6,5),GridPoint(7,5)),
         listOf(GridPoint(5,0),GridPoint(5,1),GridPoint(5,2),GridPoint(5,3),GridPoint(5,4),GridPoint(5,5)),
         listOf(GridPoint(5,2),GridPoint(6,2),GridPoint(7,2),GridPoint(7,3),GridPoint(7,4),GridPoint(7,5)),
         listOf(GridPoint(1,2),GridPoint(1,1)),listOf(GridPoint(2,2),GridPoint(2,3)),listOf(GridPoint(3,1),GridPoint(4,1),GridPoint(5,1)))
+    // Extended road network: east-west links, north-south routes and southern passages.
+    for(y in listOf(0,2,5))roads.add((7 until AdventureRules.MAP_W).map{GridPoint(it,y)})
+    for(y in listOf(6,9))roads.add((0 until AdventureRules.MAP_W).map{GridPoint(it,y)})
+    for(x in listOf(8,12,15))roads.add((0 until AdventureRules.MAP_H).map{GridPoint(x,it)})
+    for(x in listOf(0,3,5,7))roads.add((5 until AdventureRules.MAP_H).map{GridPoint(x,it)})
     // Rounded corners are real quadratic curves, not just round stroke caps.
     val roadPaths=roads.map{roundedRoad(it.map(FrontierProjection::center))}
     // Layer all roads together: junctions don't have dark seams.
@@ -227,7 +271,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             val dx=if(i%2==0)-31f else 32f
             val dy=if(i<2)-28f else 29f
             val o=c+Offset(dx,dy)
-            if(x==4&&y in 2..4)continue
+            if(x==4&&y in listOf(2,3,4,7,8))continue
             oval(p.dark.copy(alpha=.28f),o.x,o.y,10f,4f)
             for(j in 0..2)drawLine(if(j==1)p.light else p.dark,Offset(o.x+j*3f-3f,o.y+1f),Offset(o.x+j*5f-5f,o.y-6f-j),1.5f)
             if((x+y+i)%3==0)drawCircle(p.leaves,2.2f,o+Offset(0f,-6f))
@@ -240,12 +284,12 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
                     tree(p,phase,x+y)
                 }else if(x==6||x==1)rockRidge(p,x+y)else ruins(p)
             }
-        }else if(!wall&&q!=AdventureRules.base&&x!=4&&(x+y)%3==0){
+        }else if(!wall&&!AdventureRules.mainRoad(q)&&q!=AdventureRules.base&&x!=4&&(x+y)%3==0){
             translate(c.x+34f,c.y-28f){scale(.46f,.46f,Offset.Zero){tree(p,phase,x+y)}}
         }
     }
     // The bridges are navigable map nodes, not decorative obstacles.
-    for(y in listOf(0,1,5)){
+    for(y in listOf(0,1,5,6,9)){
         val c=FrontierProjection.center(GridPoint(4,y))
         translate(c.x,c.y){
             oval(Color(0xFF173A40).copy(alpha=.65f),0f,8f,42f,19f)
@@ -263,20 +307,20 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             AdventureTile.ENERGY->crate(p,Color(0xFF63DFF8),1)
             AdventureTile.REPAIR->crate(p,Color(0xFF7BF2A5),2)
             AdventureTile.AMMO->crate(p,Color(0xFFF7A65B),3)
-            AdventureTile.ENEMY->{if(q==AdventureRules.encounters.last())portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
+            AdventureTile.ENEMY->{if(q==AdventureRules.encounters(a).last())portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
             else->Unit
         }}
     }
     // Edge forest / rock faces, never place obstacles on walkable centers.
-    for(i in 0..9){
+    for(i in 0..18){
         val x=18f+i*95f
         translate(x,27f){scale(.58f,.58f,Offset.Zero){if(i%3==0)ruins(p)else tree(p,phase,i)}}
-        translate(x,610f){scale(.62f,.62f,Offset.Zero){if(i%3==1)ruins(p)else tree(p,phase,i+3)}}
+        translate(x,FrontierProjection.H-34f){scale(.62f,.62f,Offset.Zero){if(i%3==1)ruins(p)else tree(p,phase,i+3)}}
     }
     // Floating motes only above explored terrain, not a resource marker.
-    for(i in 0..31){
-        val x=(i*157%870+25).toFloat()+sin(phase*6.283f+i)*7f
-        val y=(i*97%570+40).toFloat()+cos(phase*6.283f+i)*5f
+    for(i in 0..63){
+        val x=(i*157%1770+25).toFloat()+sin(phase*6.283f+i)*7f
+        val y=(i*97%890+40).toFloat()+cos(phase*6.283f+i)*5f
         val q=FrontierProjection.at(x,y)
         if(q!=null&&AdventureRules.inSight(a,q)){
             val alpha=.15f+.30f*(.5f+.5f*sin(phase*6.283f+i))
@@ -288,7 +332,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         var prev=FrontierProjection.center(a.pos)
         route.forEach{q->val next=FrontierProjection.center(q);drawLine(p.glow.copy(alpha=.7f),prev,next,3f,StrokeCap.Round);drawCircle(p.glow,3.5f,next);prev=next}
     }
-    drawRect(Brush.radialGradient(listOf(Color.Transparent,Color.Transparent,Color(0xFF10212B).copy(alpha=.44f)),Offset(460f,320f),570f))
+    drawRect(Brush.radialGradient(listOf(Color.Transparent,Color.Transparent,Color(0xFF10212B).copy(alpha=.44f)),Offset(FrontierProjection.W/2,FrontierProjection.H/2),FrontierProjection.W*.68f))
 }
 private fun DrawScope.tree(p:FrontierPalette,phase:Float,seed:Int){
     oval(Color(0xFF243A34).copy(alpha=.7f),0f,5f,31f,12f)
@@ -406,7 +450,7 @@ private fun DrawScope.fogOfWar(a:AdventureState){
     clipPath(explored,ClipOp.Difference){
         drawRect(Color(0xFF0B1420),size=Size(FrontierProjection.W,FrontierProjection.H))
         val rng=Random(7717)
-        repeat(160){
+        repeat(420){
             val x=rng.nextFloat()*FrontierProjection.W;val y=rng.nextFloat()*FrontierProjection.H
             oval(Color(0xFF162334).copy(alpha=.4f),x,y,12f+rng.nextFloat()*22f,5f+rng.nextFloat()*12f)
         }
