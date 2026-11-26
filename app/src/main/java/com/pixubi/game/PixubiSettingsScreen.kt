@@ -128,7 +128,7 @@ internal fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SettingsSwitch(
                     title = "🎵 Фонова мелодія",
-                    description = "Цифровий саундтрек залежно від серії",
+                    description = "Мелодійний інструментальний саундтрек: база, світ і битви",
                     checked = settings.music,
                     onChecked = { onSettingsChange(settings.copy(music = it)) }
                 )
@@ -166,7 +166,7 @@ internal fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("🌌 Саундтреки середовищ", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Саундтрек автоматично відповідає серії роботика. " +
+                Text("Саундтрек відповідає серії роботика та режиму гри. " +
                     "Тут можна послухати інші середовища без зміни персонажа.",
                     color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
                 RobotSeries.entries.forEach { world ->
@@ -211,7 +211,7 @@ internal fun PixubiSettingsScreen(
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("💜 Твій спокій важливий", fontWeight = FontWeight.Bold)
                 Text("Гра автоматично замовкає, коли ти перемикаєшся на інший застосунок. " +
-                    "Усі мелодії та ефекти синтезуються прямо в телефоні: " +
+                    "Оригінальні багатошарові мелодії та ефекти створюються офлайн прямо в телефоні: " +
                     "без інтернету, реклами та завантажених пісень.",
                     color = Color(0xFFCCD5E9), style = MaterialTheme.typography.bodySmall)
             }
