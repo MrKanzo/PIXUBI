@@ -130,7 +130,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
             OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"База" else "Відступ")}
         }
-        if(!wide){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
+        if(!wide&&b==null){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
         Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")}
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
@@ -173,7 +173,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Text("Вороги · HP");b.enemies.forEach{Text("${it.series.title} ${it.hp}/${it.maxHp}",style=MaterialTheme.typography.bodySmall)}
                 }}
             }
-            if(!wide)Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Торкнись ворога для прогнозу, потім підтвердь атаку. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
+            if(!wide)Text("Блакитне — рух · червоне — атака. Торкнись цілі для прогнозу.",style=MaterialTheme.typography.labelSmall)
             }
             val actions: @Composable ()->Unit = {
             if(chosenEnemy!=null&&!busy){
@@ -222,12 +222,12 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 val hexH=boardHeight/5.15f
                 val rowStep=hexH*.75f
                 val topPad=hexH*1.15f
-                val spriteW=cell*1.58f
-                val spriteH=hexH*1.76f
+                val spriteW=cell*2.05f
+                val spriteH=hexH*2.04f
                 fun xOf(q:GridPoint)=cell*(.3f+q.x+if(q.y%2==1).5f else 0f)
                 fun yOf(q:GridPoint)=topPad+rowStep*q.y
                 fun spriteX(q:GridPoint)=xOf(q)+cell/2-spriteW/2
-                fun spriteY(q:GridPoint)=yOf(q)+hexH/2-spriteH*.85f
+                fun spriteY(q:GridPoint)=yOf(q)+hexH*.58f-spriteH*.89f
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
                     Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
                         detectTapGestures{tap->
@@ -303,7 +303,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val py by animateDpAsState(spriteY(b.pos),tween(duration(300)),label="battle y")
                     Box(Modifier.offset(px,py).size(spriteW,spriteH).zIndex(b.pos.y.toFloat()+1f)){
                         RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
                         val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
@@ -319,7 +319,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 else->RobotAction.IDLE
                             }
                             RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
                         }
                     }}
                     b.enemies.forEachIndexed{i,e->key(i){
@@ -327,7 +327,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         val ey by animateDpAsState(spriteY(e.pos),tween(duration(300)),label="bot y")
                         if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW,spriteH).zIndex(e.pos.y.toFloat()+1f)){
                             RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
                         }
                     }}
                     // Effects above sprites. Their progress is presentation-only.
@@ -394,7 +394,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 }
             }else{
                 BoxWithConstraints(Modifier.fillMaxWidth()){
-                    battlefield(Modifier.fillMaxWidth(),maxWidth*.91f)
+                    battlefield(Modifier.fillMaxWidth(),maxWidth*1.06f)
                 }
                 controls()
                 actions()
