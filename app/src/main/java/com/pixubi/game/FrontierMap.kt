@@ -61,6 +61,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     var zoom by remember{mutableIntStateOf(1)}
     var follow by remember{mutableStateOf(true)}
     var centerRequest by remember{mutableIntStateOf(0)}
+    var handledCenter by remember{mutableIntStateOf(0)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
     val loop=rememberInfiniteTransition(label="frontier scenery")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(7000,easing=LinearEasing)),label="river")
@@ -109,7 +110,8 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         val cx=with(density){(mapWidth*(center.x/FrontierProjection.W)-maxWidth/2).toPx().roundToInt()}
         val cy=with(density){(mapHeight*(center.y/FrontierProjection.H)-viewportHeight/2).toPx().roundToInt()}
         LaunchedEffect(a.pos,zoom,follow,centerRequest){
-            if(follow||centerRequest>0){
+            if(follow||centerRequest!=handledCenter){
+                handledCenter=centerRequest
                 delay(35)
                 coroutineScope{
                     launch{hScroll.animateScrollTo(cx.coerceIn(0,hScroll.maxValue),tween(240))}
