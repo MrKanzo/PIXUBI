@@ -643,7 +643,7 @@ private fun DrawScope.companionArm(x:Float,y:Float,angle:Float,far:Boolean,a:Col
         translate(x,y+43f){drawWorldWeapon(gear,a)}
     }
 }
-private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier) {
+private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier,shinAngle:Float=angle,plant:Boolean=false) {
     val d=CompanionCatalog.of(tier)
     val w=7f+d.armor*.7f
     rotate(angle,Offset(x,y)) {
@@ -651,10 +651,12 @@ private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:
         val thigh=Path().apply {moveTo(x-w,y);quadraticTo(x-w-2f,y+8f,x-5f,y+18f);lineTo(x+5f,y+18f);quadraticTo(x+w+2f,y+8f,x+w,y);close()}
         companionMetal(thigh,far)
         companionJoint(x,y+18f,5f,a)
+        rotate(shinAngle-angle,Offset(x,y+18f)){
         val shin=Path().apply {moveTo(x-5f,y+19f);quadraticTo(x-w-4f,y+24f,x-w-1f,y+36f);lineTo(x-5f,y+40f);lineTo(x+5f,y+40f);quadraticTo(x+w+4f,y+27f,x+5f,y+19f);close()}
         companionMetal(shin,far)
         omegaPlate(a,listOf(Offset(x-4f,y+20f),Offset(x+4f,y+20f),Offset(x+5f,y+27f),Offset(x,y+32f),Offset(x-5f,y+27f)))
         if(d.armor>=2f)drawLine(companionLight,Offset(x,y+23f),Offset(x,y+28f),2f,StrokeCap.Round)
+        rotate(if(plant)-shinAngle else 0f,Offset(x,y+40f)){
         val toe=if(side)16f else 10f
         val foot=Path().apply {moveTo(x-8f,y+36f);lineTo(x+8f,y+36f);if(side){quadraticTo(x+toe,y+40f,x+toe,y+46f);quadraticTo(x+toe-3f,y+49f,x-10f,y+47f);lineTo(x-10f,y+43f)}else{quadraticTo(x+11f,y+39f,x+11f,y+45f);quadraticTo(x,y+50f,x-11f,y+45f);quadraticTo(x-11f,y+39f,x-8f,y+36f)};close()}
         companionMetal(foot,far)
@@ -664,21 +666,23 @@ private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:
             drawLine(a,Offset(x-8f,y+40f),Offset(x+toe-1f,y+40f),4f,StrokeCap.Round)
             if(gear==RobotGear.SPEED_BOOTS)drawLine(companionLight,Offset(x-8f,y+45f),Offset(x+toe-1f,y+45f),1.5f)
         }
+        }}
     }
 }
 private fun DrawScope.companionRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipment,f:RobotFace,blink:Boolean,tier:RobotTier,phase:Float,action:RobotAction) {
     val side=view!=RobotView.FRONT
+    val gait=if(side&&KageGait.isLocomotion(action))WorldMotion.companionGait(action,phase)else null
     companionHair(tier,side,a,phase,action)
     backGear(e.equipped(RobotSlot.BACK),side,a)
     val boots=e.equipped(RobotSlot.FEET)
     if(side) {
-        companionLeg(94f,132f,p.farLeg,true,true,a,boots,tier)
-        companionArm(94f,91f,p.farArm,true,a,e.equipped(view.farHand()),tier)
-        companionLeg(102f,133f,p.nearLeg,true,false,a,boots,tier)
+        companionLeg(94f,133f,gait?.far?.thigh?:p.farLeg,true,true,a,boots,tier,gait?.far?.shin?:p.farLeg,gait?.far?.planted==true)
+        companionArm(94f,91f,gait?.farArm?:p.farArm,true,a,e.equipped(view.farHand()),tier)
+        companionLeg(102f,133f,gait?.near?.thigh?:p.nearLeg,true,false,a,boots,tier,gait?.near?.shin?:p.nearLeg,gait?.near?.planted==true)
         companionBody(tier,true,a,e)
         panel(94f,74f,11f,11f,4f,joint)
         companionHead(tier,true,a,f,blink,e)
-        companionArm(99f,92f,p.nearArm,false,a,e.equipped(view.nearHand()),tier)
+        companionArm(99f,92f,gait?.nearArm?:p.nearArm,false,a,e.equipped(view.nearHand()),tier)
         companionJoint(99f,92f,6.5f,a)
     } else {
         companionLeg(85f,133f,p.farLeg*.12f,false,false,a,boots,tier)
@@ -1007,7 +1011,7 @@ private fun DrawScope.kageRobot(p:RobotPose,view:RobotView,a:Color,e:RobotEquipm
 @Composable
 internal fun RobotPreview(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
                           phase:Float, showSockets:Boolean, modifier:Modifier=Modifier) {
-    RobotPreviewVisual(view,action,face,loadout.copy(equipment=WorldGearCatalog.visual(loadout.equipment)),phase,showSockets,modifier)
+    RobotPreviewVisual(KageGait.view(view,action),action,face,loadout.copy(equipment=WorldGearCatalog.visual(loadout.equipment)),phase,showSockets,modifier)
 }
 @Composable
 private fun RobotPreviewVisual(view:RobotView, action:RobotAction, face:RobotFace, loadout:RobotLoadout,
@@ -1061,7 +1065,7 @@ private fun RobotPreviewVisual(view:RobotView, action:RobotAction, face:RobotFac
                         drawLine(loadout.accent.copy(alpha=dash.trail*(.6f-i*.08f)),Offset(x-direction*35f,90f+i*14f),Offset(x,90f+i*14f),3f-i*.35f,StrokeCap.Round)
                     }
                 }
-                translate(left=travel,top=p.lift) {
+                translate(left=travel,top=if(companion&&KageGait.isLocomotion(action))WorldMotion.companionGait(action,phase).drop*growth else p.lift) {
                     scale(growth,growth,Offset(100f,ground)) {
                     scale(if(view==RobotView.LEFT) -1f else 1f,1f,Offset(100f,100f)) {
                         val actualFace=if(action==RobotAction.SLEEP) RobotFace.SLEEP else face
@@ -1150,12 +1154,12 @@ internal fun RobotLab(onBack:()->Unit) {
         })
         return
     }
-    LaunchedEffect(running,action) {
+    LaunchedEffect(running,action,series) {
         if(running) {
             var last=0L
             while(true) withFrameNanos { now ->
                 if(last!=0L) {
-                    val duration=when(action){RobotAction.NINJA_DASH->KageDashMotion.DURATION_MS;RobotAction.RUN->480f;RobotAction.WALK->950f;RobotAction.IDLE->3200f;else->1600f}
+                    val duration=if(action==RobotAction.NINJA_DASH)KageDashMotion.DURATION_MS else WorldMotion.period(series,action).toFloat()
                     val next=phase+(now-last).coerceAtMost(50_000_000L)/1_000_000f/duration
                     if(action==RobotAction.NINJA_DASH){phase=next.coerceAtMost(1f);if(phase>=1f)running=false}else phase=next%1f
                 }

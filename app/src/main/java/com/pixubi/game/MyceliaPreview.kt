@@ -19,8 +19,7 @@ internal object MyceliaCatalog {
         RobotTier.OMEGA->MyceliaForm("AETHER",4,1.02f,68f,35f,73f,3,6)
     }
     fun foot(phase:Float,index:Int,run:Boolean):Offset {
-        val p=(phase+if(run)(if(index==0||index==3)0f else .5f) else listOf(0f,.5f,.75f,.25f)[index])*2f*PI.toFloat()
-        return Offset(cos(p)*(if(run)25f else 12f),-max(0f,sin(p))*(if(run)25f else 12f))
+        return WorldMotion.quadruped(phase,index,run,if(run)22f else 12f,if(run)19f else 10f)
     }
 }
 private val ink=Color(0xFF39274E)

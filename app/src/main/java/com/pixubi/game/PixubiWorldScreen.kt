@@ -23,10 +23,13 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     var careAnimation by remember{mutableStateOf<RobotAction?>(null)}
     var careEvent by remember{mutableIntStateOf(0)}
+    var fx by remember{mutableStateOf(WorldFx.NONE)}
+    var fxEvent by remember{mutableIntStateOf(0)}
+    fun effect(next:WorldFx){fx=next;fxEvent++}
     var archiveSeries by remember{mutableStateOf(RobotSeries.CLASSIC)}
     var archiveTier by remember{mutableStateOf(RobotTier.MK1)}
     var profileName by remember{mutableStateOf(WorldProfile.load(context))}
-    fun save(p:WorldPet){WorldStorage.save(context,p);pet=p;onSeries(p.series)}
+    fun save(p:WorldPet){val before=pet;WorldStorage.save(context,p);pet=p;onSeries(p.series);if(before!=null&&p.tier!=before.tier){effect(WorldFx.EVOLVE);onSound(PixubiSound.HAPPY)}}
     LaunchedEffect(Unit){pet?.let{save(it)};while(true){delay(1000L);now=System.currentTimeMillis();pet?.let{val q=WorldRules.tick(it,now);if(q!=it)save(q)}}}
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
     BackHandler(enabled=page!="home"){page="home"}
@@ -45,7 +48,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     }
     val loop=rememberInfiniteTransition(label="world")
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
-    val period=when(action){RobotAction.WALK->950;RobotAction.IDLE->3200;else->1600}
+    val period=WorldMotion.period(p.series,RobotAction.IDLE)
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(period,easing=LinearEasing)),label="world motion")
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(14.dp),
         verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -66,10 +69,12 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             if(page=="home"){
                 Text(HabitatCatalog.of(p.series).title,style=MaterialTheme.typography.titleMedium)
                 val face=when{p.mode!=WorldMode.AWAKE->RobotFace.SLEEP;p.integrity<30||p.mood<25->RobotFace.SAD;action==RobotAction.ATTACK->RobotFace.ANGRY;p.mood>75->RobotFace.HAPPY;else->RobotFace.NEUTRAL}
-                HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(285.dp)){
-                    RobotPreview(if(action==RobotAction.WALK||action==RobotAction.ATTACK)RobotView.RIGHT else RobotView.FRONT,action,face,
-                        RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                }
+                WorldShowcase(p,action,if(fx==WorldFx.CONTACT&&careAnimation!=null)RobotFace.HAPPY else face,fx,fxEvent,
+                    Modifier.fillMaxWidth().height(320.dp),onTap={
+                        if(p.mode==WorldMode.AWAKE&&p.mission==null){
+                            careAnimation=RobotAction.WAVE;careEvent++;effect(WorldFx.CONTACT);onSound(PixubiSound.TAP)
+                        }
+                    })
                 WorldMeter("Енергія",p.energy);WorldMeter("Міцність",p.integrity);WorldMeter("Настрій",p.mood)
                 Text(p.message,style=MaterialTheme.typography.bodyMedium)
                 val m=p.mission
@@ -81,11 +86,11 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     Text("Технічне обслуговування")
                     val extras=WorldSupply.entries.filter{!it.isAmmo&&p.stock(it)>0}
                     if(extras.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        extras.forEach{kind->OutlinedButton(onClick={save(WorldRules.useSupply(p,kind));onSound(PixubiSound.HAPPY)},enabled=m==null){Text(kind.title+" "+p.stock(kind))}}
+                        extras.forEach{kind->OutlinedButton(onClick={val q=WorldRules.useSupply(p,kind);save(q);if(q.stock(kind)<p.stock(kind)){careAnimation=if(kind.category==WorldCategory.ENERGY)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;effect(when(kind.category){WorldCategory.ENERGY->WorldFx.CHARGE;WorldCategory.REPAIR->WorldFx.REPAIR;else->WorldFx.SYNC});onSound(PixubiSound.HAPPY)}},enabled=m==null){Text(kind.title+" "+p.stock(kind))}}
                     }
                     Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         listOf("Заряд ${p.cells}","Ремонт ${p.repair}","Синхронізація ${p.snacks}").forEachIndexed{i,label->
-                            OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;onSound(if(i==0)PixubiSound.HAPPY else PixubiSound.TAP)}},enabled=m==null){Text(label)}
+                            OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;effect(when(i){0->WorldFx.CHARGE;1->WorldFx.REPAIR;else->WorldFx.SYNC});onSound(if(i==0)PixubiSound.HAPPY else PixubiSound.TAP)}},enabled=m==null){Text(label)}
                         }
                     }
                     Button(onClick={page="missions"},modifier=Modifier.fillMaxWidth()){Text("Відкрити центр місій")}
@@ -101,10 +106,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 if(m!=null){
                     Text("${m.task.title} · ${((m.until-now+999)/1000).coerceAtLeast(0)} с")
                     LinearProgressIndicator(progress={1f-((m.until-now).coerceAtLeast(0L).toFloat()/(m.task.seconds*1000f)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
-                    HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(225.dp)){
-                        RobotPreview(RobotView.RIGHT,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,
-                            RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                    }
+                    WorldShowcase(p,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,fx,fxEvent,Modifier.fillMaxWidth().height(265.dp))
                 }
                 val ammoCost=WorldGearCatalog.ammoCost(p.equipment)
                 if(ammoCost.isNotEmpty())Text("Арена · "+ammoCost.entries.joinToString(" · "){(kind,n)->kind.title+" "+p.stock(kind)+"/"+n})
@@ -171,9 +173,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                         else if(!kind.isAmmo)OutlinedButton(onClick={save(WorldRules.useSupply(p,kind));onSound(PixubiSound.HAPPY)},enabled=p.mode==WorldMode.AWAKE&&p.mission==null){Text("Використати")}
                     }}
                 }
-                HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(215.dp)){
-                    RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                }
+                WorldShowcase(p,RobotAction.IDLE,RobotFace.NEUTRAL,WorldFx.NONE,0,Modifier.fillMaxWidth().height(230.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                     FilterChip(tab==null,{tab=null},label={Text("Усі слоти")})
                     RobotSlot.entries.forEach{slot->FilterChip(tab==slot,{tab=slot},label={Text(WorldCatalog.slots(p.series,slot))})}

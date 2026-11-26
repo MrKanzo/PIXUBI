@@ -351,7 +351,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
         val floor=size.height*.87f
         val lift=when{flight->38f+9f*sin(phase*6.28f);action==RobotAction.JUMP->sin(phase*PI.toFloat()).coerceAtLeast(0f)*35f;else->0f}
         val squat=if(action==RobotAction.SLEEP)f.leg*.42f else 0f
-        val bob=if(move)2f*sin(phase*12.56f)else sin(phase*6.28f)*1.4f
+        val bob=if(move)2.5f*sin(phase*12.56f)else sin(phase*6.28f)*2.1f
         val shadowWidth=(if(side)f.length*1.65f else f.length*.95f)*(if(flight).73f else 1f)
         drawOval(ink.copy(alpha=if(flight).19f else .35f),Offset(size.width/2-shadowWidth*fit*.5f,floor-2f),Size(shadowWidth*fit,6f*fit))
         translate(size.width/2+(if(view==RobotView.RIGHT)20f*fit else if(view==RobotView.LEFT)-20f*fit else 0f),floor){scale(fit*(if(view==RobotView.LEFT)-1f else 1f),fit,Offset.Zero){

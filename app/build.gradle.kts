@@ -9,8 +9,8 @@ android {
         applicationId = "com.pixubi.game.stable"
         minSdk = 26
         targetSdk = 36
-        versionCode = 96
-        versionName = "0.47.2"
+        versionCode = 97
+        versionName = "0.48.0"
     }
     // Release uses a permanent package ID. Debug is installed alongside it.
     signingConfigs {

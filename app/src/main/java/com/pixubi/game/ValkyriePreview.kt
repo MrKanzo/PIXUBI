@@ -335,7 +335,7 @@ internal fun ValkyriePreview(requested:RobotView,action:RobotAction,face:RobotFa
             val nt=gait?.near?.thigh?:motion.nearLeg;val ft=gait?.far?.thigh?:motion.farLeg
             val ns=gait?.near?.shin?:nt+bends.nearKnee;val fs=gait?.far?.shin?:ft+bends.farKnee
             val na=gait?.nearArm?:motion.nearArm;val fa=gait?.farArm?:motion.farArm
-            val lean=gait?.lean?:0f
+            val lean=gait?.lean?:WorldMotion.idleLean(loadout.series,action,phase,side)
             translate(0f,-base-hover+(gait?.drop?:0f)+(if(gait==null)motion.lift else 0f)){
                 rotate(lean,Offset(0f,f.hips)){valkBack(f,a,side,action,phase,e.equipped(RobotSlot.BACK))}
                 val boots=e.equipped(RobotSlot.FEET)

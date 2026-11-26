@@ -504,7 +504,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                 val base=hips+form.thigh+form.shin+13f
                 fun extent(t:Float,s:Float)=form.thigh*cos(t*PI.toFloat()/180f)+form.shin*cos(s*PI.toFloat()/180f)+13f
                 val drop=gait?.drop?:if(dash!=null)(form.thigh+form.shin+13f-max(extent(nt,ns),extent(ft,fs))).coerceAtLeast(0f) else 0f
-                val lean=if(side)gait?.lean?:dash?.lean?:0f else -(dash?.lean?:0f)*.2f
+                val lean=if(side)gait?.lean?:dash?.lean?:WorldMotion.idleLean(loadout.series,action,phase,side) else if(dash!=null)-dash.lean*.2f else WorldMotion.idleLean(loadout.series,action,phase,side)
                 translate(0f,-base+drop+if(gait==null)pose.lift else 0f){
                     if(dash!=null&&dash.trail>0f&&side)for(i in 0..4)led(-110f-i*4f,30f+i*20f,-65f-i*4f,30f+i*20f,a.copy(alpha=dash.trail*.6f),1.5f)
                     val boots=e.equipped(RobotSlot.FEET)

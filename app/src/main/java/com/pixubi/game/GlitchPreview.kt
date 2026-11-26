@@ -273,6 +273,7 @@ internal fun GlitchPreview(requested:RobotView,action:RobotAction,face:RobotFace
                 val nt=gait?.near?.thigh?:motion.nearLeg;val ft=gait?.far?.thigh?:motion.farLeg
                 val ns=gait?.near?.shin?:nt+bends.nearKnee;val fs=gait?.far?.shin?:ft+bends.farKnee
                 val na=gait?.nearArm?:motion.nearArm;val fa=gait?.farArm?:motion.farArm
+                val lean=gait?.lean?:WorldMotion.idleLean(loadout.series,action,phase,side)
                 val showTerminal=f.grade>=2&&(action==RobotAction.SCAN||action==RobotAction.HACK)
                 val actual=if(action==RobotAction.SLEEP)RobotFace.SLEEP else face
                 fun DrawScope.robot(){
@@ -280,9 +281,9 @@ internal fun GlitchPreview(requested:RobotView,action:RobotAction,face:RobotFace
                     if(f.grade==4)wings(a,side,action,phase)
                     if(e.equipped(RobotSlot.BACK)!=null)translate(if(side)-22f else 0f,4f){plate("M -15 -8 L 15 -8 L 18 25 L -18 25 Z");glowLine(a,-9f,0f,-9f,19f)}
                     leg(f,if(side)-4f else -14f,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,side,a,e.equipped(RobotSlot.FEET),debug)
-                    if(side)rotate(gait?.lean?:0f,Offset(0f,f.hips)){arm(f,-3f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug,false,phase)}
+                    if(side)rotate(lean,Offset(0f,f.hips)){arm(f,-3f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug,false,phase)}
                     leg(f,if(side)4f else 14f,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,e.equipped(RobotSlot.FEET),debug)
-                    rotate(gait?.lean?:0f,Offset(0f,f.hips)){
+                    rotate(lean,Offset(0f,f.hips)){
                         body(f,side,a,e)
                         if(!side){
                             for(s in listOf(-1f,1f))drawLine(dark,Offset(s*18f,3f),Offset(s*f.shoulder,3f),9f)
