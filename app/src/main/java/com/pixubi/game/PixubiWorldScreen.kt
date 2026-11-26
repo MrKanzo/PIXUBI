@@ -76,7 +76,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 Text(HabitatCatalog.of(p.series).title,style=MaterialTheme.typography.titleMedium)
                 val face=when{p.mode!=WorldMode.AWAKE->RobotFace.SLEEP;p.integrity<30||p.mood<25->RobotFace.SAD;action==RobotAction.ATTACK->RobotFace.ANGRY;p.mood>75->RobotFace.HAPPY;else->RobotFace.NEUTRAL}
                 WorldShowcase(p,action,if(fx==WorldFx.CONTACT&&careAnimation!=null)RobotFace.HAPPY else face,fx,fxEvent,
-                    Modifier.fillMaxWidth().height(320.dp),onTap={
+                    Modifier.fillMaxWidth().height(320.dp),roam=true,onTap={
                         if(p.mode==WorldMode.AWAKE&&p.mission==null){
                             careAnimation=RobotAction.WAVE;careEvent++;effect(WorldFx.CONTACT);onSound(PixubiSound.TAP)
                         }
@@ -113,7 +113,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 if(m!=null){
                     Text("${m.task.title} · ${((m.until-now+999)/1000).coerceAtLeast(0)} с")
                     LinearProgressIndicator(progress={1f-((m.until-now).coerceAtLeast(0L).toFloat()/(m.task.seconds*1000f)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
-                    WorldShowcase(p,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,fx,fxEvent,Modifier.fillMaxWidth().height(265.dp))
+                    WorldShowcase(p,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,fx,fxEvent,Modifier.fillMaxWidth().height(265.dp),roam=true)
                 }
                 val ammoCost=WorldGearCatalog.ammoCost(p.equipment)
                 if(ammoCost.isNotEmpty())Text("Арена · "+ammoCost.entries.joinToString(" · "){(kind,n)->kind.title+" "+p.stock(kind)+"/"+n})
