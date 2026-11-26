@@ -42,7 +42,7 @@ class SoundSettingsStore(context: Context) {
 enum class PixubiSound { TAP, FEED, WATER, SLEEP, WAKE, FREEZE, STAR, HAPPY, QUIZ_CORRECT, QUIZ_WRONG }
 
 /**
- * Generated original 8-bit melodies and digital effects.
+ * Original layered instrumental score and digital effects.
  * No audio files, no copyright songs, no INTERNET permission and no background playback.
  */
 class PixubiAudio(context: Context) {
@@ -55,6 +55,7 @@ class PixubiAudio(context: Context) {
     private val effectIds = mutableMapOf<PixubiSound, Int>()
     @Volatile private var options = SoundSettings()
     @Volatile private var region = Region.FOREST
+    @Volatile private var scene = MusicScene.BASE
     @Volatile private var foreground = false
     @Volatile private var closed = false
     private val backgroundThread: Thread
@@ -79,6 +80,8 @@ class PixubiAudio(context: Context) {
         options = next
         region = world
     }
+
+    fun setMusicScene(value: MusicScene) { scene = value }
 
     fun setForeground(value: Boolean) { foreground = value }
 
@@ -119,85 +122,58 @@ class PixubiAudio(context: Context) {
 
     private fun musicLoop() {
         var player: AudioTrack? = null
-        var currentWorld: Region? = null
-        var currentFrame = 0L
+        var active: Pair<Region, MusicScene>? = null
+        var position = 0
+        var fade = 0f
+        var song: ShortArray? = null
+        val cache = object : LinkedHashMap<Pair<Region,MusicScene>,ShortArray>(4,.75f,true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Region,MusicScene>,ShortArray>?): Boolean = size > 3
+        }
         val samples = ShortArray(1024)
         try {
             while (!closed) {
-                val ready = foreground && options.music
-                if (!ready) {
-                    if (player != null) {
-                        runCatching { player.stop() }
-                        player.release()
-                        player = null
-                    }
+                if (!foreground || !options.music) {
+                    player?.let { runCatching { it.pause();it.flush();it.release() } }
+                    player=null
                     Thread.sleep(120)
                     continue
                 }
-                if (player == null) {
-                    player = makeTrack()
-                    if (player == null) {
-                        Thread.sleep(600)
-                        continue
+                val desired=region to scene
+                if(active!=desired || song==null){
+                    // Fade old music before changing the arrangement.
+                    if(player!=null && song!=null && fade>0f){
+                        fade=(fade-.23f).coerceAtLeast(0f)
+                    }else{
+                        player?.let{runCatching{it.pause();it.flush();it.release()}}
+                        player=null
+                        song=cache[desired]?:PixubiScore.render(desired.first,desired.second,rate).also{cache[desired]=it}
+                        active=desired;position=0;fade=0f
+                        if(!foreground||!options.music||closed||desired!=(region to scene))continue
                     }
-                    player.play()
-                    currentFrame = 0
-                    currentWorld = null
+                }else fade=(fade+.075f).coerceAtMost(1f)
+                val pcm=song?:continue
+                if(player==null){
+                    player=makeTrack()
+                    if(player==null){Thread.sleep(600);continue}
+                    player.setVolume(0f);player.play()
                 }
-                val world = region
-                if (world != currentWorld) {
-                    currentWorld = world
-                    currentFrame = 0
+                for(i in samples.indices){
+                    samples[i]=pcm[position]
+                    position=(position+1)%pcm.size
                 }
-                val theme = RegionMelodies.forRegion(world)
-                val pace = (rate * 60.0 / theme.bpm / 2.0).toLong().coerceAtLeast(1)
-                for (i in samples.indices) {
-                    val frame = currentFrame + i
-                    val step = ((frame / pace) % 16).toInt()
-                    val position = (frame % pace).toDouble() / pace
-                    val note = theme.notes[step]
-                    val bass = theme.bass[step / 4]
-                    val t = frame.toDouble() / rate
-                    val envelope = min(1.0, position * 14.0) *
-                        (1.0 - position).coerceAtLeast(0.0).pow(theme.decay)
-                    val lead = if (note < 0) 0.0 else voice(note, t, theme.color) *
-                        envelope * 0.49
-                    val under = voice(bass, t, 0) *
-                        (0.19 + .05 * cos(PI * position)) * 0.45
-                    val shimmer = if (step % 4 == 2) voice(bass + 12, t, 0) *
-                        envelope * 0.045 else 0.0
-                    val mixed = (lead + under + shimmer).coerceIn(-0.75,0.75)
-                    samples[i] = (mixed * 32760).toInt().toShort()
-                }
-                currentFrame += samples.size
-                val volume = options.musicVolume.coerceIn(0f, 1f) * 0.72f
-                player.setVolume(volume)
-                val written = player.write(samples, 0, samples.size)
-                if (written < 0) {
-                    runCatching { player.stop() }
-                    player.release()
-                    player = null
+                player.setVolume(options.musicVolume.coerceIn(0f,1f)*fade*.85f)
+                val written=player.write(samples,0,samples.size)
+                if(written<0){
+                    runCatching{player?.release()}
+                    player=null;fade=0f
                 }
             }
         } catch (_: InterruptedException) {
-            // Activity is stopping; release audio hardware.
+            // Release on activity disposal.
         } catch (_: Exception) {
             // Audio must never crash the game.
         } finally {
-            player?.let { runCatching { it.pause(); it.flush(); it.release() } }
-        }
-    }
-
-    private fun voice(note: Int, time: Double, color: Int): Double {
-        val hz = 440.0 * 2.0.pow((note - 69.0) / 12.0)
-        val radians = 2.0 * PI * hz * time
-        return when (color) {
-            0 -> sin(radians) * .88 + sin(2.0 * radians) * .12 // clear bell
-            1 -> sin(radians) * .72 + sin(3.0 * radians) * .25 // crystalline
-            2 -> sin(radians) * .65 + sin(2.0 * radians) * .19 +
-                sin(4.0 * radians) * .10 // chiptune
-            3 -> sin(radians) * .70 + sin(2.0 * radians) * .28 // warm
-            else -> sin(radians) * .85 + sin(0.5 * radians) * .1 // airy
+            player?.let { runCatching { it.pause();it.flush();it.release() } }
         }
     }
 
