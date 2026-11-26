@@ -345,20 +345,22 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 Text("Технології · $opened/${SquadKind.entries.size} · перемоги на карті ${SquadResearch.victories(p.adventure)}",style=MaterialTheme.typography.titleMedium)
                 LinearProgressIndicator(progress={opened.toFloat()/SquadKind.entries.size},modifier=Modifier.fillMaxWidth())
                 SquadKind.entries.forEach{k->
+                    val locked=SquadDisclosure.locked(p.adventure,k)
+                    if(locked!=null){
+                        ClassifiedUnitCard(locked,SquadResearch.progress(p.adventure,k),phase)
+                    }else{
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        val unlocked=SquadResearch.unlocked(p.adventure,k)
-                        if(unlocked)RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,k.loadout(),phase,false,Modifier.size(68.dp))
-                        else Box(Modifier.size(68.dp).background(Color(0xFF202D42),RoundedCornerShape(10.dp)),contentAlignment=Alignment.Center){Text("🔒",style=MaterialTheme.typography.headlineSmall)}
+                        RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,k.loadout(),phase,false,Modifier.size(68.dp))
                         Column(Modifier.weight(1f)){
-                            Text(k.title+" · "+if(unlocked)"ранг ${SquadRules.rank(p.adventure,k)}" else "Заблоковано",style=MaterialTheme.typography.titleSmall)
-                            Text(SquadResearch.progress(p.adventure,k),style=MaterialTheme.typography.labelSmall,color=if(unlocked)MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(k.title+" · ранг ${SquadRules.rank(p.adventure,k)}",style=MaterialTheme.typography.titleSmall)
+                            Text("Технологію відкрито",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.secondary)
                             Text("HP ${SquadRules.unitHp(k,SquadRules.rank(p.adventure,k))} · ATK ${k.attack+4*(SquadRules.rank(p.adventure,k)-1)} · DEF ${k.defense+5*(SquadRules.rank(p.adventure,k)-1)} · рух ${k.move} · дальність ${k.range}",style=MaterialTheme.typography.bodySmall)
                             if(k.requiredBarracks>p.adventure.barracks)Text("Потрібні казарми рівня ${k.requiredBarracks}",style=MaterialTheme.typography.labelSmall)
                             if(k==SquadKind.MEDIC)Text("3 ремонти в радіусі 2 клітинок",style=MaterialTheme.typography.labelSmall)
                             if(k==SquadKind.RANGER)Text("8 власних зарядів на бій",style=MaterialTheme.typography.labelSmall)
                             val hp=roster[k]
                             val count=SquadRules.stackCount(p.adventure,k)
-                            Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=unlocked&&atBase&&p.adventure.barracks>=k.requiredBarracks&&(hp!=null||roster.size<SquadRules.slots(p.adventure))&&count<SquadRules.MAX_STACK&&p.coins>=k.price){Text(if(unlocked)"+1 боєць · ${k.price} 🪙 · $count/5" else "Спочатку відкрий технологію")}
+                            Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&p.adventure.barracks>=k.requiredBarracks&&(hp!=null||roster.size<SquadRules.slots(p.adventure))&&count<SquadRules.MAX_STACK&&p.coins>=k.price){Text("+1 боєць · ${k.price} 🪙 · $count/5")}
                             if(hp!=null){
                                 val rank=SquadRules.rank(p.adventure,k)
                                 if(rank<3)OutlinedButton(onClick={onChange(SquadRules.upgrade(p,k))},enabled=atBase&&rank<p.adventure.barracks&&p.coins>=SquadRules.upgradePrice(p.adventure,k)){Text("Ранг ${rank+1} · ${SquadRules.upgradePrice(p.adventure,k)} 🪙")}
@@ -369,9 +371,46 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             }
                         }
                     }
+                    }
                 }
             }
         }
     }
     dismiss?.let{k->AlertDialog(onDismissRequest={dismiss=null},title={Text("Вивести юніта?")},text={Text("Увесь загін цього класу буде розформовано без повернення монет.")},confirmButton={TextButton(onClick={onChange(SquadRules.dismiss(p,k));dismiss=null}){Text("Вивести")}},dismissButton={TextButton(onClick={dismiss=null}){Text("Скасувати")}})}
+}
+
+@Composable private fun ClassifiedUnitCard(info:SquadClassified,progress:String,phase:Float){
+    val accent=if(info.secret)Color(0xFFB29AEF)else Color(0xFF69BFCB)
+    Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF172234))){
+        Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            Box(Modifier.size(80.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0D1523)),contentAlignment=Alignment.Center){
+                // Deliberately identical abstract vault, never an actual silhouette or RobotPreview.
+                Canvas(Modifier.fillMaxSize()){
+                    val c=Offset(size.width/2,size.height/2)
+                    val radius=size.minDimension*.35f
+                    val outline=Path().apply{
+                        for(i in 0..5){
+                            val a=(i*60-90)*PI.toFloat()/180f
+                            val p=c+Offset(cos(a),sin(a))*radius
+                            if(i==0)moveTo(p.x,p.y)else lineTo(p.x,p.y)
+                        };close()
+                    }
+                    drawPath(outline,accent.copy(alpha=.10f))
+                    drawPath(outline,accent.copy(alpha=.65f),style=Stroke(2f))
+                    drawCircle(accent.copy(alpha=.10f+.10f*sin(phase*6.283f)),radius*.7f,c)
+                    repeat(7){i->val y=size.height*(.12f+i*.12f)
+                        drawLine(accent.copy(alpha=.07f),Offset(size.width*.1f,y),Offset(size.width*.9f,y),1f)}
+                    val y=size.height*(.12f+.76f*phase)
+                    drawLine(accent.copy(alpha=.4f),Offset(size.width*.12f,y),Offset(size.width*.88f,y),1.5f)
+                }
+                Text("?",color=accent,style=MaterialTheme.typography.headlineLarge)
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+                Text(info.code+" · 🔒",color=accent,style=MaterialTheme.typography.labelSmall)
+                Text(info.title,style=MaterialTheme.typography.titleSmall)
+                Text("Модель та характеристики засекречено",style=MaterialTheme.typography.bodySmall)
+                Text(progress,style=MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
 }

@@ -95,7 +95,10 @@ internal object AdventureRules{
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
         if(a.battle!=null||!canAdvance(a)||a.stage>=100||!canExplore(p))return p
-        return p.copy(adventure=AdventureState(stage=a.stage+1,squad=a.squad,barracks=a.barracks,squadRanks=a.squadRanks,pastCampaignWins=SquadResearch.victories(a),licensed=a.licensed+a.squad.keys),message="Відкрито сектор ${a.stage+1}")
+        val next=AdventureState(stage=a.stage+1,squad=a.squad,barracks=a.barracks,squadRanks=a.squadRanks,pastCampaignWins=SquadResearch.victories(a),licensed=a.licensed+a.squad.keys+SquadKind.entries.filter{SquadResearch.unlocked(a,it)})
+        val newly=SquadKind.entries.filter{!SquadResearch.unlocked(a,it)&&SquadResearch.unlocked(next,it)}
+        val notice=if(newly.isEmpty())"" else " · 🔓 Відкрито: "+newly.joinToString(", "){it.title}
+        return p.copy(adventure=next.copy(licensed=next.licensed+newly),message="Відкрито сектор ${a.stage+1}"+notice)
     }
     fun move(p:WorldPet,to:GridPoint,now:Long):WorldPet{
         val a=p.adventure
@@ -274,7 +277,7 @@ internal object AdventureRules{
         val earnsCredit=win&&!a.credited&&complete(updated)
         val newTech=SquadKind.entries.filter{!SquadResearch.unlocked(a,it)&&SquadResearch.unlocked(updated,it)}
         val techMessage=if(newTech.isEmpty())"" else " · 🔓 Відкрито: "+newTech.joinToString(", "){it.title}
-        val q=p.copy(adventure=updated.copy(credited=a.credited||earnsCredit),integrity=integrity,wins=p.wins+if(win)1 else 0,
+        val q=p.copy(adventure=updated.copy(credited=a.credited||earnsCredit,licensed=updated.licensed+newTech),integrity=integrity,wins=p.wins+if(win)1 else 0,
             expeditions=p.expeditions+if(earnsCredit)1 else 0,last=now,
             message=if(win)"Перемога! +$xp XP · +$coins монет"+techMessage else if(retreat)"Відступ. Ворог залишився на карті." else "Поразка. Повернення на базу — потрібен ремонт.")
         return WorldRules.gain(q,RobotSkill.COMBAT,xp,if(win)30 else 0,coins)

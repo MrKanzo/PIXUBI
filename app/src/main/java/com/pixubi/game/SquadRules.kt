@@ -114,3 +114,18 @@ internal object SquadResearch{
         return if(unlocked(a,k))"Технологію відкрито" else "Перемоги на карті: ${victories(a).coerceAtMost(req.wins)}/${req.wins} · сектор ${a.stage.coerceAtMost(req.sector)}/${req.sector}"
     }
 }
+
+internal data class SquadClassified(val title:String,val code:String,val secret:Boolean)
+internal object SquadDisclosure{
+    // This metadata contains no model, series, weapon, skin or combat statistics.
+    fun locked(a:AdventureState,k:SquadKind):SquadClassified?{
+        if(SquadResearch.unlocked(a,k))return null
+        return when(k){
+            SquadKind.GUARD->SquadClassified("Захисник","TECH 03",false)
+            SquadKind.MEDIC->SquadClassified("Ремонтний дрон","TECH 04",false)
+            SquadKind.SIEGE->SquadClassified("Секретний прототип","PROJECT 05",true)
+            SquadKind.AERIAL->SquadClassified("Невідома технологія","PROJECT 06",true)
+            else->SquadClassified("Невідомий юніт","CLASSIFIED",true)
+        }
+    }
+}
