@@ -26,6 +26,19 @@ internal object AdventureRules{
     fun id(q:GridPoint)=q.y*MAP_W+q.x
     fun inMap(q:GridPoint)=q.x in 0 until MAP_W&&q.y in 0 until MAP_H
     fun inArena(q:GridPoint)=q.x in 0 until ARENA_W&&q.y in 0 until ARENA_H
+    // Odd-r pointy-top hex coordinates. Map movement remains four-directional.
+    fun arenaNeighbors(q:GridPoint):List<GridPoint>{
+        val shift=if(q.y%2==0)-1 else 0
+        return listOf(GridPoint(q.x-1,q.y),GridPoint(q.x+1,q.y),
+            GridPoint(q.x+shift,q.y-1),GridPoint(q.x+shift+1,q.y-1),
+            GridPoint(q.x+shift,q.y+1),GridPoint(q.x+shift+1,q.y+1))
+    }
+    fun arenaDistance(a:GridPoint,b:GridPoint):Int{
+        val ax=a.x-(a.y-(a.y and 1))/2
+        val bx=b.x-(b.y-(b.y and 1))/2
+        val dx=ax-bx;val dy=a.y-b.y
+        return maxOf(abs(dx),abs(dy),abs(dx+dy))
+    }
     fun tile(a:AdventureState,q:GridPoint):AdventureTile=when{
         q==base->AdventureTile.BASE
         q in walls->AdventureTile.WALL
@@ -111,7 +124,7 @@ internal object AdventureRules{
         while(queue.isNotEmpty()){
             val (q,d)=queue.removeFirst()
             if(q==to)return d
-            q.neighbors().filter{inArena(it)&&it !in blocked&&visited.add(it)}.forEach{queue.add(it to d+1)}
+            arenaNeighbors(q).filter{inArena(it)&&it !in blocked&&visited.add(it)}.forEach{queue.add(it to d+1)}
         }
         return null
     }
@@ -126,7 +139,7 @@ internal object AdventureRules{
     }
     fun attackCost(g:RobotGear?)=if(g==null)null else WorldGearCatalog.ammo(g)?.first
     fun canHit(p:WorldPet,b:ArenaBattle,enemy:ArenaBot,g:RobotGear?):Boolean{
-        if(enemy.hp<=0||b.pos.distance(enemy.pos)>range(g))return false
+        if(enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>range(g))return false
         if(g!=null&&g !in weapons(p))return false
         return attackCost(g)?.let{p.stock(it)>0}?:true
     }
@@ -167,7 +180,7 @@ internal object AdventureRules{
         var hp=b.hp;val bots=b.enemies.toMutableList();val logs=mutableListOf(log)
         for(i in bots.indices){
             val e=bots[i];if(e.hp<=0||hp<=0)continue
-            if(e.pos.distance(b.pos)==1){
+            if(arenaDistance(e.pos,b.pos)==1){
                 val hit=damage(e.attack,p.stats.defense).let{if(guard)(it+1)/2 else it}
                 hp=(hp-hit).coerceAtLeast(0);logs+="${e.series.title}: −$hit HP"
             }else{
@@ -175,7 +188,7 @@ internal object AdventureRules{
                 val reach=(1+e.speed/55).coerceIn(1,3)
                 val options=(0 until ARENA_W*ARENA_H).map{GridPoint(it%ARENA_W,it/ARENA_W)}
                     .filter{it !in blocked&&(path(e.pos,it,blocked)?:999)<=reach}
-                val next=options.minWithOrNull(compareBy<GridPoint>{it.distance(b.pos)}.thenBy{it.y}.thenBy{it.x})?:e.pos
+                val next=options.minWithOrNull(compareBy<GridPoint>{arenaDistance(it,b.pos)}.thenBy{it.y}.thenBy{it.x})?:e.pos
                 bots[i]=e.copy(pos=next)
                 if(next!=e.pos)logs+="${e.series.title} наближається"
             }
