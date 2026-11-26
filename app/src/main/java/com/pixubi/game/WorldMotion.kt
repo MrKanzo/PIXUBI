@@ -43,3 +43,23 @@ internal object WorldMotion{
     }
     fun companionGait(action:RobotAction,phase:Float)=KageGait.pose(KageForm(1f,1f,30f,1f,18f,22f,18f,20f,0f,0),action,phase)
 }
+
+/** Presentation-only patrol planner. Does not alter needs, rewards or saved progress. */
+internal object HomeRoam {
+    const val MIN_X=.32f
+    const val MAX_X=.68f
+    const val SCALE=.63f
+    private val stops=listOf(MIN_X,.50f,MAX_X)
+    fun destination(current:Float,random:kotlin.random.Random):Float {
+        val candidates=stops.filter{abs(it-current)>=.14f}
+        return candidates[random.nextInt(candidates.size)]
+    }
+    fun direction(from:Float,to:Float)=if(to<from)RobotView.LEFT else RobotView.RIGHT
+    fun duration(series:RobotSeries,from:Float,to:Float,running:Boolean=false):Int {
+        val period=WorldMotion.period(series,if(running)RobotAction.RUN else RobotAction.WALK)
+        val distance=abs(to-from)
+        return (distance/.095f*period).roundToInt().coerceIn(300,5200)
+    }
+    fun pause(random:kotlin.random.Random,mission:Boolean):Long=
+        if(mission)random.nextLong(650L,1401L) else random.nextLong(1800L,4201L)
+}
