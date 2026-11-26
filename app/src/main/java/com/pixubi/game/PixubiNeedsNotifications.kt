@@ -111,8 +111,8 @@ object PixubiNeedsNotifier {
     fun createChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Потреби Піксубі", NotificationManager.IMPORTANCE_DEFAULT)
-                .apply { description = "Дбайливі нагадування від цифрового вихованця" }
+            NotificationChannel(CHANNEL, "Стан роботика PIXUBI", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "Енергія, ремонт, синхронізація та місії" }
         )
     }
 
@@ -168,6 +168,11 @@ object PixubiNeedsNotifier {
             "Привіт! Це тест сповіщень. Я нагадаю, коли мені знадобишся 💜"))
     }
 
+    fun sendWorldTest(context:Context){
+        val name=WorldStorage.load(context)?.name?:"PIXUBI"
+        post(context,PixubiNeedAlert(PixubiNeed.PLAY,"🤖 $name · системи активні","Тест каналу: енергія, корпус, синхронізація та місії."))
+    }
+
     fun check(context: Context, now: Long = System.currentTimeMillis()) {
         if (isVisible || !permissionGranted(context)) return
         val settings = PixubiNotificationSettingsStore(context).load()
@@ -177,16 +182,11 @@ object PixubiNeedsNotifier {
         val history = context.getSharedPreferences("pixubi_notification_history", Context.MODE_PRIVATE)
         if (now - history.getLong("lastVisit", 0L) < 20L * MINUTE) return
         if (now - history.getLong("lastAny", 0L) < ANY_COOLDOWN) return
-        val saved = PetStorage(context).load() ?: return
-        if (history.getLong("bornAt", -1L) != saved.bornAt) {
-            history.edit().clear().putLong("bornAt", saved.bornAt).apply()
-        }
-        val simulated = GameEngine.restoreAfterAbsence(saved, now)
-        val awayMinutes = ((now - history.getLong("lastVisit", saved.lastUpdatedAt))
-            .coerceAtLeast(0L) / MINUTE)
-        val candidate = PixubiNeedRules.findNeeds(simulated, settings, awayMinutes).firstOrNull {
-            now - history.getLong("last_${it.need.name}", 0L) >= KIND_COOLDOWN
-        } ?: return
+        val saved = WorldStorage.load(context) ?: return
+        val simulated = WorldRules.tick(saved,now)
+        val candidate=WorldNeedRules.find(saved,simulated,settings).firstOrNull{
+            now-history.getLong("last_${it.need.name}",0L)>=KIND_COOLDOWN
+        }?:return
         post(context, candidate)
         history.edit()
             .putLong("lastAny", now)
@@ -203,5 +203,18 @@ class PixubiNeedsWorker(context: Context, params: WorkerParameters) : Worker(con
         } catch (error: Exception) {
             Result.retry()
         }
+    }
+}
+
+internal object WorldNeedRules{
+    fun find(saved:WorldPet,p:WorldPet,settings:PixubiNotificationSettings):List<PixubiNeedAlert>{
+        if(!settings.enabled||p.mode==WorldMode.HIBERNATE)return emptyList()
+        val result=mutableListOf<PixubiNeedAlert>()
+        if(settings.food&&p.energy<=30&&p.mode==WorldMode.AWAKE)result+=PixubiNeedAlert(PixubiNeed.FOOD,"🔋 ${p.name} · низька енергія","Підключи енергокомірку або активуй відпочинок.")
+        if(settings.water&&p.integrity<=55)result+=PixubiNeedAlert(PixubiNeed.WATER,"🛠 ${p.name} · ремонт","Цілісність корпусу ${p.integrity}%. Потрібен ремонтний модуль.")
+        if(settings.play&&saved.mission!=null&&p.mission==null)result+=PixubiNeedAlert(PixubiNeed.PLAY,"📡 ${p.name} · місія завершена","Повернися до світу, щоб переглянути результат.")
+        if(settings.sleep&&p.energy<=50&&p.mode==WorldMode.AWAKE&&p.mission==null)result+=PixubiNeedAlert(PixubiNeed.SLEEP,"🌙 ${p.name} · відпочинок","Активуй режим сну для відновлення енергії.")
+        if(settings.play&&p.mood<=40&&p.mode==WorldMode.AWAKE)result+=PixubiNeedAlert(PixubiNeed.PLAY,"💠 ${p.name} · синхронізація","Підтримай стабільність цифрової свідомості.")
+        return result
     }
 }

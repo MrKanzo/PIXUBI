@@ -16,7 +16,7 @@ internal data class WorldPet(val series:RobotSeries,val skin:RobotSkin,val name:
     val cells:Int=4,val repair:Int=3,val snacks:Int=4,val mode:WorldMode=WorldMode.AWAKE,
     val equipment:RobotEquipment=RobotEquipment(),val owned:Set<RobotGear> = emptySet(),
     val skills:RobotSkills=RobotSkills(),val wins:Int=0,val expeditions:Int=0,val last:Long=0,
-    val mission:WorldMission?=null,val message:String="Твій новий світ відкрито!"){
+    val mission:WorldMission?=null,val message:String="GENESIS завершено. Системи активні!"){
     val level get()=RobotProgress(xp).level
     val tier get()=if(level>=30&&wins>=10&&expeditions>=10)RobotTier.OMEGA else RobotProgress(xp).nextTier
     val stats get()=RobotBalance.total(tier,equipment,level,skills.bonuses())+WorldRules.innate(series)
@@ -52,7 +52,7 @@ internal object WorldRules{
             skills=p.skills.copy(points=p.skills.points+(skill to (p.skills.xp(skill)+points).coerceAtMost(RobotSkills.MAX_XP))))
     fun tick(p:WorldPet,now:Long):WorldPet{
         val safeNow=now.coerceAtLeast(p.last)
-        if(p.mode==WorldMode.HIBERNATE)return p.copy(last=safeNow)
+        if(p.mode==WorldMode.HIBERNATE)return p
         val minutes=((safeNow-p.last)/60000L).coerceIn(0L,10080L).toInt()
         val blocks=minutes/15
         var q=if(p.mode==WorldMode.SLEEP&&minutes>0)p.copy(energy=(p.energy+minutes*2).coerceAtMost(100),last=p.last+minutes*60000L)
@@ -90,7 +90,7 @@ internal object WorldRules{
         return when(kind){
             0->if(p.cells>0&&p.energy<100)gain(p.copy(cells=p.cells-1,energy=(p.energy+45).coerceAtMost(100),message="Заряд поповнено"),RobotSkill.ENERGY,10,15,0) else p.copy(message="Немає комірок або заряд повний.")
             1->if(p.repair>0&&p.integrity<100)gain(p.copy(repair=p.repair-1,integrity=(p.integrity+40).coerceAtMost(100),message="Корпус відновлено"),RobotSkill.ENGINEERING,10,15,0) else p.copy(message="Немає ремонтних наборів або корпус цілий.")
-            else->if(p.snacks>0&&p.mood<100)p.copy(snacks=p.snacks-1,mood=(p.mood+40).coerceAtMost(100),message="Настрій покращено") else p.copy(message="Немає поживних модулів або настрій повний.")
+            else->if(p.snacks>0&&p.mood<100)p.copy(snacks=p.snacks-1,mood=(p.mood+40).coerceAtMost(100),message="Настрій покращено") else p.copy(message="Немає модулів синхронізації або настрій повний.")
         }
     }
     fun mode(source:WorldPet,mode:WorldMode,now:Long):WorldPet{

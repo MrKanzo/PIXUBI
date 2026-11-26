@@ -1,95 +1,37 @@
 package com.pixubi.game
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 
-private val loreMint=Color(0xFF98E6CD)
-private val loreMuted=Color(0xFFCCD9ED)
-private val loreGold=Color(0xFFFFD58A)
-private val loreCard=Color(0xFF22344F)
-
 @Composable
-internal fun PixubiAboutScreen(version:String,onBack:()->Unit) {
-    var section by rememberSaveable { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment=Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("PIXUBI LAB",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black,color=loreMint)
-                Text("Версія $version",style=MaterialTheme.typography.labelMedium,color=loreMuted)
-            }
-            OutlinedButton(onClick=onBack){Text("← Назад")}
+internal fun PixubiAboutScreen(version:String,onBack:()->Unit){
+    var tab by remember{mutableIntStateOf(0)}
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){Text("PIXUBI WORLD",style=MaterialTheme.typography.headlineMedium);Text("Версія $version")}
+            OutlinedButton(onClick=onBack){Text("Назад")}
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            listOf("🌍 Світ","🐾 Види","💜 Автори").forEachIndexed{i,title->
-                FilterChip(selected=section==i,onClick={section=i},label={Text(title)},modifier=Modifier.weight(1f))
-            }
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            listOf("Світ","Серії","Автори").forEachIndexed{i,label->FilterChip(tab==i,{tab=i},label={Text(label)})}
         }
-        key(section) {
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                when(section) {
-                    0 -> {
-                        LorePanel(PixubiLore.tagline,PixubiLore.description)
-                        LorePanel("✨ Легенда про Велику Тишу",PixubiLore.origin)
-                        LorePanel("💚 Життя твого Піксу",PixubiLore.care)
-                        LorePanel("🔭 Майбутнє світу",PixubiLore.future)
-                    }
-                    1 -> Species.entries.forEach{s->
-                        val story=PixubiLore.story(s)
-                        Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
-                            colors=CardDefaults.cardColors(containerColor=loreCard)) {
-                            Column(Modifier.padding(15.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                                Row(verticalAlignment=Alignment.CenterVertically) {
-                                    Text(s.icon, style=MaterialTheme.typography.headlineLarge, modifier=Modifier.size(86.dp))
-                                    Column(Modifier.weight(1f).padding(start=8.dp)){
-                                        Text(s.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=loreMint)
-                                        Text(story.epithet,color=loreGold,style=MaterialTheme.typography.bodySmall)
-                                        Text(s.native.icon+" "+s.native.title,color=loreMuted,style=MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                                Text("Характер",fontWeight=FontWeight.Bold)
-                                Text(story.personality,color=loreMuted)
-                                Text("Що вміє у грі",fontWeight=FontWeight.Bold)
-                                Text(story.talent,color=loreMuted)
-                                HorizontalDivider(color=Color(0xFF41556D))
-                                Text("Легенда походження",fontWeight=FontWeight.Bold,color=loreGold)
-                                Text(story.legend,color=loreMuted)
-                                Text(story.detail,color=loreMuted,style=MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                    else -> {
-                        LorePanel("🎬 Творці PIXUBI","Незалежний ігровий проєкт. Ідея, творчий напрям і перевірка гри — від людини; спільна робота над кодом, текстами та графікою — за допомогою ШІ.")
-                        LorePanel(PixubiLore.creator,PixubiLore.creatorRole)
-                        LorePanel(PixubiLore.assistant,PixubiLore.assistantRole)
-                        LorePanel("🎨 Художній напрям","Кібернетичний піксель-арт, дизайн світу та персонажів — спільна концепція Миколи й Аліси. Ілюстрації створені за допомогою генеративного ШІ та відібрані під час розробки.")
-                        LorePanel("🛠 Технології","Android • Kotlin • Jetpack Compose. Власні локальні ігрові системи, синтезовані звуки й покадрові художні ресурси.")
-                        LorePanel("Особлива подяка",PixubiLore.dedication)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            when(tab){
+                0->{WorldInfo("GENESIS","Після Великої Тиші в цифрових руїнах прокинулися автономні механічні та біосинтетичні істоти. Вісім серій утворили власні середовища.")
+                    WorldInfo("Життя роботика","Заряджай ядро, відновлюй корпус, синхронізуй настрій, виконуй місії та встановлюй спорядження. Розвиток відкриває п’ять форм від MK-1 до OMEGA.")
+                    WorldInfo("Локальний світ","Гра працює офлайн без реклами. Інтернет використовується для перевірки підписаних оновлень. Сплячка зупиняє витрату ресурсів.")}
+                1->RobotSeries.entries.forEach{s->val info=WorldCatalog.info(s);WorldInfo(s.title+" · "+info.role,info.description+"\n"+HabitatCatalog.of(s).title+"\n"+info.origin)}
+                else->{WorldInfo(PixubiLore.creator,PixubiLore.creatorRole);WorldInfo(PixubiLore.assistant,PixubiLore.assistantRole);WorldInfo("Технології","Kotlin, Jetpack Compose, процедурна графіка, анімації та локальний синтез звуку.");WorldInfo("Подяка",PixubiLore.dedication)}
             }
         }
     }
 }
-@Composable
-private fun LorePanel(title:String,body:String) {
-    Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),
-        colors=CardDefaults.cardColors(containerColor=loreCard)) {
-        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text(title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=loreMint)
-            Text(body,color=loreMuted,style=MaterialTheme.typography.bodyMedium)
-        }
-    }
+@Composable private fun WorldInfo(title:String,body:String){
+    Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+        Text(title,style=MaterialTheme.typography.titleMedium);Text(body)
+    }}
 }

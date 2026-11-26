@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun PixubiWorldScreen(onSettings:()->Unit,onLegacy:()->Unit){
+internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,onSound:(PixubiSound)->Unit){
     val context=LocalContext.current
     var pet by remember(context){mutableStateOf(WorldStorage.load(context)?.let{WorldRules.tick(it,System.currentTimeMillis())})}
     var selected by remember{mutableStateOf(RobotSeries.CLASSIC)}
@@ -24,8 +24,12 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onLegacy:()->Unit){
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     var careAnimation by remember{mutableStateOf<RobotAction?>(null)}
     var careEvent by remember{mutableIntStateOf(0)}
-    var legacyConfirm by remember{mutableStateOf(false)}
-    fun save(p:WorldPet){WorldStorage.save(context,p);pet=p}
+    var archiveSeries by remember{mutableStateOf(RobotSeries.CLASSIC)}
+    var archiveTier by remember{mutableStateOf(RobotTier.MK1)}
+    var profileName by remember{mutableStateOf(WorldProfile.load(context))}
+    var activation by remember{mutableIntStateOf(0)}
+    var activationMask by remember{mutableIntStateOf(0)}
+    fun save(p:WorldPet){WorldStorage.save(context,p);pet=p;onSeries(p.series)}
     LaunchedEffect(Unit){pet?.let{save(it)};while(true){delay(1000L);now=System.currentTimeMillis();pet?.let{val q=WorldRules.tick(it,now);if(q!=it)save(q)}}}
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
     BackHandler(enabled=page!="home"){page="home"}
@@ -41,27 +45,41 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onLegacy:()->Unit){
             OutlinedButton(onClick=onSettings){Text("⚙")}
         }
         if(p==null){
-            Text("Обери свого цифрового компаньйона",style=MaterialTheme.typography.titleLarge)
+            Text("GENESIS · Активація ядра",style=MaterialTheme.typography.titleLarge)
+            Text("Обери одну з восьми серій.")
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                RobotSeries.entries.forEach{s->FilterChip(selected==s,onClick={selected=s},label={Text(s.title)})}
+                RobotSeries.entries.forEach{s->FilterChip(selected==s,onClick={selected=s;activation=0;activationMask=0;onSeries(s)},label={Text(s.title)})}
             }
+            Text(WorldCatalog.info(selected).role,style=MaterialTheme.typography.titleMedium)
+            Text(WorldCatalog.info(selected).description)
             Text(HabitatCatalog.of(selected).title)
             HabitatScene(selected,phase,Modifier.fillMaxWidth().height(275.dp)){
                 RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(series=selected),phase,false,Modifier.fillMaxSize())
             }
             OutlinedTextField(name,{name=it.take(24)},label={Text("Ім’я")},singleLine=true,modifier=Modifier.fillMaxWidth())
+            Text("Ініціалізація ядра · $activation%")
+            LinearProgressIndicator(progress={activation/100f},modifier=Modifier.fillMaxWidth())
+            GenesisCare.entries.forEachIndexed{i,kind->
+                val bit=1 shl i
+                OutlinedButton(onClick={activation=(activation+kind.amount*2).coerceAtMost(100);activationMask=activationMask or bit;onSound(PixubiSound.TAP)},
+                    enabled=activation<100||(activationMask and bit)==0,modifier=Modifier.fillMaxWidth()){
+                    Text(kind.title+if((activationMask and bit)!=0)" ✓" else "")
+                }
+            }
             Text("Колір і характер випадкові. Початкова форма MK-1.")
-            Button(onClick={save(WorldRules.hatch(selected,name,System.currentTimeMillis()))},modifier=Modifier.fillMaxWidth()){Text("Почати життя")}
-            OutlinedButton(onClick={legacyConfirm=true}){Text("Попередня гра / збереження")}
+            Button(onClick={save(WorldRules.hatch(selected,name,System.currentTimeMillis()));onSound(PixubiSound.HAPPY)},
+                enabled=activation==100&&activationMask==7,modifier=Modifier.fillMaxWidth()){Text("Активувати роботика")}
         }else{
             val prog=RobotProgress(p.xp)
             Text("${p.name} · ${p.series.title}",style=MaterialTheme.typography.titleLarge)
             Text("${p.tier.title} · Рівень ${p.level} · 🪙 ${p.coins} · ${p.trait.title}")
             LinearProgressIndicator(progress={prog.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(prog.remaining==0)"Максимальний рівень · OMEGA: 10 перемог і 10 експедицій" else "${p.xp} XP · До рівня ${prog.remaining} XP",style=MaterialTheme.typography.bodySmall)
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                listOf("home" to "Дім","shop" to "Магазин","inventory" to "Інвентар","stats" to "Розвиток").forEach{(id,label)->FilterChip(page==id,{page=id},label={Text(label)})}
-            }
+            val navigation=listOf(listOf("home" to "База","missions" to "Місії","shop" to "Магазин"),
+                listOf("inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
+            navigation.forEach{group->Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                group.forEach{(id,label)->FilterChip(page==id,{page=id;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
+            }}
             if(page=="home"){
                 Text(HabitatCatalog.of(p.series).title,style=MaterialTheme.typography.titleMedium)
                 val face=when{p.mode!=WorldMode.AWAKE->RobotFace.SLEEP;p.integrity<30||p.mood<25->RobotFace.SAD;action==RobotAction.ATTACK->RobotFace.ANGRY;p.mood>75->RobotFace.HAPPY;else->RobotFace.NEUTRAL}
@@ -77,34 +95,82 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onLegacy:()->Unit){
                     LinearProgressIndicator(progress={1f-((m.until-now).coerceAtLeast(0L).toFloat()/(m.task.seconds*1000f)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
                 }
                 if(p.mode==WorldMode.AWAKE){
-                    Text("Догляд")
+                    Text("Технічне обслуговування")
                     Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        listOf("Заряд ${p.cells}","Ремонт ${p.repair}","Пожива ${p.snacks}").forEachIndexed{i,label->
-                            OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++}},enabled=m==null){Text(label)}
+                        listOf("Заряд ${p.cells}","Ремонт ${p.repair}","Синхронізація ${p.snacks}").forEachIndexed{i,label->
+                            OutlinedButton(onClick={val q=WorldRules.care(p,i);save(q);if(q.xp!=p.xp||q.mood!=p.mood){careAnimation=if(i==0)RobotAction.CHARGE else RobotAction.WAVE;careEvent++;onSound(if(i==0)PixubiSound.HAPPY else PixubiSound.TAP)}},enabled=m==null){Text(label)}
                         }
                     }
-                    Text("Завдання · нагорода після завершення")
-                    WorldTask.entries.forEach{task->
-                        OutlinedButton(onClick={save(WorldRules.start(p,task,System.currentTimeMillis()))},enabled=m==null&&p.energy>=task.energy&&p.integrity>=20,modifier=Modifier.fillMaxWidth()){
-                            Text("${task.title} · ${task.seconds} с · -${task.energy} ⚡ · +${task.xp} XP")
-                        }
-                    }
+                    Button(onClick={page="missions"},modifier=Modifier.fillMaxWidth()){Text("Відкрити центр місій")}
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(onClick={save(WorldRules.mode(p,WorldMode.SLEEP,System.currentTimeMillis()))},enabled=m==null){Text("Сон")}
                         OutlinedButton(onClick={save(WorldRules.mode(p,WorldMode.HIBERNATE,System.currentTimeMillis()))},enabled=m==null){Text("Сплячка")}
                     }
                 }else Button(onClick={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))}){Text("Розбудити")}
+            }else if(page=="missions"){
+                Text("Центр місій",style=MaterialTheme.typography.titleLarge)
+                Text(p.message)
+                val m=p.mission
+                if(m!=null){
+                    Text("${m.task.title} · ${((m.until-now+999)/1000).coerceAtLeast(0)} с")
+                    LinearProgressIndicator(progress={1f-((m.until-now).coerceAtLeast(0L).toFloat()/(m.task.seconds*1000f)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
+                    HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(225.dp)){
+                        RobotPreview(RobotView.RIGHT,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,
+                            RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
+                    }
+                }
+                WorldTask.entries.forEach{task->
+                    Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                        Text(task.title,style=MaterialTheme.typography.titleMedium)
+                        Text("${task.seconds} с · -${task.energy} ⚡ · до ${task.xp} XP · ${task.coins} монет")
+                        Button(onClick={save(WorldRules.start(p,task,System.currentTimeMillis()));onSound(PixubiSound.TAP)},
+                            enabled=m==null&&p.mode==WorldMode.AWAKE&&p.energy>=task.energy&&p.integrity>=20,modifier=Modifier.fillMaxWidth()){Text("Розпочати")}
+                    }}
+                }
+            }else if(page=="archive"){
+                Text("Архів серій · 8 серій / 40 форм",style=MaterialTheme.typography.titleLarge)
+                Text("Твоя активована серія: ${p.series.title}. Інші серії доступні як довідник.")
+                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    RobotSeries.entries.forEach{s->FilterChip(archiveSeries==s,{archiveSeries=s;archiveTier=RobotTier.MK1},label={Text(s.title)})}
+                }
+                val info=WorldCatalog.info(archiveSeries)
+                Text(info.role,style=MaterialTheme.typography.titleMedium);Text(info.description);Text(info.origin)
+                RobotTier.entries.forEach{tier->
+                    val unlocked=archiveSeries==p.series&&WorldCatalog.unlocked(p,tier)
+                    OutlinedButton(onClick={archiveTier=tier},enabled=unlocked||tier==RobotTier.MK1,modifier=Modifier.fillMaxWidth()){
+                        Text(tier.title+" · рівень "+tier.requiredLevel+if(unlocked)" ✓" else if(tier==RobotTier.MK1)" · довідник" else " · заблоковано")
+                    }
+                }
+                HabitatScene(archiveSeries,phase,Modifier.fillMaxWidth().height(250.dp)){
+                    RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,
+                        RobotLoadout(if(archiveSeries==p.series)p.skin.accent else RobotSkin.CYAN.accent,RobotEquipment(),archiveTier,archiveSeries),phase,false,Modifier.fillMaxSize())
+                }
+                Text(HabitatCatalog.of(archiveSeries).title)
+            }else if(page=="profile"){
+                Text("Профіль оператора",style=MaterialTheme.typography.titleLarge)
+                OutlinedTextField(profileName,{profileName=it.take(24);WorldProfile.save(context,profileName)},label={Text("Ім’я оператора")},singleLine=true,modifier=Modifier.fillMaxWidth())
+                Text("Активний роботик: ${p.name} · ${p.series.title}")
+                Text("Характер: ${p.trait.title} · колір: ${p.skin.title}")
+                Text("Рівень ${p.level} · ${p.xp} XP")
+                Text("Перемоги: ${p.wins} · Експедиції: ${p.expeditions}")
+                Text("Відкриті форми: ${p.tier.ordinal+1}/5 · Предмети: ${p.owned.size}")
+                Text("Спеціалізація: "+p.skills.specialties.joinToString(", "){it.title}.ifBlank{"ще не визначена"})
+                OutlinedButton(onClick={page="archive";archiveSeries=p.series;archiveTier=p.tier}){Text("Відкрити архів")}
+                OutlinedButton(onClick={page="stats"}){Text("Характеристики")}
             }else if(page=="shop"||page=="inventory"){
                 Text(p.message)
                 if(page=="shop"){
                     Text("Витратні матеріали · 25 монет за 3 шт.")
-                    listOf("Енергокомірки","Ремонтні набори","Поживні модулі").forEachIndexed{i,label->
+                    listOf("Енергокомірки","Ремонтні набори","Модулі синхронізації").forEachIndexed{i,label->
                         OutlinedButton(onClick={save(WorldRules.supplies(p,i))},enabled=p.coins>=25,modifier=Modifier.fillMaxWidth()){Text("$label +3 · 25 🪙")}
                     }
                 }
-                Text(if(page=="shop")"Спорядження для всіх серій" else "Куплене спорядження")
+                Text(if(page=="shop")"Модулі для ${p.series.title}" else "Інвентар · ${p.series.title}")
+                HabitatScene(p.series,phase,Modifier.fillMaxWidth().height(215.dp)){
+                    RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
+                }
                 Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    RobotSlot.entries.forEach{slot->FilterChip(tab==slot,{tab=slot},label={Text(slot.title)})}
+                    RobotSlot.entries.forEach{slot->FilterChip(tab==slot,{tab=slot},label={Text(WorldCatalog.slots(p.series,slot))})}
                 }
                 val offers=WorldRules.shop.filter{it.gear.slot==tab&&(page=="shop"||it.gear in p.owned)}
                 if(offers.isEmpty())Text("Поки порожньо.")
@@ -130,13 +196,16 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onLegacy:()->Unit){
                 Text("Навички")
                 RobotSkill.entries.forEach{k->Text("${k.title} · ${p.skills.level(k)}/10");LinearProgressIndicator(progress={p.skills.fraction(k)},modifier=Modifier.fillMaxWidth())}
             }
-            OutlinedButton(onClick={legacyConfirm=true}){Text("Попередня гра / збереження")}
         }
         Spacer(Modifier.height(12.dp))
     }
-    if(legacyConfirm)AlertDialog(onDismissRequest={legacyConfirm=false},title={Text("Попередній світ?")},text={Text("Збереження нового й попереднього світу окремі. Повернутися можна через Налаштування → Світ PIXUBI.")},confirmButton={TextButton(onClick={legacyConfirm=false;onLegacy()}){Text("Перейти")}},dismissButton={TextButton(onClick={legacyConfirm=false}){Text("Скасувати")}})
 }
 @Composable private fun WorldMeter(label:String,value:Int){
     Text("$label · $value%",style=MaterialTheme.typography.bodySmall)
     LinearProgressIndicator(progress={value/100f},modifier=Modifier.fillMaxWidth())
+}
+
+internal object WorldProfile{
+    fun load(c:android.content.Context)=c.getSharedPreferences("pixubi_world_profile_v1",android.content.Context.MODE_PRIVATE).getString("operator","").orEmpty()
+    fun save(c:android.content.Context,name:String){c.getSharedPreferences("pixubi_world_profile_v1",android.content.Context.MODE_PRIVATE).edit().putString("operator",name.take(24)).apply()}
 }

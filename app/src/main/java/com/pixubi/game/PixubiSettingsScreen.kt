@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,20 +37,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PixubiSettingsScreen(
+internal fun PixubiSettingsScreen(
     settings: SoundSettings,
     notificationSettings: PixubiNotificationSettings,
     onNotificationSettingsChange: (PixubiNotificationSettings) -> Unit,
     onTestNotification: () -> Unit,
-    currentRegion: Region,
-    previewRegion: Region?,
+    currentSeries: RobotSeries,
+    previewSeries: RobotSeries?,
     onSettingsChange: (SoundSettings) -> Unit,
-    onPreviewRegion: (Region) -> Unit,
+    onPreviewSeries: (RobotSeries) -> Unit,
     onTestSound: () -> Unit,
     onCheckUpdates: () -> Unit,
     isStableInstall: Boolean,
     checkingForUpdates: Boolean,
-    onWorld: () -> Unit,
     onBack: () -> Unit
 ) {
     val context=LocalContext.current
@@ -66,23 +66,22 @@ fun PixubiSettingsScreen(
         return
     }
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("⚙️ Налаштування", style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold)
-                Text("Маленький світ — велика атмосфера", color = Color(0xFFB8C8E3))
+                Text("Керування цифровим світом", color = Color(0xFFB8C8E3))
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
         }
-        Button(onClick=onWorld,modifier=Modifier.fillMaxWidth()) { Text("🌌 Світ PIXUBI · Основна гра") }
         OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
             Text("Robot Lab · Режим розробника")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
-            Text("📖 Про PIXUBI LAB · Світ, види та автори")
+            Text("📖 Про PIXUBI WORLD · Серії та автори")
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
@@ -90,8 +89,8 @@ fun PixubiSettingsScreen(
                 Text("🔔 Піксубі на зв'язку", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
                 SettingsSwitch(
-                    title = "🐣 Сповіщення від вихованця",
-                    description = "Пікс нагадає, коли хоче їсти, пити, гратися або спати",
+                    title = "🤖 Сповіщення роботика",
+                    description = "Енергія, стан корпусу, відпочинок та завершені місії",
                     checked = notificationSettings.enabled,
                     onChecked = { onNotificationSettingsChange(notificationSettings.copy(enabled = it)) }
                 )
@@ -103,16 +102,16 @@ fun PixubiSettingsScreen(
                         checked = notificationSettings.quietHours,
                         onChecked = { onNotificationSettingsChange(notificationSettings.copy(quietHours = it)) }
                     )
-                    SettingsSwitch("🍓 Про їжу", "Коли Пікс зголодніє",
+                    SettingsSwitch("🔋 Низька енергія", "Коли потрібна зарядка",
                         notificationSettings.food,
                         { onNotificationSettingsChange(notificationSettings.copy(food = it)) })
-                    SettingsSwitch("💧 Про воду", "Коли Пікс захоче пити",
+                    SettingsSwitch("🛠 Стан корпусу", "Коли потрібен ремонт",
                         notificationSettings.water,
                         { onNotificationSettingsChange(notificationSettings.copy(water = it)) })
-                    SettingsSwitch("💤 Про сон", "Коли закінчується енергія",
+                    SettingsSwitch("💤 Режим відпочинку", "Коли робот довго активний і розряджений",
                         notificationSettings.sleep,
                         { onNotificationSettingsChange(notificationSettings.copy(sleep = it)) })
-                    SettingsSwitch("🎮 Про ігри", "Коли Піксу стане сумно",
+                    SettingsSwitch("📡 Місії та синхронізація", "Завершені місії та низький настрій",
                         notificationSettings.play,
                         { onNotificationSettingsChange(notificationSettings.copy(play = it)) })
                     OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) {
@@ -129,7 +128,7 @@ fun PixubiSettingsScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SettingsSwitch(
                     title = "🎵 Фонова мелодія",
-                    description = "Оригінальна цифрова музика залежно від регіону",
+                    description = "Цифровий саундтрек залежно від серії",
                     checked = settings.music,
                     onChecked = { onSettingsChange(settings.copy(music = it)) }
                 )
@@ -144,7 +143,7 @@ fun PixubiSettingsScreen(
                 HorizontalDivider(color = Color(0xFF41556D))
                 SettingsSwitch(
                     title = "🔊 Звукові ефекти",
-                    description = "Біпи, їжа, вода, сон, радість і дотики",
+                    description = "Сигнали зарядки, ремонту, активації та місій",
                     checked = settings.effects,
                     onChecked = { onSettingsChange(settings.copy(effects = it)) }
                 )
@@ -165,26 +164,26 @@ fun PixubiSettingsScreen(
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("🌍 Мелодії регіонів", style = MaterialTheme.typography.titleMedium,
+                Text("🌌 Саундтреки середовищ", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
-                Text("У грі музика автоматично відповідає дому твого Піксубі. " +
-                    "Тут можна послухати інші мелодії, не змінюючи регіон.",
+                Text("Саундтрек автоматично відповідає серії роботика. " +
+                    "Тут можна послухати інші середовища без зміни персонажа.",
                     color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
-                Region.entries.forEach { world ->
-                    val selected = previewRegion == world ||
-                        (previewRegion == null && currentRegion == world)
+                RobotSeries.entries.forEach { world ->
+                    val selected = previewSeries == world ||
+                        (previewSeries == null && currentSeries == world)
                     FilterChip(
                         selected = selected,
-                        onClick = { onPreviewRegion(world) },
+                        onClick = { onPreviewSeries(world) },
                         modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(world.icon + " " + world.title +
-                                (if (currentRegion == world) "  •  твій регіон" else ""))
+                            Text(world.title + " · " + HabitatCatalog.of(world).title +
+                                (if (currentSeries == world) "  •  твоя серія" else ""))
                         }
                     )
                 }
                 if (!settings.music) {
-                    Text("Увімкни фонову мелодію, щоб почути вибраний регіон.",
+                    Text("Увімкни фонову мелодію, щоб почути вибране середовище.",
                         color = Color(0xFFFFD58A), style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -192,7 +191,7 @@ fun PixubiSettingsScreen(
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("🔄 Оновлення PIXUBI LAB", style = MaterialTheme.typography.titleMedium,
+                Text("🔄 Оновлення PIXUBI WORLD", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
                 Text("Поточна версія: $version" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
@@ -204,7 +203,7 @@ fun PixubiSettingsScreen(
                 Text(if (isStableInstall)
                     "Перевіряємо підписані GitHub Releases. При новій версії PIXUBI сама запропонує завантаження й відкриє Android-інсталятор. Дані лишаються, якщо підпис збігається."
                 else
-                    "Це тестова збірка. Оновлення поверх зі збереженням вихованця працюватиме тільки зі стабільним APK, підписаним постійним ключем.",
+                    "Це тестова збірка. Оновлення поверх зі збереженням прогресу працюватиме тільки зі стабільним APK, підписаним постійним ключем.",
                     color = Color(0xFFFFDA97), style = MaterialTheme.typography.bodySmall)
             }
         }

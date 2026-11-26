@@ -167,7 +167,7 @@ class PixubiUpdater(private val activity: Activity) {
         try {
             val request = DownloadManager.Request(Uri.parse(release.url))
                 .setTitle("PIXUBI ${release.version}")
-                .setDescription("Безпечне оновлення кіберзвірят")
+                .setDescription("Безпечне оновлення PIXUBI WORLD")
                 .setAllowedOverMetered(true)
                 .setNotificationVisibility(
                     DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
