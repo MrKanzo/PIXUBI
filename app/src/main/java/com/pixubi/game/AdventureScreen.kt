@@ -232,7 +232,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     for(other in occupied.filter{it!=q}){
                         val dest=projection.foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
                         if(dx>=projection.cell*.64f&&dy<projection.row*.85f)w=minOf(w,dx*.94f)
-                        else if(dx<projection.cell*1.30f&&dy>=projection.row*.45f)h=minOf(h,dy*.91f)
+                        else if(dx<projection.cell*1.30f&&dy>=projection.row*.45f)h=minOf(h,dy*.76f)
                     }
                     return w to h
                 }
@@ -314,7 +314,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Box(Modifier.offset(px,py).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f).clipToBounds()){
                         ArenaGroundShadow(false,actor==-1&&!busy)
                         RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter))
+
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
                         val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
@@ -328,7 +328,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 else->RobotAction.IDLE
                             }
                             RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter))
+
                         }
                     }}
                     b.enemies.forEachIndexed{i,e->key(i){
@@ -337,9 +337,19 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW(e.pos),spriteH(e.pos)).zIndex(projection.depth(e.pos)+1f).clipToBounds()){
                             ArenaGroundShadow(true,targetChoice==i)
                             RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter))
+
                         }
                     }}
+                    // Numbers are on the ground, separate from the model, never a box covering its body.
+                    val hpAt: @Composable (GridPoint,Int,Int,String,Boolean,Boolean)->Unit = {q,hp,max,count,enemy,active->
+                        val foot=projection.foot(q)
+                        Box(Modifier.offset(foot.x.dp-cell/2,foot.y.dp+1.dp).width(cell).zIndex(24f),contentAlignment=Alignment.TopCenter){
+                            ArenaUnitBadge(hp,max,count,enemy,active)
+                        }
+                    }
+                    hpAt(b.pos,b.hp,b.maxHp,"",false,actor==-1&&!busy)
+                    b.allies.filter{it.hp>0}.forEach{u->hpAt(u.pos,u.hp,u.maxHp,"×${u.count}",false,false)}
+                    b.enemies.filter{it.hp>0}.forEach{e->hpAt(e.pos,e.hp,e.maxHp,"",true,false)}
                     // Effects above sprites. Their progress is presentation-only.
                     if(busy)Canvas(Modifier.fillMaxSize().zIndex(30f)){
                         val src=visualSource;val dst=visualTarget
