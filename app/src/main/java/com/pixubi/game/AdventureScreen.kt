@@ -218,28 +218,28 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             val battlefield: @Composable (Modifier,Dp)->Unit = { modifier,boardHeight ->
             BoxWithConstraints(modifier.height(boardHeight)){
-                val cell=maxWidth/8.1f
-                val hexH=boardHeight/5.15f
-                val rowStep=hexH*.75f
-                val topPad=hexH*1.15f
-                val spriteW=cell*2.05f
-                val spriteH=hexH*2.04f
-                fun xOf(q:GridPoint)=cell*(.3f+q.x+if(q.y%2==1).5f else 0f)
-                fun yOf(q:GridPoint)=topPad+rowStep*q.y
+                val cell=maxWidth/7.7f
+                val hexH=boardHeight/6.4f
+                val rowStep=hexH
+                val topPad=hexH*1.25f
+                val spriteW=cell*1.9f
+                val spriteH=hexH*1.88f
+                fun xOf(q:GridPoint)=cell*(.35f+q.x*.75f)
+                fun yOf(q:GridPoint)=topPad+rowStep*(q.y+if(q.x%2==1).5f else 0f)
                 fun spriteX(q:GridPoint)=xOf(q)+cell/2-spriteW/2
                 fun spriteY(q:GridPoint)=yOf(q)+hexH*.58f-spriteH*.89f
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
                     Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
                         detectTapGestures{tap->
-                            val w=size.width/8.1f
-                            val h=size.height/5.15f
+                            val w=size.width/7.7f
+                            val h=size.height/6.4f
                             var hitCell:GridPoint?=null
-                            for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
-                                val cx=w*(x+.8f+if(y%2==1).5f else 0f)
-                                val cy=h*(1.65f+y*.75f)
+                            for(cellPoint in AdventureRules.arenaCells){
+                                val cx=w*(.85f+cellPoint.x*.75f)
+                                val cy=h*(1.75f+cellPoint.y+if(cellPoint.x%2==1).5f else 0f)
                                 val dx=kotlin.math.abs(tap.x-cx)
                                 val dy=kotlin.math.abs(tap.y-cy)
-                                if(dx<=w/2f&&dy<=h/2f-dx*h/(2f*w))hitCell=GridPoint(x,y)
+                                if(dy<=h/2f&&dx<=w/2f-dy*w/(2f*h))hitCell=cellPoint
                             }
                             val q=hitCell
                             if(q!=null&&!busy){
@@ -257,8 +257,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             }
                         }
                     }){
-                        val w=size.width/8.1f
-                        val h=size.height/5.15f
+                        val w=size.width/7.7f
+                        val h=size.height/6.4f
                         // Raised futuristic stage behind ground hexes.
                         drawRect(Brush.verticalGradient(listOf(Color(0xFF10192D),Color(0xFF334B60),Color(0xFF20313E)),endY=size.height*.36f),size=Size(size.width,size.height*.36f))
                         for(i in 0..14){
@@ -276,16 +276,16 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val yy=k*size.height/12f
                             drawLine(Color(0xFF91A7A4).copy(alpha=.09f),Offset(0f,yy),Offset(size.width,yy),1f)
                         }
-                        for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
-                            val q=GridPoint(x,y)
+                        for(q in AdventureRules.arenaCells){
+                            val x=q.x;val y=q.y
                             val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
                             val hit=i>=0&&canHit(b.enemies[i])
                             val can=reachable(q)
-                            val cx=w*(x+.8f+if(y%2==1).5f else 0f);val cy=h*(1.65f+y*.75f)
+                            val cx=w*(.85f+x*.75f);val cy=h*(1.75f+y+if(x%2==1).5f else 0f)
                             val outline=Path().apply{
-                                moveTo(cx,cy-h*.48f);lineTo(cx+w*.48f,cy-h*.24f)
-                                lineTo(cx+w*.48f,cy+h*.24f);lineTo(cx,cy+h*.48f)
-                                lineTo(cx-w*.48f,cy+h*.24f);lineTo(cx-w*.48f,cy-h*.24f);close()
+                                moveTo(cx-w*.49f,cy);lineTo(cx-w*.245f,cy-h*.49f)
+                                lineTo(cx+w*.245f,cy-h*.49f);lineTo(cx+w*.49f,cy)
+                                lineTo(cx+w*.245f,cy+h*.49f);lineTo(cx-w*.245f,cy+h*.49f);close()
                             }
                             val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
                             drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
@@ -334,8 +334,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     if(busy)Canvas(Modifier.fillMaxSize().zIndex(30f)){
                         val src=visualSource;val dst=visualTarget
                         if(src!=null&&dst!=null){
-                            val w=size.width/8.1f;val h=size.height/5.15f
-                            fun center(q:GridPoint)=Offset(w*(q.x+.8f+if(q.y%2==1).5f else 0f),h*(1.65f+q.y*.75f))
+                            val w=size.width/7.7f;val h=size.height/6.4f
+                            fun center(q:GridPoint)=Offset(w*(.85f+q.x*.75f),h*(1.75f+q.y+if(q.x%2==1).5f else 0f))
                             val from=center(src);val to=center(dst)
                             val t=fx.value
                             when(visualKind){
