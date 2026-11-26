@@ -46,7 +46,10 @@ internal object AdventureRules{
         q in encounters->AdventureTile.ENEMY
         else->resources[q]?:AdventureTile.EMPTY
     }
-    fun visible(a:AdventureState,q:GridPoint)=id(q) in a.seen||a.pos.distance(q)<=2||q==base
+    // Keep explored cells navigable, but hide live objects outside the scanner radius.
+    fun inSight(a:AdventureState,q:GridPoint)=inMap(q)&&(a.pos.distance(q)<=2||q==base)
+    fun visible(a:AdventureState,q:GridPoint)=inMap(q)&&(inSight(a,q)||id(q) in a.seen)
+    fun knownTile(a:AdventureState,q:GridPoint):AdventureTile?=if(inSight(a,q))tile(a,q)else null
     private fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{q.distance(GridPoint(it%MAP_W,it/MAP_W))<=2}
     fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters.indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
     fun complete(a:AdventureState)=encounters.all{id(it) in a.cleared}
