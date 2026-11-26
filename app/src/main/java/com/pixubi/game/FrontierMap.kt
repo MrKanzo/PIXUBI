@@ -42,7 +42,7 @@ internal object FrontierProjection{
 }
 private data class FrontierPalette(val name:String,val grass:Color,val light:Color,val dark:Color,val water:Color,val leaves:Color,val glow:Color)
 private fun palette(stage:Int)=when((stage-1)%4){
-    0->FrontierPalette("Неонова долина",Color(0xFF648B3C),Color(0xFFA7BC65),Color(0xFF344E31),Color(0xFF187A91),Color(0xFFB84D99),Color(0xFF6CE7FB))
+    0->FrontierPalette("Неонова долина",Color(0xFF648B3C),Color(0xFFA7BC65),Color(0xFF344E31),Color(0xFF187A91),Color(0xFF447B44),Color(0xFF6CE7FB))
     1->FrontierPalette("Кристалові руїни",Color(0xFF5F7184),Color(0xFF8A9DA2),Color(0xFF38465F),Color(0xFF25589C),Color(0xFF6C87C6),Color(0xFF85E8FF))
     2->FrontierPalette("Спорові острови",Color(0xFF536B4F),Color(0xFF88A564),Color(0xFF304D49),Color(0xFF255F68),Color(0xFF8B5CB4),Color(0xFFB7FC9B))
     else->FrontierPalette("Золотий каньйон",Color(0xFF97704A),Color(0xFFC49B60),Color(0xFF604937),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
@@ -54,7 +54,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     val change by rememberUpdatedState(onChange)
     val sound by rememberUpdatedState(onSound)
     var target by remember(a.stage){mutableStateOf<GridPoint?>(null)}
-    var zoom by remember{mutableStateOf(false)}
+    var zoom by remember{mutableIntStateOf(0)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
     val loop=rememberInfiniteTransition(label="frontier scenery")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(7000,easing=LinearEasing)),label="river")
@@ -83,10 +83,10 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             Text(colors.name,style=MaterialTheme.typography.titleLarge)
             Text(if(target!=null)"Робот прямує до цілі" else "Сектор ${a.stage} · відкрий територію",style=MaterialTheme.typography.labelSmall)
         }
-        OutlinedButton(onClick={zoom=!zoom}){Text(if(zoom)"− Огляд" else "+ Масштаб")}
+        OutlinedButton(onClick={zoom=(zoom+1)%3}){Text(listOf("Огляд 1×","Масштаб 1,5×","Масштаб 2×")[zoom])}
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
-        val mapWidth=maxWidth*(if(zoom)1.65f else 1f)
+        val mapWidth=maxWidth*listOf(1f,1.5f,2f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
         val route=target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())){
@@ -161,6 +161,27 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         val x=when{y<160f->526f-25f*sin(y*.025f);y<340f->505f+34f*sin((y-160f)*.02f);else->467f-(y-340f)*.34f}
         drawLine(p.glow.copy(alpha=.18f),Offset(x-13f,y),Offset(x+12f,y+5f),2f,StrokeCap.Round)
     }
+    // Stepped cliffs and the animated river gorge; only on blocked river cells.
+    for(y in 2..4){
+        val c=FrontierProjection.center(GridPoint(4,y))
+        translate(c.x,c.y){
+            for(side in listOf(-1f,1f)){
+                val x=side*34f
+                shape(Color(0xFF253F43),x-12f,-35f,x+10f,-39f,x+18f,21f,x-17f,27f)
+                shape(Color(0xFF50655D),x-12f,-35f,x+10f,-39f,x+15f,-22f,x-14f,-18f)
+                for(j in 0..7){val yy=-15f+j*5f
+                    drawLine(Color(0xFF7C8774).copy(alpha=.5f),Offset(x-11f,yy),Offset(x+12f,yy-4f),2f)}
+            }
+            if(y==3){
+                for(i in 0..9){
+                    val t=(phase*2f+i*.1f)%1f
+                    val x=-17f+i*4f
+                    drawLine(Color(0xFF91E8E3).copy(alpha=.35f+t*.35f),Offset(x,-24f+t*40f),Offset(x-4f,-13f+t*40f),3f)
+                }
+                for(i in 0..7){val t=(phase+i/8f)%1f;oval(Color(0xFFB7F5E6).copy(alpha=(1-t)*.4f),0f,30f,8f+t*23f,2f+t*5f)}
+            }
+        }
+    }
     // Road network and bridges on passable crossings.
     val roads=listOf(
         listOf(GridPoint(0,2),GridPoint(1,2),GridPoint(2,2),GridPoint(3,2),GridPoint(3,1),GridPoint(3,0),GridPoint(4,0),GridPoint(5,0),GridPoint(6,0),GridPoint(7,0)),
@@ -173,6 +194,11 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         drawPath(path,p.dark.copy(alpha=.65f),style=Stroke(27f,cap=StrokeCap.Round,join=StrokeJoin.Round))
         drawPath(path,Color(0xFFB99A6E),style=Stroke(21f,cap=StrokeCap.Round,join=StrokeJoin.Round))
         drawPath(path,Color(0xFFDDC396).copy(alpha=.42f),style=Stroke(11f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+        road.zipWithNext().forEach{(start,end)->
+            val a0=FrontierProjection.center(start);val b0=FrontierProjection.center(end)
+            for(j in 1..14){val o=a0+(b0-a0)*(j/15f)+Offset((j%3-1)*5f,-2f)
+                drawRect(if(j%2==0)Color(0xFFDBC69B)else Color(0xFF9C825E),o,Size(5f,3f))}
+        }
     }
     // Grass, flowers, crystal clusters and scenic rubble, placed away from the center of walkable cells.
     for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
@@ -193,7 +219,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
                     translate(-27f,-13f){scale(.65f,.65f,Offset.Zero){tree(p,phase,x+y+4)}}
                     translate(24f,-4f){scale(.75f,.75f,Offset.Zero){tree(p,phase,x+y+7)}}
                     tree(p,phase,x+y)
-                }else ruins(p)
+                }else if(x==6||x==1)rockRidge(p,x+y)else ruins(p)
             }
         }else if(t==AdventureTile.EMPTY&&x!=4&&(x+y)%3==0){
             translate(c.x+34f,c.y-28f){scale(.46f,.46f,Offset.Zero){tree(p,phase,x+y)}}
@@ -218,7 +244,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             AdventureTile.ENERGY->crate(p,Color(0xFF63DFF8),1)
             AdventureTile.REPAIR->crate(p,Color(0xFF7BF2A5),2)
             AdventureTile.AMMO->crate(p,Color(0xFFF7A65B),3)
-            AdventureTile.ENEMY->{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}
+            AdventureTile.ENEMY->{if(q==AdventureRules.encounters.last())portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
             else->Unit
         }}
     }
@@ -235,6 +261,16 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             poly(points,Color(0xFF111E2B).copy(alpha=.69f))
             val c=FrontierProjection.center(q)
             drawCircle(Brush.radialGradient(listOf(Color(0xFF2A3B50).copy(alpha=.35f),Color.Transparent),c,55f),55f,c)
+        }
+    }
+    // Floating motes only above explored terrain, not a resource marker.
+    for(i in 0..31){
+        val x=(i*157%870+25).toFloat()+sin(phase*6.283f+i)*7f
+        val y=(i*97%570+40).toFloat()+cos(phase*6.283f+i)*5f
+        val q=FrontierProjection.at(x,y)
+        if(q!=null&&AdventureRules.visible(a,q)){
+            val alpha=.15f+.30f*(.5f+.5f*sin(phase*6.283f+i))
+            drawRect(p.glow.copy(alpha=alpha),Offset(x,y),Size(3f,3f))
         }
     }
     // Route preview, only over reachable terrain.
@@ -303,4 +339,27 @@ private fun DrawScope.baseBuilding(p:FrontierPalette){
     drawOval(Color(0xFFB8C2C1),Offset(-4f,-69f),Size(27f,10f))
     drawCircle(p.glow,3f,Offset(9f,-65f))
     oval(p.glow.copy(alpha=.4f),0f,15f,20f,6f)
+}
+
+private fun DrawScope.rockRidge(p:FrontierPalette,seed:Int){
+    oval(Color(0xFF243B36).copy(alpha=.72f),0f,8f,46f,17f)
+    for(i in 0..2){
+        val x=-29f+i*27f;val h=35f+((seed+i*7)%5)*8f
+        shape(Color(0xFF3B4949),x-21f,7f,x-14f,-h*.55f,x-2f,-h,x+12f,-h*.76f,x+24f,3f)
+        shape(Color(0xFF778178),x-21f,7f,x-14f,-h*.55f,x-2f,-h,x+1f,-h*.45f,x-4f,3f)
+        shape(Color(0xFFB0B39A),x-14f,-h*.55f,x-2f,-h,x+12f,-h*.76f,x+1f,-h*.55f)
+        for(j in 0..4)drawRect(p.dark.copy(alpha=.65f),Offset(x-14f+j*5f,-j*5f),Size(8f,3f))
+    }
+}
+private fun DrawScope.portal(p:FrontierPalette,phase:Float){
+    oval(Color(0xFF202A33),0f,10f,36f,16f)
+    oval(p.glow.copy(alpha=.24f),0f,7f,30f,12f)
+    drawOval(Color(0xFF46535B),Offset(-32f,-69f),Size(64f,77f),style=Stroke(10f))
+    drawOval(Color(0xFF9AAFA9),Offset(-30f,-67f),Size(60f,73f),style=Stroke(3f))
+    drawOval(Brush.radialGradient(listOf(p.glow.copy(alpha=.10f),p.glow.copy(alpha=.55f),Color(0xFF234B63)),Offset(0f,-31f),35f),Offset(-25f,-61f),Size(50f,62f))
+    for(i in 0..7){
+        val angle=(phase+i/8f)*6.283f
+        val x=cos(angle)*23f;val y=-31f+sin(angle)*29f
+        drawRect(p.glow,Offset(x-2f,y-2f),Size(4f,4f))
+    }
 }
