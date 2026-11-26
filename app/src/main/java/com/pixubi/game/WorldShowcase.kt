@@ -12,18 +12,44 @@ import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
 import kotlin.math.*
+import kotlin.random.Random
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:WorldFx,event:Int,
-    modifier:Modifier=Modifier,onTap:(()->Unit)?=null){
+    modifier:Modifier=Modifier,roam:Boolean=false,onTap:(()->Unit)?=null){
     val series=p.series
     val accent=p.skin.accent
     val clock=rememberInfiniteTransition(label="ambient")
     val ambient by clock.animateFloat(0f,1f,infiniteRepeatable(tween(12000,easing=LinearEasing)),label="atmosphere")
     // A stable clock avoids restarting the background whenever the robot changes action.
     var phase by remember{mutableFloatStateOf(0f)}
-    val period=WorldMotion.period(series,action)
-    LaunchedEffect(series,action){
+    val roomX=remember(series){Animatable(.5f)}
+    var patrolAction by remember(series){mutableStateOf(RobotAction.IDLE)}
+    var patrolView by remember(series){mutableStateOf(RobotView.FRONT)}
+    val walkingMission=KageGait.isLocomotion(action)
+    val canRoam=roam&&p.mode==WorldMode.AWAKE&&
+        (walkingMission||(action==RobotAction.IDLE&&p.energy>=15&&p.integrity>=20))
+    LaunchedEffect(series,canRoam,action){
+        if(!canRoam)return@LaunchedEffect
+        // The position survives interruptions: care, sleep and page interaction do not teleport the robot.
+        patrolAction=RobotAction.IDLE;patrolView=RobotView.FRONT
+        while(true){
+            delay(HomeRoam.pause(Random.Default,walkingMission))
+            val from=roomX.value
+            val next=HomeRoam.destination(from,Random.Default)
+            patrolView=HomeRoam.direction(from,next)
+            patrolAction=if(action==RobotAction.RUN)RobotAction.RUN else RobotAction.WALK
+            roomX.animateTo(next,tween(HomeRoam.duration(series,from,next,patrolAction==RobotAction.RUN),easing=LinearEasing))
+            patrolAction=RobotAction.IDLE
+            // Briefly hold the arrival-facing pose before looking toward the player.
+            delay(350L)
+            patrolView=RobotView.FRONT
+        }
+    }
+    val displayedAction=if(canRoam)patrolAction else if(roam&&walkingMission)RobotAction.IDLE else action
+    val period=WorldMotion.period(series,displayedAction)
+    LaunchedEffect(series,displayedAction){
         phase=0f
         var previous=0L
         while(true)withFrameNanos{frame->
@@ -33,9 +59,18 @@ internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:World
     }
     val flash=remember{Animatable(1f)}
     LaunchedEffect(event,fx){if(fx!=WorldFx.NONE){flash.snapTo(0f);flash.animateTo(1f,tween(if(fx==WorldFx.EVOLVE)2300 else 1400,easing=LinearEasing))}else flash.snapTo(1f)}
-    val view=if(KageGait.isLocomotion(action)||action==RobotAction.ATTACK)RobotView.RIGHT else RobotView.FRONT
+    val view=if(canRoam)patrolView else if(KageGait.isLocomotion(displayedAction)||displayedAction==RobotAction.ATTACK)RobotView.RIGHT else RobotView.FRONT
     Box(modifier.clip(RoundedCornerShape(androidx.compose.ui.unit.Dp(16f))).then(if(onTap!=null)Modifier.clickable(onClick=onTap)else Modifier)){
         HabitatScene(series,ambient,Modifier.fillMaxSize()){
+            // One common transform for the robot, ground shadow and local effects.
+            // The floor stays fixed; the feet remain anchored to its perspective.
+            Box(Modifier.fillMaxSize().graphicsLayer{
+                if(roam){
+                    scaleX=HomeRoam.SCALE;scaleY=HomeRoam.SCALE
+                    transformOrigin=TransformOrigin(.5f,.89f)
+                    translationX=(roomX.value-.5f)*size.width
+                }
+            }){
             Canvas(Modifier.fillMaxSize()){
                 val w=size.width;val h=size.height;val c=Offset(w*.5f,h*.55f)
                 drawCircle(Brush.radialGradient(listOf(accent.copy(alpha=.17f),Color.Transparent),c,min(w,h)*.52f),min(w,h)*.52f,c)
@@ -45,14 +80,20 @@ internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:World
                     Offset(w*.5f-spread,g-h*.036f),Size(spread*2,h*.072f))
                 drawOval(accent.copy(alpha=.10f),Offset(w*.5f-spread,g-h*.035f),Size(spread*2,h*.07f),style=Stroke(1f))
             }
-            RobotPreview(view,action,face,RobotLoadout(accent,p.equipment,p.tier,series),phase,false,Modifier.fillMaxSize())
+            RobotPreview(view,displayedAction,face,RobotLoadout(accent,p.equipment,p.tier,series),phase,false,Modifier.fillMaxSize())
             Canvas(Modifier.fillMaxSize()){
                 val h=size.height;val w=size.width;val unit=min(w,h)/100f
                 scale(w/100f,h/100f,Offset.Zero){
-                    worldForeground(series,ambient,HabitatCatalog.of(series).light)
-                    worldActionFx(action,phase,accent)
+                    if(view==RobotView.LEFT&&KageGait.isLocomotion(displayedAction)){
+                        scale(-1f,1f,Offset(50f,50f)){worldActionFx(displayedAction,phase,accent)}
+                    }else worldActionFx(displayedAction,phase,accent)
                     if(fx!=WorldFx.NONE&&flash.value<1f)eventFx(fx,flash.value,accent)
                 }
+            }
+            }
+            Canvas(Modifier.fillMaxSize()){
+                val w=size.width;val h=size.height
+                scale(w/100f,h/100f,Offset.Zero){worldForeground(series,ambient,HabitatCatalog.of(series).light)}
                 // Darken corners softly, keeping the actor readable.
                 drawRect(Brush.radialGradient(listOf(Color.Transparent,Color.Transparent,Color.Black.copy(alpha=.32f)),Offset(w/2,h*.48f),max(w,h)*.67f))
                 if(p.mode==WorldMode.HIBERNATE)drawRect(Color(0xFF10192D).copy(alpha=.19f))
