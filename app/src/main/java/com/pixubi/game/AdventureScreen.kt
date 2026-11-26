@@ -43,6 +43,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var retreat by remember{mutableStateOf(false)}
     var tacticsPanel by remember{mutableStateOf(false)}
     var skillsPanel by remember{mutableStateOf(false)}
+    var showGrid by remember{mutableStateOf(false)}
     var weapon by remember{mutableStateOf<RobotGear?>(null)}
     var moving by remember{mutableStateOf(false)}
     var attack by remember{mutableStateOf(false)}
@@ -231,8 +232,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     var h=minOf(projection.cell*2.05f,boardHeight.value*.56f)*projection.scale(q)
                     for(other in occupied.filter{it!=q}){
                         val dest=projection.foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
-                        if(dx>=projection.cell*.64f&&dy<projection.row*.85f)w=minOf(w,dx*.94f)
-                        else if(dx<projection.cell*1.30f&&dy>=projection.row*.45f)h=minOf(h,dy*.76f)
+                        if(dx>=projection.cell*.52f)w=minOf(w,dx*.94f)
+                        else if(dy>=projection.row*.45f)h=minOf(h,dy*.84f)
                     }
                     return w to h
                 }
@@ -243,6 +244,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 fun xOf(q:GridPoint)=projection.center(q).x.dp-cell/2
                 fun yOf(q:GridPoint)=projection.center(q).y.dp
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
+                    Canvas(Modifier.fillMaxSize()){arenaLandscape(ArenaProjection(size.width,size.height),a.stage)}
                     Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
                         detectTapGestures{tap->
                             val q=ArenaProjection(size.width.toFloat(),size.height.toFloat()).hit(tap)
@@ -267,28 +269,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     }){
                         val plane=ArenaProjection(size.width,size.height)
                         val w=plane.cell;val h=plane.row
-                        // Horizon, distant city silhouette and raised combat platform.
-                        val horizon=plane.project(2.25f,-.5f).y
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF0D1727),Color(0xFF30475A),Color(0xFF51616A)),endY=horizon.coerceAtLeast(1f)),size=Size(size.width,horizon.coerceAtLeast(1f)))
-                        for(i in 0..19){
-                            val x=i*size.width/19f
-                            val towerH=h*(.6f+(i*7%5)*.22f)
-                            drawRect(Color(0xFF1A2C40),Offset(x-w*.22f,horizon-towerH),Size(w*.44f,towerH))
-                            drawRect(Color(0xFF7394A5).copy(alpha=.55f),Offset(x-w*.22f,horizon-towerH),Size(w*.44f,h*.055f))
-                            repeat(3){j->drawRect(Color(0xFF6FD9E3).copy(alpha=.32f),Offset(x-w*.12f,horizon-towerH+h*.13f+j*h*.16f),Size(w*.24f,h*.035f))}
-                        }
-                        val leftBack=plane.project(-.63f,-.62f);val rightBack=plane.project(5.13f,-.62f)
-                        val leftFront=plane.project(-.63f,2.63f);val rightFront=plane.project(5.13f,2.63f)
                         fun surface(points:List<Offset>)=Path().apply{moveTo(points[0].x,points[0].y);points.drop(1).forEach{lineTo(it.x,it.y)};close()}
-                        val lip=h*.24f
-                        drawPath(surface(listOf(leftFront,rightFront,rightFront+Offset(0f,lip),leftFront+Offset(0f,lip))),Color(0xFF101C29))
-                        drawPath(surface(listOf(leftBack,rightBack,rightFront,leftFront)),Brush.verticalGradient(listOf(Color(0xFF344653),Color(0xFF172A36)),startY=horizon,endY=leftFront.y))
-                        drawLine(Color(0xFF6D8D9C),leftBack,rightBack,2f)
-                        drawLine(Color(0xFF56B9C3).copy(alpha=.65f),leftFront,rightFront,2f)
-                        for(i in 0..6){
-                            val v=plane.project(i*.75f,2.68f)
-                            drawLine(Color(0xFF70D5D4).copy(alpha=.42f),v,v+Offset(0f,lip*.7f),2f)
-                        }
                         for(q in AdventureRules.arenaCells){
                             val x=q.x;val y=q.y
                             val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
@@ -297,16 +278,21 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val center=plane.center(q);val cx=center.x;val cy=center.y
                             val corners=plane.vertices(q).map{center+(it-center)*.97f}
                             val outline=surface(corners)
-                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
-                            drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
-                            drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
-                            if(i>=0&&i==targetChoice&&!busy)drawPath(outline,Color(0xFFFFE1A5),style=Stroke(3.5f))
-                            for(j in 0..5){
-                                val dx=((x*17+y*9+j*13)%21-10)*w/38f
-                                val dy=((x*9+y*19+j*7)%17-8)*h/38f
-                                drawRect(Color.White.copy(alpha=.06f),Offset(cx+dx,cy+dy),androidx.compose.ui.geometry.Size(w*.08f,h*.035f))
+                            // Heroes-like overlays: terrain remains visible and only tactical cells are highlighted.
+                            val fill=when{
+                                q==source->Color(0xFF72DFD0).copy(alpha=.24f)
+                                hit->Color(0xFFFF6F79).copy(alpha=.23f)
+                                can&&!busy->Color(0xFF071D18).copy(alpha=.38f)
+                                i>=0&&i==targetChoice->Color(0xFFFF9A78).copy(alpha=.23f)
+                                else->Color.Transparent
                             }
-                            if(can&&!busy){drawOval(Color(0xFF71CAD4).copy(alpha=.16f),Offset(cx-w*.16f,cy-h*.15f),Size(w*.32f,h*.30f));drawCircle(Color(0xFF71CAD4),w*.027f,Offset(cx,cy))}
+                            if(fill!=Color.Transparent)drawPath(outline,fill)
+                            if(showGrid||q==source||hit||can&&!busy){
+                                val edge=when{q==source->Color(0xFF99F6DF);hit->Color(0xFFFF8790);can&&!busy->Color(0xFF9BD3BA).copy(alpha=.55f);else->Color.White.copy(alpha=.18f)}
+                                drawPath(outline,edge,style=Stroke(if(q==source||hit)2f else 1f))
+                            }
+                            if(i>=0&&i==targetChoice&&!busy)drawPath(outline,Color(0xFFFFE1A5),style=Stroke(2.5f))
+
                         }
                     }
                     val px by animateDpAsState(spriteX(b.pos),tween(duration(300)),label="battle x")
@@ -430,6 +416,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     }
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
                         Text(if(chosenEnemy!=null)"Ціль: ${chosenEnemy.series.title} · ${damagePreview?.let{"−$it HP"}?:"поза дальністю"}" else b.log,modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,maxLines=1)
+                        TextButton(onClick={showGrid=!showGrid}){Text(if(showGrid)"Сітка ✓" else "Сітка")}
                         TextButton(onClick={tacticsPanel=true},enabled=!busy){Text("Тактика · ${speed}×")}
                     }
                 }
@@ -441,7 +428,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 actionStrip()
             }else{
                 BoxWithConstraints(Modifier.fillMaxWidth()){
-                    battlefield(Modifier.fillMaxWidth(),maxWidth*.79f)
+                    battlefield(Modifier.fillMaxWidth(),maxWidth*.76f)
                 }
                 actionStrip()
                 if(!b.deploying)controls()
