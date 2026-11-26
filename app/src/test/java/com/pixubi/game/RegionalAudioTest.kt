@@ -20,6 +20,18 @@ class RegionalAudioTest {
         assertEquals(5, motifs.toSet().size)
     }
 
+    @Test fun instrumentalScoreHasLongDistinctScenes() {
+        val base=PixubiScore.render(Region.FOREST,MusicScene.BASE,8000)
+        val battle=PixubiScore.render(Region.FOREST,MusicScene.BATTLE,8000)
+        assertTrue(base.size>40*8000)
+        assertTrue(battle.size>25*8000)
+        assertTrue(base.any{it>1000})
+        assertTrue(battle.any{it< -1000})
+        assertNotEquals(base.size,battle.size)
+        assertTrue(base.all{it.toInt() in -30000..30000})
+        assertTrue(battle.all{it.toInt() in -30000..30000})
+    }
+
     @Test fun soundSettingsDefaultToOnAndGentleVolume() {
         val settings = SoundSettings()
         assertTrue(settings.music)
