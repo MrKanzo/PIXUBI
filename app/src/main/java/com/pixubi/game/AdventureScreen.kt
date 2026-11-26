@@ -47,6 +47,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var visualTarget by remember{mutableStateOf<GridPoint?>(null)}
     var visualSource by remember{mutableStateOf<GridPoint?>(null)}
     var visualKind by remember{mutableStateOf("")}
+    var melee by remember{mutableStateOf(false)}
+    var damageLabels by remember{mutableStateOf<List<Pair<GridPoint,Int>>>(emptyList())}
+    val response=remember{Animatable(0f)}
     var queued by remember{mutableStateOf<(() -> WorldPet)?>(null)}
     val fx=remember{Animatable(0f)}
     fun duration(ms:Int)=(ms/speed).toInt().coerceAtLeast(1)
@@ -54,26 +57,39 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val loop=rememberInfiniteTransition(label="adventure")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(duration(1000),easing=LinearEasing)),label="actors")
     val busy=queued!=null||moving||attack
-    fun perform(kind:String,source:GridPoint,target:GridPoint,action:()->WorldPet){
+    fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,action:()->WorldPet){
         if(queued!=null||moving||attack)return
-        visualKind=kind;visualSource=source;visualTarget=target
+        visualKind=kind;visualSource=source;visualTarget=target;melee=closeCombat
         attack=kind=="strike";moving=kind=="move"
         queued=action
     }
     LaunchedEffect(queued){
         val action=queued?:return@LaunchedEffect
         try{
+            val oldBattle=latestPet.adventure.battle
+            val result:WorldPet
             fx.snapTo(0f)
+            response.snapTo(0f)
             if(visualKind=="move"){
-                latestChange(action())
+                result=action();latestChange(result)
                 fx.animateTo(1f,tween(duration(460),easing=LinearEasing))
             }else{
                 fx.animateTo(1f,tween(duration(520),easing=LinearEasing))
-                latestChange(action())
+                result=action();latestChange(result)
             }
-            delay(duration(180).toLong())
+            val updated=result.adventure.battle
+            if(oldBattle!=null&&updated!=null){
+                damageLabels=buildList{
+                    val taken=oldBattle.hp-updated.hp
+                    if(taken!=0)add(updated.pos to taken)
+                    oldBattle.enemies.zip(updated.enemies).forEach{(before,after)->
+                        if(before.hp>after.hp)add(after.pos to (before.hp-after.hp))
+                    }
+                }
+            }
+            response.animateTo(1f,tween(duration(520),easing=LinearEasing))
         }finally{
-            moving=false;attack=false;visualTarget=null;visualSource=null;visualKind="";queued=null
+            moving=false;attack=false;visualTarget=null;visualSource=null;visualKind="";damageLabels=emptyList();queued=null
         }
     }
     fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
@@ -82,7 +98,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=MaterialTheme.typography.headlineSmall)
-                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+if(busy)"Виконується дія" else "Твій хід")
+                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+(if(busy)"Виконується дія" else "Твій хід"))
             }
             OutlinedButton(onClick={back()}){Text(if(b==null)"База" else "Відступ")}
         }
@@ -98,8 +114,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(AdventureRules.complete(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
-                Text("Швидкість",style=MaterialTheme.typography.labelMedium,modifier=Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+                Text("Швидкість",style=MaterialTheme.typography.labelMedium)
                 listOf(.5f,1f,2f,3f).forEach{v->FilterChip(speed==v,{speed=v;settings.edit().putFloat("speed",v).apply()},enabled=!busy,label={Text(if(v==.5f)"0,5×" else "${v.toInt()}×")})}
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -135,7 +151,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
                                 if(i>=0&&AdventureRules.canHit(p,b,b.enemies[i],selected)){
                                     direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
-                                    perform("strike",b.pos,q){latestSound(PixubiSound.TAP);AdventureRules.strike(latestPet,i,selected,now())}
+                                    perform("strike",b.pos,q,selected==null||AdventureRules.range(selected)==1){latestSound(PixubiSound.TAP);AdventureRules.strike(latestPet,i,selected,now())}
                                 }else if(AdventureRules.reachable(p,b,q)){
                                     direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
                                     perform("move",b.pos,q){latestSound(PixubiSound.TAP);AdventureRules.moveArena(latestPet,q,now())}
@@ -199,7 +215,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             when(visualKind){
                                 "strike"->{
                                     val point=from+(to-from)*(t*1.8f).coerceIn(0f,1f)
-                                    if(t<.62f){
+                                    if(t<.62f&&melee){
+                                        val sweep=Offset(to.x-w*.34f,to.y-w*.34f)
+                                        drawArc(Color(0xFFE2FAFF).copy(alpha=1f-t),-135f,190f*t/.62f,false,sweep,Size(w*.68f,w*.68f),style=Stroke(w*.10f,cap=StrokeCap.Round))
+                                    }else if(t<.62f){
                                         drawLine(Color(0xFF61E9FF).copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
                                         drawLine(Color(0xFFB5FFFF),from,point,w*.052f,StrokeCap.Round)
                                         drawCircle(Color.White,w*.06f,point)
@@ -226,6 +245,12 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                     drawLine(Color(0xFF9BE3DF).copy(alpha=.25f*(1-t)),from,point,w*.10f,StrokeCap.Round)
                                 }
                             }
+                        }
+                    }
+                    damageLabels.forEach{(point,amount)->
+                        val t=response.value
+                        Box(Modifier.offset(xOf(point),yOf(point)-cell*(.15f+t*.4f)).width(cell),contentAlignment=Alignment.Center){
+                            Text(if(amount>0)"−$amount" else "+${-amount}",color=(if(amount>0)Color(0xFFFFA285)else Color(0xFF9EFFB6)).copy(alpha=(1f-t*.65f).coerceIn(0f,1f)),style=MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
