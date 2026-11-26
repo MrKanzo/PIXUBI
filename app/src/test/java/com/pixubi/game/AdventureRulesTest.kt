@@ -28,8 +28,21 @@ class AdventureRulesTest{
         assertEquals(win,AdventureRules.strike(win,0,RobotGear.RIFLE_L,2000))
         assertTrue(AdventureRules.id(GridPoint(3,1)) in win.adventure.cleared)
     }
+    @Test fun hexNeighborsAndRangeAgree(){
+        for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
+            val p=GridPoint(x,y)
+            val neighbors=AdventureRules.arenaNeighbors(p)
+            assertEquals(6,neighbors.toSet().size)
+            for(q in neighbors.filter{AdventureRules.inArena(it)}){
+                assertTrue(p in AdventureRules.arenaNeighbors(q))
+                assertEquals(1,AdventureRules.arenaDistance(p,q))
+                assertEquals(1,AdventureRules.path(p,q,emptySet()))
+            }
+            assertEquals(0,AdventureRules.arenaDistance(p,p))
+        }
+    }
     @Test fun pathAvoidsOccupiedCells(){
-        assertEquals(4,AdventureRules.path(GridPoint(0,2),GridPoint(2,2),setOf(GridPoint(1,2))))
+        assertEquals(3,AdventureRules.path(GridPoint(0,2),GridPoint(2,2),setOf(GridPoint(1,2))))
         assertNull(AdventureRules.path(GridPoint(0,2),GridPoint(1,2),setOf(GridPoint(1,2))))
     }
 }
