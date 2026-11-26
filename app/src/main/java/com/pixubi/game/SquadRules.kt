@@ -37,8 +37,8 @@ internal object SquadRules{
     }
     fun recruit(p:WorldPet,k:SquadKind):WorldPet{
         val a=p.adventure;val hp=a.squad[k]?:0
-        if(!atBase(p)||a.barracks<k.requiredBarracks||(hp==0&&a.squad.size>=slots(a))||stackCount(a,k)>=MAX_STACK||p.coins<k.price)return p
-        return p.copy(coins=p.coins-k.price,adventure=a.copy(squad=a.squad+(k to hp+unitHp(k,rank(a,k)))),message="${k.title}: +1 боєць")
+        if(!atBase(p)||!SquadResearch.unlocked(a,k)||a.barracks<k.requiredBarracks||(hp==0&&a.squad.size>=slots(a))||stackCount(a,k)>=MAX_STACK||p.coins<k.price)return p
+        return p.copy(coins=p.coins-k.price,adventure=a.copy(squad=a.squad+(k to hp+unitHp(k,rank(a,k))),licensed=a.licensed+k),message="${k.title}: +1 боєць")
     }
     fun upgradePrice(a:AdventureState,k:SquadKind)=k.price*rank(a,k)*stackCount(a,k)
     fun upgrade(p:WorldPet,k:SquadKind):WorldPet{
@@ -92,5 +92,25 @@ internal object SquadRules{
             b.allies.forEachIndexed{j,a->if(a.hp in 1 until a.maxHp&&AdventureRules.arenaDistance(u.pos,a.pos)<=2)add(j to a.hp.toFloat()/a.maxHp)}
         }
         return options.minByOrNull{it.second}?.first
+    }
+}
+
+internal data class SquadBlueprint(val wins:Int,val sector:Int)
+internal object SquadResearch{
+    fun requirement(k:SquadKind)=when(k){
+        SquadKind.ASSAULT,SquadKind.RANGER->SquadBlueprint(0,1)
+        SquadKind.GUARD->SquadBlueprint(2,1)
+        SquadKind.MEDIC->SquadBlueprint(4,1)
+        SquadKind.SIEGE->SquadBlueprint(10,2)
+        SquadKind.AERIAL->SquadBlueprint(20,3)
+    }
+    fun victories(a:AdventureState)=a.pastCampaignWins+AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}
+    fun unlocked(a:AdventureState,k:SquadKind):Boolean{
+        val req=requirement(k)
+        return k in a.licensed||k in a.squad||(a.stage>=req.sector&&victories(a)>=req.wins)
+    }
+    fun progress(a:AdventureState,k:SquadKind):String{
+        val req=requirement(k)
+        return if(unlocked(a,k))"Технологію відкрито" else "Перемоги на карті: ${victories(a).coerceAtMost(req.wins)}/${req.wins} · сектор ${a.stage.coerceAtMost(req.sector)}/${req.sector}"
     }
 }

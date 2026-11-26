@@ -2,7 +2,7 @@ package com.pixubi.game
 import org.junit.Assert.*
 import org.junit.Test
 class SquadRulesTest{
-    private fun pet()=WorldRules.hatch(RobotSeries.CLASSIC,"X",1000L).copy(coins=1000)
+    private fun pet()=WorldRules.hatch(RobotSeries.CLASSIC,"X",1000L).copy(coins=1000,adventure=AdventureState(pastCampaignWins=2))
     private fun battle():WorldPet{
         val p=SquadRules.recruit(SquadRules.recruit(pet(),SquadKind.RANGER),SquadKind.GUARD)
         return AdventureRules.move(p.copy(adventure=p.adventure.copy(pos=GridPoint(3,2))),GridPoint(3,1),1000L)

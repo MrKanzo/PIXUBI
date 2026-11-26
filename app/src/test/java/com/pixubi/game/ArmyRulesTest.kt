@@ -2,7 +2,7 @@ package com.pixubi.game
 import org.junit.Assert.*
 import org.junit.Test
 class ArmyRulesTest{
-    private fun pet()=WorldRules.hatch(RobotSeries.CLASSIC,"X",1000L).copy(coins=10000)
+    private fun pet()=WorldRules.hatch(RobotSeries.CLASSIC,"X",1000L).copy(coins=10000,adventure=AdventureState(stage=3,pastCampaignWins=20))
     @Test fun stacksGrowAndLoseStrength(){
         var p=pet()
         repeat(7){p=SquadRules.recruit(p,SquadKind.RANGER)}
