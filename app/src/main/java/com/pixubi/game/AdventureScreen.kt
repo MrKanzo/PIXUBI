@@ -38,6 +38,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var moving by remember{mutableStateOf(false)}
     var attack by remember{mutableStateOf(false)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
+    var actorChoice by remember{mutableIntStateOf(-1)}
     val context=LocalContext.current
     val settings=remember(context){context.getSharedPreferences("pixubi_arena_settings",android.content.Context.MODE_PRIVATE)}
     var speed by remember{mutableStateOf(settings.getFloat("speed",1f).takeIf{it in listOf(.5f,1f,2f,3f)}?:1f)}
@@ -82,6 +83,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 damageLabels=buildList{
                     val taken=oldBattle.hp-updated.hp
                     if(taken!=0)add(updated.pos to taken)
+                    oldBattle.allies.zip(updated.allies).forEach{(before,after)->if(before.hp!=after.hp)add(after.pos to (before.hp-after.hp))}
                     oldBattle.enemies.zip(updated.enemies).forEach{(before,after)->
                         if(before.hp>after.hp)add(after.pos to (before.hp-after.hp))
                     }
@@ -107,6 +109,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound)
+            SquadPanel(p,onChange)
             Text("База · монети · енергокомірки · ремонт · боєприпаси",style=MaterialTheme.typography.bodySmall)
             Text("Переможено ботів: ${AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}}/${AdventureRules.encounters(a).size}")
             Text(p.message)
@@ -114,6 +117,17 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(AdventureRules.canAdvance(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
+            val available=SquadRules.available(b)
+            val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
+            val source=SquadRules.position(b,actor)
+            val ally=b.allies.getOrNull(actor)
+            fun canHit(enemy:ArenaBot)=if(actor==-1)AdventureRules.canHit(p,b,enemy,selected)else SquadRules.canHit(b,actor,enemy)
+            fun reachable(q:GridPoint)=SquadRules.reachable(p,b,actor,q)
+            Text("Загін · обери юніта для ходу",style=MaterialTheme.typography.titleMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                FilterChip(actor==-1,{actorChoice=-1},enabled=!busy&&-1 in available,label={Text("Командир "+if(-1 in b.acted)"✓" else "${b.hp} HP")})
+                b.allies.forEachIndexed{i,u->FilterChip(actor==i,{actorChoice=i},enabled=!busy&&i in available,label={Text(u.kind.title+" "+if(u.hp==0)"×" else if(i in b.acted)"✓" else "${u.hp} HP")})}
+            }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
                 Text("Швидкість",style=MaterialTheme.typography.labelMedium)
                 listOf(.5f,1f,2f,3f).forEach{v->FilterChip(speed==v,{speed=v;settings.edit().putFloat("speed",v).apply()},enabled=!busy,label={Text(if(v==.5f)"0,5×" else "${v.toInt()}×")})}
@@ -126,7 +140,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Text("Вороги · HP");b.enemies.forEach{Text("${it.series.title} ${it.hp}/${it.maxHp}",style=MaterialTheme.typography.bodySmall)}
                 }}
             }
-            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Після твоєї дії ходять усі живі боти.",style=MaterialTheme.typography.bodySmall)
+            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Після ходу всіх живих юнітів відповідають боти.",style=MaterialTheme.typography.bodySmall)
             BoxWithConstraints(Modifier.fillMaxWidth()){
                 val cell=maxWidth/(AdventureRules.ARENA_W+.5f)
                 val hexH=cell*1.1547f
@@ -134,7 +148,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 fun xOf(q:GridPoint)=cell*(q.x+if(q.y%2==1).5f else 0f)
                 fun yOf(q:GridPoint)=rowStep*q.y
                 Box(Modifier.fillMaxWidth().height(rowStep*(AdventureRules.ARENA_H-1)+hexH).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
-                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed){
+                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor){
                         detectTapGestures{tap->
                             val w=size.width/(AdventureRules.ARENA_W+.5f)
                             val h=w*1.1547f
@@ -149,12 +163,17 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val q=hitCell
                             if(q!=null&&!busy){
                                 val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
-                                if(i>=0&&AdventureRules.canHit(p,b,b.enemies[i],selected)){
-                                    direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
-                                    perform("strike",b.pos,q,selected==null||AdventureRules.range(selected)==1){latestSound(PixubiSound.TAP);AdventureRules.strike(latestPet,i,selected,now())}
-                                }else if(AdventureRules.reachable(p,b,q)){
-                                    direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
-                                    perform("move",b.pos,q){latestSound(PixubiSound.TAP);AdventureRules.moveArena(latestPet,q,now())}
+                                val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
+                                if(q==b.pos&&-1 in available){actorChoice=-1}
+                                else if(friend>=0&&friend in available){actorChoice=friend}
+                                else if(i>=0&&canHit(b.enemies[i])){
+                                    direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
+                                    perform("strike",source,q,if(ally!=null)ally.kind.range==1 else selected==null||AdventureRules.range(selected)==1){
+                                        latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
+                                    }
+                                }else if(reachable(q)){
+                                    direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
+                                    perform("move",source,q){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.moveArena(latestPet,q,now())else AdventureRules.allyMove(latestPet,actor,q,now())}
                                 }
                             }
                         }
@@ -171,15 +190,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
                             val q=GridPoint(x,y)
                             val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
-                            val hit=i>=0&&AdventureRules.canHit(p,b,b.enemies[i],selected)
-                            val can=AdventureRules.reachable(p,b,q)
+                            val hit=i>=0&&canHit(b.enemies[i])
+                            val can=reachable(q)
                             val cx=w*(x+.5f+if(y%2==1).5f else 0f);val cy=h*(.5f+y*.75f)
                             val outline=Path().apply{
                                 moveTo(cx,cy-h*.48f);lineTo(cx+w*.48f,cy-h*.24f)
                                 lineTo(cx+w*.48f,cy+h*.24f);lineTo(cx,cy+h*.48f)
                                 lineTo(cx-w*.48f,cy+h*.24f);lineTo(cx-w*.48f,cy-h*.24f);close()
                             }
-                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==b.pos->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
+                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
                             drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
                             drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
                             for(j in 0..5){
@@ -193,9 +212,26 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val px by animateDpAsState(xOf(b.pos),tween(duration(300)),label="battle x")
                     val py by animateDpAsState(yOf(b.pos)+hexH*.08f,tween(duration(300)),label="battle y")
                     Box(Modifier.offset(px,py).size(cell)){
-                        RobotPreview(direction,if(attack)RobotAction.ATTACK else if(moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
+                        RobotPreview(direction,if(attack&&visualSource==b.pos)RobotAction.ATTACK else if(moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
                         LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp))
                     }
+                    b.allies.forEachIndexed{i,u->key("ally"+i){
+                        val ax by animateDpAsState(xOf(u.pos),tween(duration(300)),label="ally x")
+                        val ay by animateDpAsState(yOf(u.pos)+hexH*.08f,tween(duration(300)),label="ally y")
+                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(cell)){
+                            Canvas(Modifier.fillMaxSize()){
+                                drawOval(Color(0xFF70E6CD).copy(alpha=if(actor==i).65f else .25f),Offset(size.width*.1f,size.height*.76f),Size(size.width*.8f,size.height*.20f),style=Stroke(2f))
+                            }
+                            val activeAction=when{
+                                attack&&visualSource==u.pos->RobotAction.ATTACK
+                                moving&&visualTarget==u.pos->RobotAction.WALK
+                                busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
+                                else->RobotAction.IDLE
+                            }
+                            RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
+                            LinearProgressIndicator(progress={u.hp.toFloat()/u.kind.hp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFF77DCC5))
+                        }
+                    }}
                     b.enemies.forEachIndexed{i,e->key(i){
                         val ex by animateDpAsState(xOf(e.pos),tween(duration(300)),label="bot x")
                         val ey by animateDpAsState(yOf(e.pos)+hexH*.08f,tween(duration(300)),label="bot y")
@@ -257,7 +293,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             if(busy)Text(when(visualKind){"strike"->"⚡ Атака";"guard"->"🛡 Щит";"repair"->"✚ Ремонт";else->"Переміщення"},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.titleMedium)
             Text(b.log)
-            Text("Зброя · рух до ${AdventureRules.movement(p)} клітинок")
+            Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} · рух ${ally.kind.move} · атака ${ally.kind.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
+            if(ally==null){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(selected==null,{weapon=null},label={Text("Ближній удар · 1")})
                 AdventureRules.weapons(p).forEach{g->
@@ -265,12 +302,61 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     FilterChip(selected==g,{weapon=g},label={Text(g.title+" · "+AdventureRules.range(g)+(ammo?.let{" · ${p.stock(it)} зар."}?:""))})
                 }
             }
+            }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                Button(onClick={perform("guard",b.pos,b.pos){latestSound(PixubiSound.TAP);AdventureRules.guard(latestPet,now())}},enabled=!busy,modifier=Modifier.weight(1f)){Text("Захист")}
-                OutlinedButton(onClick={perform("repair",b.pos,b.pos){latestSound(PixubiSound.HAPPY);AdventureRules.repair(latestPet,now())}},enabled=p.repair>0&&b.hp<b.maxHp&&!busy,modifier=Modifier.weight(1f)){Text("Ремонт")}
+                Button(onClick={perform("guard",source,source){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.guard(latestPet,now())else AdventureRules.allyGuard(latestPet,actor,now())}},enabled=!busy&&actor in available,modifier=Modifier.weight(1f)){Text("Захист / пропуск")}
+                val repairTarget=if(actor==-1)null else SquadRules.repairTarget(b,actor)
+                if(actor==-1||ally?.kind==SquadKind.MEDIC)OutlinedButton(onClick={
+                    val target=repairTarget?.let{SquadRules.position(b,it)}?:source
+                    perform("repair",source,target){latestSound(PixubiSound.HAPPY);if(actor==-1)AdventureRules.repair(latestPet,now())else AdventureRules.allyRepair(latestPet,actor,now())}
+                },enabled=!busy&&actor in available&&(if(actor==-1)p.repair>0&&b.hp<b.maxHp else repairTarget!=null),modifier=Modifier.weight(1f)){Text("Ремонт")}
             }
         }
     }
     if(retreat)AlertDialog(onDismissRequest={retreat=false},title={Text("Відступити?")},text={Text("Отримані пошкодження та витрачені заряди збережуться. Вороги залишаться на карті.")},
         confirmButton={TextButton(onClick={retreat=false;onChange(AdventureRules.retreat(p,now()))}){Text("Відступити")}},dismissButton={TextButton(onClick={retreat=false}){Text("Продовжити бій")}})
+}
+
+@Composable private fun SquadPanel(p:WorldPet,onChange:(WorldPet)->Unit){
+    var expanded by remember{mutableStateOf(false)}
+    var dismiss by remember{mutableStateOf<SquadKind?>(null)}
+    val atBase=SquadRules.atBase(p)
+    val roster=p.adventure.squad
+    val loop=rememberInfiniteTransition(label="squad")
+    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(2800,easing=LinearEasing)),label="squad preview")
+    Card(Modifier.fillMaxWidth()){
+        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){Text("Бойовий загін",style=MaterialTheme.typography.titleMedium);Text("Командир + ${roster.size}/${SquadRules.MAX} юнітів")}
+                OutlinedButton(onClick={expanded=!expanded}){Text(if(expanded)"Згорнути" else "Керувати")}
+            }
+            if(roster.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                roster.forEach{(kind,hp)->Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(82.dp)){
+                    RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,kind.loadout(),phase,false,Modifier.size(72.dp))
+                    Text(kind.title,style=MaterialTheme.typography.labelSmall);Text("$hp/${kind.hp} HP",style=MaterialTheme.typography.labelSmall)
+                }}
+            }
+            if(expanded){
+                Text(if(atBase)"Пункт найму та ремонту. Заряди юнітів поповнюються перед кожним боєм. Загиблі юніти втрачаються." else "Найм і ремонт доступні на стартовій базі.")
+                SquadKind.entries.forEach{k->
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,k.loadout(),phase,false,Modifier.size(68.dp))
+                        Column(Modifier.weight(1f)){
+                            Text(k.title,style=MaterialTheme.typography.titleSmall)
+                            Text("HP ${k.hp} · ATK ${k.attack} · DEF ${k.defense} · рух ${k.move} · дальність ${k.range}",style=MaterialTheme.typography.bodySmall)
+                            if(k==SquadKind.MEDIC)Text("3 ремонти в радіусі 2 клітинок",style=MaterialTheme.typography.labelSmall)
+                            if(k==SquadKind.RANGER)Text("8 власних зарядів на бій",style=MaterialTheme.typography.labelSmall)
+                            val hp=roster[k]
+                            if(hp==null)Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&roster.size<SquadRules.MAX&&p.coins>=k.price){Text("Найняти · ${k.price} 🪙")}
+                            else Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                TextButton(onClick={onChange(SquadRules.restore(p,k))},enabled=atBase&&hp<k.hp&&p.coins>=15){Text("Ремонт 15")}
+                                TextButton(onClick={dismiss=k},enabled=atBase){Text("Вивести")}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    dismiss?.let{k->AlertDialog(onDismissRequest={dismiss=null},title={Text("Вивести юніта?")},text={Text("Юніт покине загін без повернення монет.")},confirmButton={TextButton(onClick={onChange(SquadRules.dismiss(p,k));dismiss=null}){Text("Вивести")}},dismissButton={TextButton(onClick={dismiss=null}){Text("Скасувати")}})}
 }

@@ -12,9 +12,9 @@ internal enum class AdventureTile(val title:String,val symbol:String){
     ENERGY("Енергокомірки","⚡"), REPAIR("Ремонтні модулі","🛠"), AMMO("Боєприпаси","▣"), ENEMY("Ворожий бот","!")
 }
 internal data class ArenaBot(val series:RobotSeries,val tier:RobotTier,val pos:GridPoint,val hp:Int,val maxHp:Int,val attack:Int,val defense:Int,val speed:Int)
-internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,val maxHp:Int,val enemies:List<ArenaBot>,val turn:Int=1,val log:String="Твій хід")
+internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,val maxHp:Int,val enemies:List<ArenaBot>,val turn:Int=1,val log:String="Твій хід",val allies:List<ArenaAlly> = emptyList(),val acted:Set<Int> = emptySet(),val guards:Set<Int> = emptySet())
 internal data class AdventureState(val stage:Int=1,val pos:GridPoint=GridPoint(0,2),val cleared:Set<Int> = emptySet(),
-    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false)
+    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap())
 internal object AdventureRules{
     const val MAP_W=16;const val MAP_H=10;const val ARENA_W=7;const val ARENA_H=5
     val base=GridPoint(0,2)
@@ -95,7 +95,7 @@ internal object AdventureRules{
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
         if(a.battle!=null||!canAdvance(a)||a.stage>=100||!canExplore(p))return p
-        return p.copy(adventure=AdventureState(stage=a.stage+1),message="Відкрито сектор ${a.stage+1}")
+        return p.copy(adventure=AdventureState(stage=a.stage+1,squad=a.squad),message="Відкрито сектор ${a.stage+1}")
     }
     fun move(p:WorldPet,to:GridPoint,now:Long):WorldPet{
         val a=p.adventure
@@ -137,7 +137,7 @@ internal object AdventureRules{
                 (stats.attack*.60f+4+a.stage.coerceAtMost(12)).toInt(),(stats.defense*.55f).toInt(),stats.speed)
         }
         val max=p.stats.durability.coerceAtLeast(1)
-        return ArenaBattle(id(at),GridPoint(0,2),(max*p.integrity/100).coerceAtLeast(1),max,bots)
+        return ArenaBattle(id(at),GridPoint(0,2),(max*p.integrity/100).coerceAtLeast(1),max,bots,allies=SquadRules.deploy(a.squad))
     }
     fun movement(p:WorldPet)=(1+p.stats.speed/45).coerceIn(2,4)
     fun path(from:GridPoint,to:GridPoint,blocked:Set<GridPoint>):Int?{
@@ -151,7 +151,7 @@ internal object AdventureRules{
         }
         return null
     }
-    fun reachable(p:WorldPet,b:ArenaBattle,q:GridPoint)=q!=b.pos&&(path(b.pos,q,b.enemies.filter{it.hp>0}.map{it.pos}.toSet())?:999)<=movement(p)
+    fun reachable(p:WorldPet,b:ArenaBattle,q:GridPoint)=SquadRules.reachable(p,b,-1,q)
     fun weapons(p:WorldPet)=p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sortedBy{it.ordinal}
     fun range(g:RobotGear?)=when(g){
         RobotGear.BLASTER_L,RobotGear.BLASTER_R->3
@@ -162,7 +162,7 @@ internal object AdventureRules{
     }
     fun attackCost(g:RobotGear?)=if(g==null)null else WorldGearCatalog.ammo(g)?.first
     fun canHit(p:WorldPet,b:ArenaBattle,enemy:ArenaBot,g:RobotGear?):Boolean{
-        if(enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>range(g))return false
+        if(-1 in b.acted||enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>range(g))return false
         if(g!=null&&g !in weapons(p))return false
         return attackCost(g)?.let{p.stock(it)>0}?:true
     }
@@ -170,7 +170,7 @@ internal object AdventureRules{
     fun moveArena(p:WorldPet,to:GridPoint,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         if(!reachable(p,b,to))return p
-        return enemiesTurn(p,b.copy(pos=to),false,"Переміщення",now)
+        return afterAction(p,b.copy(pos=to),-1,false,"Переміщення командира",now)
     }
     fun strike(p:WorldPet,index:Int,gear:RobotGear?,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
@@ -183,40 +183,81 @@ internal object AdventureRules{
         val enemies=b.enemies.mapIndexed{i,bot->if(i==index)bot.copy(hp=(bot.hp-hit).coerceAtLeast(0))else bot}
         val next=b.copy(enemies=enemies)
         if(enemies.none{it.hp>0})return finish(q,next,true,now)
-        return enemiesTurn(q,next,false,"Удар по ${e.series.title}: −$hit HP",now)
+        return afterAction(q,next,-1,false,"Удар по ${e.series.title}: −$hit HP",now)
     }
     fun guard(p:WorldPet,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
-        return enemiesTurn(p,b,true,"Захист активовано",now)
+        if(-1 in b.acted)return p
+        return afterAction(p,b,-1,true,"Захист активовано",now)
     }
     fun repair(p:WorldPet,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
-        if(p.repair==0||b.hp>=b.maxHp)return p
+        if(-1 in b.acted||p.repair==0||b.hp>=b.maxHp)return p
         val amount=(b.maxHp*(40+WorldGearCatalog.repairBonus(p.equipment))/100).coerceAtLeast(1)
-        return enemiesTurn(p.copy(repair=p.repair-1),b.copy(hp=(b.hp+amount).coerceAtMost(b.maxHp)),false,"Корпус відновлено",now)
+        return afterAction(p.copy(repair=p.repair-1),b.copy(hp=(b.hp+amount).coerceAtMost(b.maxHp)),-1,false,"Корпус відновлено",now)
     }
     fun retreat(p:WorldPet,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         return finish(p,b,false,now,true)
     }
-    private fun enemiesTurn(p:WorldPet,b:ArenaBattle,guard:Boolean,log:String,now:Long):WorldPet{
-        var hp=b.hp;val bots=b.enemies.toMutableList();val logs=mutableListOf(log)
+    fun allyMove(p:WorldPet,index:Int,to:GridPoint,now:Long):WorldPet{
+        val b=p.adventure.battle?:return p
+        val ally=b.allies.getOrNull(index)?:return p
+        if(!SquadRules.reachable(p,b,index,to))return p
+        val next=b.copy(allies=b.allies.mapIndexed{i,u->if(i==index)u.copy(pos=to)else u})
+        return afterAction(p,next,index,false,"${ally.kind.title}: переміщення",now)
+    }
+    fun allyStrike(p:WorldPet,index:Int,target:Int,now:Long):WorldPet{
+        val b=p.adventure.battle?:return p
+        val ally=b.allies.getOrNull(index)?:return p
+        val enemy=b.enemies.getOrNull(target)?:return p
+        if(!SquadRules.canHit(b,index,enemy))return p
+        val hit=damage(ally.kind.attack+p.level/3,enemy.defense)
+        val next=b.copy(allies=b.allies.mapIndexed{i,u->if(i==index&&u.kind.range>1)u.copy(charges=u.charges-1)else u},
+            enemies=b.enemies.mapIndexed{i,e->if(i==target)e.copy(hp=(e.hp-hit).coerceAtLeast(0))else e})
+        if(next.enemies.none{it.hp>0})return finish(p,next,true,now)
+        return afterAction(p,next,index,false,"${ally.kind.title}: удар −$hit HP",now)
+    }
+    fun allyGuard(p:WorldPet,index:Int,now:Long):WorldPet{
+        val b=p.adventure.battle?:return p
+        if(index<0||!SquadRules.ready(b,index))return p
+        return afterAction(p,b,index,true,"${b.allies[index].kind.title}: захист",now)
+    }
+    fun allyRepair(p:WorldPet,index:Int,now:Long):WorldPet{
+        val b=p.adventure.battle?:return p
+        val target=SquadRules.repairTarget(b,index)?:return p
+        val amount=20+p.level/2
+        val next=b.copy(hp=if(target==-1)(b.hp+amount).coerceAtMost(b.maxHp)else b.hp,
+            allies=b.allies.mapIndexed{i,a->a.copy(hp=if(i==target)(a.hp+amount).coerceAtMost(a.kind.hp)else a.hp,charges=if(i==index)a.charges-1 else a.charges)})
+        return afterAction(p,next,index,false,"Ремонтний дрон: +HP",now)
+    }
+    private fun afterAction(p:WorldPet,b:ArenaBattle,actor:Int,guard:Boolean,log:String,now:Long):WorldPet{
+        val next=b.copy(acted=b.acted+actor,guards=if(guard)b.guards+actor else b.guards,log=log)
+        if(SquadRules.available(next).isNotEmpty())return p.copy(adventure=p.adventure.copy(battle=next),message=log)
+        return enemiesTurn(p,next,log,now)
+    }
+    private fun enemiesTurn(p:WorldPet,b:ArenaBattle,log:String,now:Long):WorldPet{
+        var hp=b.hp;val bots=b.enemies.toMutableList();val allies=b.allies.toMutableList();val logs=mutableListOf(log)
         for(i in bots.indices){
             val e=bots[i];if(e.hp<=0||hp<=0)continue
-            if(arenaDistance(e.pos,b.pos)==1){
-                val hit=damage(e.attack,p.stats.defense).let{if(guard)(it+1)/2 else it}
-                hp=(hp-hit).coerceAtLeast(0);logs+="${e.series.title}: −$hit HP"
+            val targets=buildList{add(-1 to b.pos);allies.forEachIndexed{j,u->if(u.hp>0)add(j to u.pos)}}
+            val (actor,position)=targets.minWithOrNull(compareBy<Pair<Int,GridPoint>>{arenaDistance(e.pos,it.second)}.thenBy{if(it.first>=0&&allies[it.first].kind==SquadKind.GUARD)0 else 1}.thenBy{it.first})!!
+            if(arenaDistance(e.pos,position)==1){
+                val def=if(actor==-1)p.stats.defense else allies[actor].kind.defense
+                val hit=damage(e.attack,def).let{if(actor in b.guards)(it+1)/2 else it}
+                if(actor==-1)hp=(hp-hit).coerceAtLeast(0)else allies[actor]=allies[actor].copy(hp=(allies[actor].hp-hit).coerceAtLeast(0))
+                logs+="${e.series.title}: −$hit HP · "+(if(actor==-1)"командир" else allies[actor].kind.title)
             }else{
-                val blocked=bots.filterIndexed{j,bot->j!=i&&bot.hp>0}.map{it.pos}.toSet()+b.pos
+                val blocked=bots.filterIndexed{j,bot->j!=i&&bot.hp>0}.map{it.pos}.toSet()+targets.map{it.second}
                 val reach=(1+e.speed/55).coerceIn(1,3)
                 val options=(0 until ARENA_W*ARENA_H).map{GridPoint(it%ARENA_W,it/ARENA_W)}
                     .filter{it !in blocked&&(path(e.pos,it,blocked)?:999)<=reach}
-                val next=options.minWithOrNull(compareBy<GridPoint>{arenaDistance(it,b.pos)}.thenBy{it.y}.thenBy{it.x})?:e.pos
+                val next=options.minWithOrNull(compareBy<GridPoint>{arenaDistance(it,position)}.thenBy{it.y}.thenBy{it.x})?:e.pos
                 bots[i]=e.copy(pos=next)
                 if(next!=e.pos)logs+="${e.series.title} наближається"
             }
         }
-        val next=b.copy(hp=hp,enemies=bots,turn=b.turn+1,log=logs.joinToString(" · "))
+        val next=b.copy(hp=hp,enemies=bots,allies=allies,acted=emptySet(),guards=emptySet(),turn=b.turn+1,log=logs.joinToString(" · "))
         if(hp<=0)return finish(p,next,false,now)
         return p.copy(adventure=p.adventure.copy(battle=next),message=next.log)
     }
@@ -227,7 +268,7 @@ internal object AdventureRules{
         val pos=if(win)GridPoint(b.encounter%MAP_W,b.encounter/MAP_W) else if(retreat)a.pos else base
         val xp=if(win)70+b.enemies.size*30+a.stage*5 else if(retreat)0 else 10
         val coins=if(win)25+b.enemies.size*15+a.stage*4 else 0
-        val updated=a.copy(battle=null,cleared=cleared,pos=pos)
+        val updated=a.copy(battle=null,cleared=cleared,pos=pos,squad=if(b.allies.isEmpty())a.squad else b.allies.filter{it.hp>0}.associate{it.kind to it.hp})
         val earnsCredit=win&&!a.credited&&complete(updated)
         val q=p.copy(adventure=updated.copy(credited=a.credited||earnsCredit),integrity=integrity,wins=p.wins+if(win)1 else 0,
             expeditions=p.expeditions+if(earnsCredit)1 else 0,last=now,
@@ -241,8 +282,9 @@ internal object AdventureCodec{
     fun encode(a:AdventureState):String{
         val b=a.battle
         val battle=if(b==null)"" else listOf(b.encounter.toString(),point(b.pos),b.hp.toString(),b.maxHp.toString(),b.turn.toString(),
-            b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")}).joinToString("~")
-        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0").joinToString("|")
+            b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")},
+            b.allies.joinToString(";"){u->listOf(u.kind.name,u.pos.x,u.pos.y,u.hp,u.charges).joinToString(",")},b.acted.sorted().joinToString(","),b.guards.sorted().joinToString(",")).joinToString("~")
+        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"}).joinToString("|")
     }
     fun decode(s:String):AdventureState=runCatching{
         val v=s.split("|")
@@ -255,14 +297,21 @@ internal object AdventureCodec{
         val cleared=ids(v[2])
         val credited=v.getOrNull(7)=="1"||(old&&AdventureRules.legacyEncounters.all{AdventureRules.id(it) in cleared})
         val pos=parse(v[1]);require(AdventureRules.inMap(pos))
+        val squad=v.getOrElse(8){""}.split(";").mapNotNull{line->val k=line.split(",");val kind=SquadKind.entries.firstOrNull{it.name==k.firstOrNull()};val hp=k.getOrNull(1)?.toIntOrNull();if(kind!=null&&hp!=null&&hp>0)kind to hp.coerceAtMost(kind.hp) else null}.take(3).toMap()
         val b=v.getOrElse(5){""}.takeIf{it.isNotBlank()}?.let{value->
             val z=value.split("~");val p=parse(z[1]);val max=z[3].toInt();require(AdventureRules.inArena(p)&&max>0)
             val bots=z[5].split(";").map{line->val e=line.split(",");val pt=GridPoint(e[2].toInt(),e[3].toInt());val m=e[5].toInt()
                 require(AdventureRules.inArena(pt)&&m>0);ArenaBot(RobotSeries.valueOf(e[0]),RobotTier.valueOf(e[1]),pt,e[4].toInt().coerceIn(0,m),m,e[6].toInt(),e[7].toInt(),e[8].toInt())}
             require(bots.isNotEmpty()&&bots.any{it.hp>0}&&bots.size<=2)
             val encounter=migrateId(z[0].toInt())?:error("Invalid encounter");require(AdventureRules.layout(stage).encounters.any{AdventureRules.id(it)==encounter})
-            ArenaBattle(encounter,p,z[2].toInt().coerceIn(1,max),max,bots,z[4].toInt().coerceAtLeast(1),"Бій відновлено. Твій хід.")
+            val allies=z.getOrElse(6){""}.split(";").filter{it.isNotBlank()}.map{line->
+                val u=line.split(",");val kind=SquadKind.valueOf(u[0]);val point=GridPoint(u[1].toInt(),u[2].toInt())
+                require(AdventureRules.inArena(point));ArenaAlly(kind,point,u[3].toInt().coerceIn(0,kind.hp),u[4].toInt().coerceIn(0,kind.charges))
+            }
+            require(allies.size<=3&&allies.map{it.kind}.distinct().size==allies.size)
+            fun actors(index:Int)=z.getOrElse(index){""}.split(",").mapNotNull{it.toIntOrNull()}.filter{it in -1 until allies.size}.toSet()
+            ArenaBattle(encounter,p,z[2].toInt().coerceIn(1,max),max,bots,z[4].toInt().coerceAtLeast(1),"Бій відновлено. Твій хід.",allies,actors(7),actors(8))
         }
-        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited)
+        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad)
     }.getOrElse{AdventureState()}
 }
