@@ -46,10 +46,10 @@ internal object FrontierProjection{
 }
 private data class FrontierPalette(val name:String,val grass:Color,val light:Color,val dark:Color,val water:Color,val leaves:Color,val glow:Color)
 private fun palette(stage:Int)=when((stage-1)%4){
-    0->FrontierPalette("Неонова долина",Color(0xFF648B3C),Color(0xFFA7BC65),Color(0xFF344E31),Color(0xFF187A91),Color(0xFF447B44),Color(0xFF6CE7FB))
+    0->FrontierPalette("Неоновий мегасектор",Color(0xFF334B50),Color(0xFF647E83),Color(0xFF202F42),Color(0xFF167D9C),Color(0xFF426B80),Color(0xFF6CE7FB))
     1->FrontierPalette("Кристалові руїни",Color(0xFF5F7184),Color(0xFF8A9DA2),Color(0xFF38465F),Color(0xFF25589C),Color(0xFF6C87C6),Color(0xFF85E8FF))
-    2->FrontierPalette("Спорові острови",Color(0xFF536B4F),Color(0xFF88A564),Color(0xFF304D49),Color(0xFF255F68),Color(0xFF8B5CB4),Color(0xFFB7FC9B))
-    else->FrontierPalette("Золотий каньйон",Color(0xFF97704A),Color(0xFFC49B60),Color(0xFF604937),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
+    2->FrontierPalette("Біотехнологічний сектор",Color(0xFF3E5D56),Color(0xFF67968B),Color(0xFF243B42),Color(0xFF255F68),Color(0xFF8B5CB4),Color(0xFFB7FC9B))
+    else->FrontierPalette("Промисловий каньйон",Color(0xFF62585A),Color(0xFF958477),Color(0xFF3D3948),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
 }
 @Composable
 internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit){
@@ -249,18 +249,19 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
     val roadPaths=roads.map{roundedRoad(it.map(FrontierProjection::center))}
     // Layer all roads together: junctions don't have dark seams.
     for(path in roadPaths)drawPath(path,p.dark.copy(alpha=.75f),style=Stroke(36f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFF82704E),style=Stroke(29f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFFBDA274),style=Stroke(23f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFFDECAA0).copy(alpha=.65f),style=Stroke(13f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,Color(0xFF354552),style=Stroke(29f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,Color(0xFF536573),style=Stroke(23f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,Color(0xFF233746),style=Stroke(13f,cap=StrokeCap.Round,join=StrokeJoin.Round))
     for(path in roadPaths){
         val measure=PathMeasure().apply{setPath(path,false)}
+        for(j in 0..6){val f=(phase+j/7f)%1f;val at=measure.getPosition(f*measure.length);oval(p.glow.copy(alpha=.24f),at.x,at.y,9f,5f);drawCircle(p.glow,2.7f,at)}
         val count=(measure.length/8f).toInt()
         for(i in 1..count){
             val distance=(i*8f).coerceAtMost(measure.length)
             val at=measure.getPosition(distance)
             val tangent=measure.getTangent(distance)
             val o=at+Offset(-tangent.y,tangent.x)*((i%5-2)*3f)
-            drawRect(if(i%2==0)Color(0xFFDBC69B)else Color(0xFF9C825E),o,Size(4f,2f))
+            drawRect(if(i%2==0)p.glow.copy(alpha=.65f)else Color(0xFF627F8D),o,Size(4f,2f))
         }
     }
     // Grass, flowers, crystal clusters and scenic rubble, placed away from the center of walkable cells.
@@ -280,7 +281,7 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         }
         if(wall&&x!=4){
             translate(c.x,c.y){
-                if((x+y)%2==0){
+                if((x+y)%3==0){techTower(p,phase,x+y)}else if((x+y)%2==0){
                     translate(-27f,-13f){scale(.65f,.65f,Offset.Zero){tree(p,phase,x+y+4)}}
                     translate(24f,-4f){scale(.75f,.75f,Offset.Zero){tree(p,phase,x+y+7)}}
                     tree(p,phase,x+y)
@@ -289,6 +290,11 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         }else if(!wall&&!AdventureRules.mainRoad(q)&&q!=AdventureRules.base&&x!=4&&(x+y)%3==0){
             translate(c.x+34f,c.y-28f){scale(.46f,.46f,Offset.Zero){tree(p,phase,x+y)}}
         }
+    }
+    // Small data pylons beside roads, never over resources or hidden objects.
+    for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
+        val q=GridPoint(x,y);if(!AdventureRules.visible(a,q)||!AdventureRules.mainRoad(q)||(x+y)%4!=0)continue
+        val c=FrontierProjection.center(q);translate(c.x+31f,c.y-25f){scale(.45f,.45f,Offset.Zero){techTower(p,phase,x+y)}}
     }
     // The bridges are navigable map nodes, not decorative obstacles.
     for(y in listOf(0,1,5,6,9)){
@@ -458,4 +464,19 @@ private fun DrawScope.fogOfWar(a:AdventureState){
         }
         drawRect(Brush.verticalGradient(listOf(Color(0xFF162130).copy(alpha=.28f),Color.Transparent,Color(0xFF050B13).copy(alpha=.40f)),endY=FrontierProjection.H),size=Size(FrontierProjection.W,FrontierProjection.H))
     }
+}
+
+private fun DrawScope.techTower(p:FrontierPalette,phase:Float,seed:Int){
+    oval(Color(0xFF0C1927).copy(alpha=.75f),0f,6f,35f,14f)
+    shape(Color(0xFF435363),-27f,-8f,20f,-8f,34f,-18f,-13f,-18f)
+    shape(Color(0xFF233346),-27f,-8f,20f,-8f,20f,6f,-27f,6f)
+    shape(Color(0xFF314B61),-16f,-12f,13f,-12f,13f,-59f,-16f,-59f)
+    shape(Color(0xFF152638),13f,-12f,23f,-23f,23f,-68f,13f,-59f)
+    shape(Color(0xFF8195A2),-16f,-59f,13f,-59f,23f,-68f,-6f,-68f)
+    for(i in 0..5){val y=-53f+i*7f;drawRect(p.glow.copy(alpha=.25f+.3f*(.5f+.5f*sin(phase*6.283f+i+seed))),Offset(-12f,y),Size(20f,3f))}
+    drawLine(Color(0xFF859DA8),Offset(0f,-68f),Offset(0f,-86f),3f)
+    val pulse=.5f+.5f*sin(phase*6.283f+seed)
+    drawCircle(p.glow.copy(alpha=.18f),9f+pulse*6f,Offset(0f,-86f))
+    drawCircle(p.glow,3f,Offset(0f,-86f))
+    drawLine(p.glow.copy(alpha=.8f),Offset(-25f,-5f),Offset(17f,-5f),2f)
 }

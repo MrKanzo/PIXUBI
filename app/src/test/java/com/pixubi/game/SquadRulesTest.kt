@@ -14,16 +14,18 @@ class SquadRulesTest{
         assertEquals(1000-90-75-100,p.coins)
         assertEquals(p.adventure.squad,AdventureCodec.decode(AdventureCodec.encode(p.adventure)).squad)
     }
-    @Test fun roundWaitsForEveryLivingUnit(){
+    @Test fun everyFriendlyActionRequiresOneEnemyResponse(){
         val p=battle()
         val q=AdventureRules.guard(p,1000L)
-        assertEquals(1,q.adventure.battle!!.turn)
+        assertTrue(q.adventure.battle!!.enemyPending)
         assertEquals(setOf(-1),q.adventure.battle!!.acted)
-        assertEquals(q,AdventureRules.guard(q,1000L))
-        val r=AdventureRules.allyGuard(q,0,1000L)
+        assertEquals(q,AdventureRules.allyGuard(q,0,1000L))
+        val r=AdventureRules.enemyTurn(q,1000L)
+        assertFalse(r.adventure.battle!!.enemyPending)
         assertEquals(1,r.adventure.battle!!.turn)
-        val s=AdventureRules.allyGuard(r,1,1000L)
-        assertEquals(2,s.adventure.battle!!.turn);assertTrue(s.adventure.battle!!.acted.isEmpty())
+        val s=AdventureRules.enemyTurn(AdventureRules.allyGuard(r,0,1000L),1000L)
+        val u=AdventureRules.enemyTurn(AdventureRules.allyGuard(s,1,1000L),1000L)
+        assertEquals(2,u.adventure.battle!!.turn);assertTrue(u.adventure.battle!!.acted.isEmpty())
     }
     @Test fun allyPositionsBlockPathsAndSavedTurnsRoundTrip(){
         val p=AdventureRules.guard(battle(),1000L);val b=p.adventure.battle!!

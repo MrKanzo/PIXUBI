@@ -66,6 +66,7 @@ internal object SquadRules{
         }
     }
     fun available(b:ArenaBattle):List<Int> = buildList{
+        if(b.enemyPending)return@buildList
         if(b.hp>0&&-1 !in b.acted)add(-1)
         b.allies.forEachIndexed{i,u->if(u.hp>0&&i !in b.acted)add(i)}
     }

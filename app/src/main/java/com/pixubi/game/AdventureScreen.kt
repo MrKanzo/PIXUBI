@@ -39,6 +39,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var attack by remember{mutableStateOf(false)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
     var actorChoice by remember{mutableIntStateOf(-1)}
+    var enemyVisual by remember{mutableIntStateOf(-1)}
     val context=LocalContext.current
     val settings=remember(context){context.getSharedPreferences("pixubi_arena_settings",android.content.Context.MODE_PRIVATE)}
     var speed by remember{mutableStateOf(settings.getFloat("speed",1f).takeIf{it in listOf(.5f,1f,2f,3f)}?:1f)}
@@ -57,7 +58,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val now={System.currentTimeMillis()}
     val loop=rememberInfiniteTransition(label="adventure")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(duration(1000),easing=LinearEasing)),label="actors")
-    val busy=queued!=null||moving||attack
+    val busy=queued!=null||moving||attack||b?.enemyPending==true
     fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,action:()->WorldPet){
         if(queued!=null||moving||attack)return
         visualKind=kind;visualSource=source;visualTarget=target;melee=closeCombat
@@ -91,7 +92,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             response.animateTo(1f,tween(duration(520),easing=LinearEasing))
         }finally{
-            moving=false;attack=false;visualTarget=null;visualSource=null;visualKind="";damageLabels=emptyList();queued=null
+            moving=false;attack=false;enemyVisual=-1;visualTarget=null;visualSource=null;visualKind="";damageLabels=emptyList();queued=null
+        }
+    }
+    LaunchedEffect(b?.enemyPending,queued){
+        if(queued==null&&b?.enemyPending==true){
+            val plan=AdventureRules.enemyPlan(b)?:return@LaunchedEffect
+            delay(duration(180).toLong())
+            enemyVisual=plan.index
+            perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,true){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
         }
     }
     fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
@@ -100,7 +109,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=MaterialTheme.typography.headlineSmall)
-                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+(if(busy)"Виконується дія" else "Твій хід"))
+                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
             }
             OutlinedButton(onClick={back()}){Text(if(b==null)"База" else "Відступ")}
         }
@@ -117,6 +126,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(AdventureRules.canAdvance(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
+            val combos=SquadTactics.active(b)
+            if(combos.isNotEmpty())Text("Активні зв’язки: "+combos.joinToString(" · "){it.title},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.bodySmall)
             val available=SquadRules.available(b)
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
@@ -140,7 +151,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Text("Вороги · HP");b.enemies.forEach{Text("${it.series.title} ${it.hp}/${it.maxHp}",style=MaterialTheme.typography.bodySmall)}
                 }}
             }
-            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Після ходу всіх живих юнітів відповідають боти.",style=MaterialTheme.typography.bodySmall)
+            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
             BoxWithConstraints(Modifier.fillMaxWidth()){
                 val cell=maxWidth/(AdventureRules.ARENA_W+.5f)
                 val hexH=cell*1.1547f
@@ -212,7 +223,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val px by animateDpAsState(xOf(b.pos),tween(duration(300)),label="battle x")
                     val py by animateDpAsState(yOf(b.pos)+hexH*.08f,tween(duration(300)),label="battle y")
                     Box(Modifier.offset(px,py).size(cell)){
-                        RobotPreview(direction,if(attack&&visualSource==b.pos)RobotAction.ATTACK else if(moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
+                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
                         LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp))
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
@@ -223,8 +234,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 drawOval(Color(0xFF70E6CD).copy(alpha=if(actor==i).65f else .25f),Offset(size.width*.1f,size.height*.76f),Size(size.width*.8f,size.height*.20f),style=Stroke(2f))
                             }
                             val activeAction=when{
-                                attack&&visualSource==u.pos->RobotAction.ATTACK
-                                moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
+                                enemyVisual<0&&attack&&visualSource==u.pos->RobotAction.ATTACK
+                                enemyVisual<0&&moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
                                 busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
                                 else->RobotAction.IDLE
                             }
@@ -237,7 +248,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         val ex by animateDpAsState(xOf(e.pos),tween(duration(300)),label="bot x")
                         val ey by animateDpAsState(yOf(e.pos)+hexH*.08f,tween(duration(300)),label="bot y")
                         if(e.hp>0)Box(Modifier.offset(ex,ey).size(cell)){
-                            RobotPreview(RobotView.LEFT,if(busy&&visualKind=="move")RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
+                            RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
                             LinearProgressIndicator(progress={e.hp.toFloat()/e.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFFF07586))
                         }
                     }}
@@ -294,7 +305,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             if(busy)Text(when(visualKind){"strike"->"⚡ Атака";"guard"->"🛡 Щит";"repair"->"✚ Ремонт";else->"Переміщення"},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.titleMedium)
             Text(b.log)
-            Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} ×${ally.count} · ATK ${ally.attack} · рух ${ally.move} · дальність ${ally.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
+            Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} ×${ally.count} · ATK ${ally.attack+SquadTactics.attackBonus(b,ally.kind)} · рух ${ally.move} · дальність ${ally.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
             if(ally==null){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(selected==null,{weapon=null},label={Text("Ближній удар · 1")})
@@ -338,6 +349,11 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 }}
             }
             if(expanded){
+                val active=SquadTactics.active(roster.keys)
+                Text("Тактичні зв’язки",style=MaterialTheme.typography.titleMedium)
+                SquadCombo.entries.filter{combo->combo.kinds.all{SquadResearch.unlocked(p.adventure,it)}}.forEach{combo->
+                    Text((if(combo in active)"✓ " else "○ ")+combo.title+" · "+combo.detail,style=MaterialTheme.typography.bodySmall,color=if(combo in active)MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Text(if(atBase)"До 5 бійців одного класу в клітинці. Втрата бійця зменшує силу загону. Заряди поповнюються перед боєм." else "Найм, ремонт і покращення доступні на стартовій базі.")
                 if(p.adventure.barracks<3)Button(onClick={onChange(SquadRules.expand(p))},enabled=atBase&&p.coins>=SquadRules.barracksPrice(p.adventure),modifier=Modifier.fillMaxWidth()){Text("Розширити казарми · ${SquadRules.barracksPrice(p.adventure)} 🪙")}
                 Text("Рівень 2: четвертий загін. Рівень 3: елітні війська. Нові класи відкриваються перемогами в експедиції.",style=MaterialTheme.typography.bodySmall)
