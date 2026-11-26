@@ -59,7 +59,7 @@ internal object SquadRules{
         return p.copy(adventure=a.copy(squad=a.squad-k,squadRanks=a.squadRanks-k),message="${k.title}: виведено із загону")
     }
     fun deploy(roster:Map<SquadKind,Int>,ranks:Map<SquadKind,Int> = emptyMap(),limit:Int=MAX):List<ArenaAlly>{
-        val slots=listOf(GridPoint(0,1),GridPoint(0,3),GridPoint(1,2),GridPoint(0,4))
+        val slots=listOf(GridPoint(0,1),GridPoint(0,3),GridPoint(0,0),GridPoint(0,4))
         return roster.entries.sortedBy{it.key.ordinal}.filter{it.value>0}.take(limit.coerceIn(1,4)).mapIndexed{i,(k,h)->
             val rank=(ranks[k]?:1).coerceIn(1,3);val hp=h.coerceAtMost(unitHp(k,rank)*MAX_STACK)
             ArenaAlly(k,slots[i],hp,k.charges*count(hp,unitHp(k,rank)),rank)

@@ -28,6 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.zIndex
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import kotlinx.coroutines.delay
 
 @Composable
@@ -44,6 +49,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val context=LocalContext.current
     val settings=remember(context){context.getSharedPreferences("pixubi_arena_settings",android.content.Context.MODE_PRIVATE)}
     var speed by remember{mutableStateOf(settings.getFloat("speed",1f).takeIf{it in listOf(.5f,1f,2f,3f)}?:1f)}
+    var landscapeMode by remember{mutableStateOf(settings.getBoolean("wide_arena",true))}
+    val configuration=LocalConfiguration.current
+    val wide=b!=null&&configuration.screenWidthDp>configuration.screenHeightDp
+    val activity=context as? Activity
+    DisposableEffect(activity,b!=null,landscapeMode){
+        val previous=activity?.requestedOrientation
+        if(b!=null&&activity!=null)activity.requestedOrientation=if(landscapeMode)ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        onDispose{if(b!=null&&activity!=null&&previous!=null)activity.requestedOrientation=previous}
+    }
     val latestPet by rememberUpdatedState(p)
     val latestChange by rememberUpdatedState(onChange)
     val latestSound by rememberUpdatedState(onSound)
@@ -107,16 +121,17 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     }
     fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
     BackHandler{back()}
-    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+    Column(Modifier.fillMaxSize().safeDrawingPadding().then(if(wide)Modifier else Modifier.verticalScroll(rememberScrollState())).padding(if(wide)6.dp else 10.dp),verticalArrangement=Arrangement.spacedBy(if(wide)4.dp else 8.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=MaterialTheme.typography.headlineSmall)
+                Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=if(wide)MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
                 Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
             }
-            OutlinedButton(onClick={back()}){Text(if(b==null)"База" else "Відступ")}
+            if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
+            OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"База" else "Відступ")}
         }
-        Text("${p.name} · ${p.series.title} · ${p.tier.title}")
-        Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")
+        if(!wide){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
+        Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")}
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound)
@@ -129,7 +144,6 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
             val combos=SquadTactics.active(b)
-            if(combos.isNotEmpty())Text("Активні зв’язки: "+combos.joinToString(" · "){it.title},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.bodySmall)
             val available=SquadRules.available(b)
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
@@ -137,10 +151,12 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             val chosenEnemy=b.enemies.getOrNull(targetChoice)?.takeIf{it.hp>0}
             val damagePreview=AdventureRules.previewDamage(p,b,actor,targetChoice,selected)
             val nextEnemy=AdventureRules.nextEnemy(b)
-            Text(if(b.enemyPending)"Відповідає: "+(nextEnemy?.series?.title?:"—") else "Наступний ворог: "+(nextEnemy?.series?.title?:"—"),color=Color(0xFFE9B5AE),style=MaterialTheme.typography.labelMedium)
             fun canHit(enemy:ArenaBot)=if(actor==-1)AdventureRules.canHit(p,b,enemy,selected)else SquadRules.canHit(b,actor,enemy)
             fun reachable(q:GridPoint)=SquadRules.reachable(p,b,actor,q)
-            Text("Загін · обери юніта для ходу",style=MaterialTheme.typography.titleMedium)
+            val controls: @Composable ()->Unit = {
+                Text(if(b.enemyPending)"Відповідає: "+(nextEnemy?.series?.title?:"—") else "Наступний ворог: "+(nextEnemy?.series?.title?:"—"),color=Color(0xFFE9B5AE),style=MaterialTheme.typography.labelMedium)
+                if(combos.isNotEmpty())Text("Активні зв’язки: "+combos.joinToString(" · "){it.title},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.labelSmall)
+            Text(if(wide)"Загін" else "Загін · обери юніта для ходу",style=MaterialTheme.typography.titleSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(actor==-1,{actorChoice=-1},enabled=!busy&&-1 in available,label={Text("Командир "+if(-1 in b.acted)"✓" else "${b.hp} HP")})
                 b.allies.forEachIndexed{i,u->FilterChip(actor==i,{actorChoice=i},enabled=!busy&&i in available,label={Text(u.kind.title+" ×${u.count} "+if(u.hp==0)"×" else if(i in b.acted)"✓" else "${u.hp} HP")})}
@@ -149,7 +165,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 Text("Швидкість",style=MaterialTheme.typography.labelMedium)
                 listOf(.5f,1f,2f,3f).forEach{v->FilterChip(speed==v,{speed=v;settings.edit().putFloat("speed",v).apply()},enabled=!busy,label={Text(if(v==.5f)"0,5×" else "${v.toInt()}×")})}
             }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            if(!wide)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 Card(Modifier.weight(1f)){Column(Modifier.padding(8.dp)){
                     Text("Твій робот · HP");Text("${b.hp}/${b.maxHp}");LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.fillMaxWidth())
                 }}
@@ -157,157 +173,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Text("Вороги · HP");b.enemies.forEach{Text("${it.series.title} ${it.hp}/${it.maxHp}",style=MaterialTheme.typography.bodySmall)}
                 }}
             }
-            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Торкнись ворога для прогнозу, потім підтвердь атаку. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
-            BoxWithConstraints(Modifier.fillMaxWidth()){
-                val cell=maxWidth/(AdventureRules.ARENA_W+.5f)
-                val hexH=cell*1.1547f
-                val rowStep=hexH*.75f
-                fun xOf(q:GridPoint)=cell*(q.x+if(q.y%2==1).5f else 0f)
-                fun yOf(q:GridPoint)=rowStep*q.y
-                Box(Modifier.fillMaxWidth().height(rowStep*(AdventureRules.ARENA_H-1)+hexH).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
-                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
-                        detectTapGestures{tap->
-                            val w=size.width/(AdventureRules.ARENA_W+.5f)
-                            val h=w*1.1547f
-                            var hitCell:GridPoint?=null
-                            for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
-                                val cx=w*(x+.5f+if(y%2==1).5f else 0f)
-                                val cy=h*(.5f+y*.75f)
-                                val dx=kotlin.math.abs(tap.x-cx)
-                                val dy=kotlin.math.abs(tap.y-cy)
-                                if(dx<=w/2f&&dy<=h/2f-dx*h/(2f*w))hitCell=GridPoint(x,y)
-                            }
-                            val q=hitCell
-                            if(q!=null&&!busy){
-                                val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
-                                val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
-                                if(q==b.pos&&-1 in available){actorChoice=-1}
-                                else if(friend>=0&&friend in available){actorChoice=friend}
-                                else if(i>=0){
-                                    targetChoice=i
-                                    latestSound(PixubiSound.TAP)
-                                }else if(reachable(q)){
-                                    direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                                    perform("move",source,q){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.moveArena(latestPet,q,now())else AdventureRules.allyMove(latestPet,actor,q,now())}
-                                }
-                            }
-                        }
-                    }){
-                        val w=size.width/(AdventureRules.ARENA_W+.5f)
-                        val h=w*1.1547f
-                        // Dark industrial deck, illuminated channels and a warm enemy side.
-                        drawRect(Brush.radialGradient(listOf(Color(0xFF3D7880).copy(alpha=.25f),Color.Transparent),Offset(size.width*.17f,size.height*.52f),size.width*.62f))
-                        drawRect(Brush.radialGradient(listOf(Color(0xFF9F4C48).copy(alpha=.22f),Color.Transparent),Offset(size.width*.85f,size.height*.52f),size.width*.55f))
-                        for(k in 0..12){
-                            val yy=k*size.height/12f
-                            drawLine(Color(0xFF91A7A4).copy(alpha=.09f),Offset(0f,yy),Offset(size.width,yy),1f)
-                        }
-                        for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
-                            val q=GridPoint(x,y)
-                            val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
-                            val hit=i>=0&&canHit(b.enemies[i])
-                            val can=reachable(q)
-                            val cx=w*(x+.5f+if(y%2==1).5f else 0f);val cy=h*(.5f+y*.75f)
-                            val outline=Path().apply{
-                                moveTo(cx,cy-h*.48f);lineTo(cx+w*.48f,cy-h*.24f)
-                                lineTo(cx+w*.48f,cy+h*.24f);lineTo(cx,cy+h*.48f)
-                                lineTo(cx-w*.48f,cy+h*.24f);lineTo(cx-w*.48f,cy-h*.24f);close()
-                            }
-                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
-                            drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
-                            drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
-                            if(i>=0&&i==targetChoice&&!busy)drawPath(outline,Color(0xFFFFE1A5),style=Stroke(3.5f))
-                            for(j in 0..5){
-                                val dx=((x*17+y*9+j*13)%21-10)*w/38f
-                                val dy=((x*9+y*19+j*7)%17-8)*h/38f
-                                drawRect(Color.White.copy(alpha=.06f),Offset(cx+dx,cy+dy),androidx.compose.ui.geometry.Size(w*.08f,h*.035f))
-                            }
-                            if(can&&!busy){drawCircle(Color(0xFF71CAD4).copy(alpha=.16f),w*.19f,Offset(cx,cy));drawCircle(Color(0xFF71CAD4),w*.035f,Offset(cx,cy))}
-                        }
-                    }
-                    val px by animateDpAsState(xOf(b.pos),tween(duration(300)),label="battle x")
-                    val py by animateDpAsState(yOf(b.pos)+hexH*.08f,tween(duration(300)),label="battle y")
-                    Box(Modifier.offset(px,py).size(cell)){
-                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                        LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp))
-                    }
-                    b.allies.forEachIndexed{i,u->key("ally"+i){
-                        val ax by animateDpAsState(xOf(u.pos),tween(duration(300)),label="ally x")
-                        val ay by animateDpAsState(yOf(u.pos)+hexH*.08f,tween(duration(300)),label="ally y")
-                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(cell)){
-                            Canvas(Modifier.fillMaxSize()){
-                                drawOval(Color(0xFF70E6CD).copy(alpha=if(actor==i).65f else .25f),Offset(size.width*.1f,size.height*.76f),Size(size.width*.8f,size.height*.20f),style=Stroke(2f))
-                            }
-                            val activeAction=when{
-                                enemyVisual<0&&attack&&visualSource==u.pos->RobotAction.ATTACK
-                                enemyVisual<0&&moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
-                                busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
-                                else->RobotAction.IDLE
-                            }
-                            RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
-                            LinearProgressIndicator(progress={u.hp.toFloat()/u.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFF77DCC5))
-                            Text("×${u.count}",Modifier.align(Alignment.BottomEnd).background(Color(0xFF142D3C),RoundedCornerShape(4.dp)).padding(horizontal=3.dp),color=Color(0xFFB9F8DB),style=MaterialTheme.typography.labelSmall)
-                        }
-                    }}
-                    b.enemies.forEachIndexed{i,e->key(i){
-                        val ex by animateDpAsState(xOf(e.pos),tween(duration(300)),label="bot x")
-                        val ey by animateDpAsState(yOf(e.pos)+hexH*.08f,tween(duration(300)),label="bot y")
-                        if(e.hp>0)Box(Modifier.offset(ex,ey).size(cell)){
-                            RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
-                            LinearProgressIndicator(progress={e.hp.toFloat()/e.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFFF07586))
-                        }
-                    }}
-                    // Effects above sprites. Their progress is presentation-only.
-                    if(busy)Canvas(Modifier.fillMaxSize()){
-                        val src=visualSource;val dst=visualTarget
-                        if(src!=null&&dst!=null){
-                            val w=size.width/(AdventureRules.ARENA_W+.5f);val h=w*1.1547f
-                            fun center(q:GridPoint)=Offset(w*(q.x+.5f+if(q.y%2==1).5f else 0f),h*(.5f+q.y*.75f))
-                            val from=center(src);val to=center(dst)
-                            val t=fx.value
-                            when(visualKind){
-                                "strike"->{
-                                    val point=from+(to-from)*(t*1.8f).coerceIn(0f,1f)
-                                    if(t<.62f&&melee){
-                                        val sweep=Offset(to.x-w*.34f,to.y-w*.34f)
-                                        drawArc(Color(0xFFE2FAFF).copy(alpha=1f-t),-135f,190f*t/.62f,false,sweep,Size(w*.68f,w*.68f),style=Stroke(w*.10f,cap=StrokeCap.Round))
-                                    }else if(t<.62f){
-                                        drawLine(Color(0xFF61E9FF).copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
-                                        drawLine(Color(0xFFB5FFFF),from,point,w*.052f,StrokeCap.Round)
-                                        drawCircle(Color.White,w*.06f,point)
-                                    }
-                                    if(t>.38f){
-                                        val z=((t-.38f)/.62f).coerceIn(0f,1f)
-                                        drawCircle(Color(0xFFFFBB72).copy(alpha=(1-z)*.40f),w*(.10f+z*.47f),to)
-                                        drawCircle(Color(0xFFFFE2AA).copy(alpha=1-z),w*(.12f+z*.46f),to,style=Stroke(w*.045f))
-                                        repeat(12){i->
-                                            val a=i*6.283f/12f;val end=to+Offset(cos(a),sin(a))*w*(.10f+z*.52f)
-                                            drawLine(Color(0xFFFFC480).copy(alpha=1-z),to+(end-to)*.75f,end,w*.035f,StrokeCap.Round)
-                                        }
-                                    }
-                                }
-                                "guard","repair"->{
-                                    val col=if(visualKind=="guard")Color(0xFF8CDFFF)else Color(0xFF8BFFB1)
-                                    val radius=w*(.22f+.30f*sin(t*3.14159f))
-                                    drawCircle(col.copy(alpha=.18f),radius,from)
-                                    drawCircle(col.copy(alpha=1-t*.7f),radius,from,style=Stroke(w*.045f))
-                                    repeat(6){i->val a=i*1.0472f+t*3f;drawCircle(col,w*.035f,from+Offset(cos(a),sin(a))*radius)}
-                                }
-                                "move"->{
-                                    val point=from+(to-from)*t
-                                    drawLine(Color(0xFF9BE3DF).copy(alpha=.25f*(1-t)),from,point,w*.10f,StrokeCap.Round)
-                                }
-                            }
-                        }
-                    }
-                    damageLabels.forEach{(point,amount)->
-                        val t=response.value
-                        Box(Modifier.offset(xOf(point),yOf(point)-cell*(.15f+t*.4f)).width(cell),contentAlignment=Alignment.Center){
-                            Text(if(amount>0)"−$amount" else "+${-amount}",color=(if(amount>0)Color(0xFFFFA285)else Color(0xFF9EFFB6)).copy(alpha=(1f-t*.65f).coerceIn(0f,1f)),style=MaterialTheme.typography.titleMedium)
-                        }
-                    }
-                }
+            if(!wide)Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Торкнись ворога для прогнозу, потім підтвердь атаку. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
             }
+            val actions: @Composable ()->Unit = {
             if(chosenEnemy!=null&&!busy){
                 Card(Modifier.fillMaxWidth()){
                     Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -347,6 +215,191 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     perform("repair",source,target){latestSound(PixubiSound.HAPPY);if(actor==-1)AdventureRules.repair(latestPet,now())else AdventureRules.allyRepair(latestPet,actor,now())}
                 },enabled=!busy&&actor in available&&(if(actor==-1)p.repair>0&&b.hp<b.maxHp else repairTarget!=null),modifier=Modifier.weight(1f)){Text("Ремонт")}
             }
+            }
+            val battlefield: @Composable (Modifier,Dp)->Unit = { modifier,boardHeight ->
+            BoxWithConstraints(modifier.height(boardHeight)){
+                val cell=maxWidth/8.1f
+                val hexH=boardHeight/5.15f
+                val rowStep=hexH*.75f
+                val topPad=hexH*1.15f
+                val spriteW=cell*1.58f
+                val spriteH=hexH*1.76f
+                fun xOf(q:GridPoint)=cell*(.3f+q.x+if(q.y%2==1).5f else 0f)
+                fun yOf(q:GridPoint)=topPad+rowStep*q.y
+                fun spriteX(q:GridPoint)=xOf(q)+cell/2-spriteW/2
+                fun spriteY(q:GridPoint)=yOf(q)+hexH/2-spriteH*.85f
+                Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
+                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
+                        detectTapGestures{tap->
+                            val w=size.width/8.1f
+                            val h=size.height/5.15f
+                            var hitCell:GridPoint?=null
+                            for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
+                                val cx=w*(x+.8f+if(y%2==1).5f else 0f)
+                                val cy=h*(1.65f+y*.75f)
+                                val dx=kotlin.math.abs(tap.x-cx)
+                                val dy=kotlin.math.abs(tap.y-cy)
+                                if(dx<=w/2f&&dy<=h/2f-dx*h/(2f*w))hitCell=GridPoint(x,y)
+                            }
+                            val q=hitCell
+                            if(q!=null&&!busy){
+                                val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
+                                val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
+                                if(q==b.pos&&-1 in available){actorChoice=-1}
+                                else if(friend>=0&&friend in available){actorChoice=friend}
+                                else if(i>=0){
+                                    targetChoice=i
+                                    latestSound(PixubiSound.TAP)
+                                }else if(reachable(q)){
+                                    direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
+                                    perform("move",source,q){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.moveArena(latestPet,q,now())else AdventureRules.allyMove(latestPet,actor,q,now())}
+                                }
+                            }
+                        }
+                    }){
+                        val w=size.width/8.1f
+                        val h=size.height/5.15f
+                        // Raised futuristic stage behind ground hexes.
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF10192D),Color(0xFF334B60),Color(0xFF20313E)),endY=size.height*.36f),size=Size(size.width,size.height*.36f))
+                        for(i in 0..14){
+                            val x=i*size.width/14f
+                            val towerH=h*(.44f+(i*7%5)*.13f)
+                            drawRect(Color(0xFF172B3E),Offset(x-w*.21f,h*1.05f-towerH),Size(w*.42f,towerH))
+                            drawRect(Color(0xFF466578),Offset(x-w*.21f,h*1.05f-towerH),Size(w*.42f,h*.06f))
+                            repeat(3){j->drawRect(Color(0xFF6FD9E3).copy(alpha=.28f),Offset(x-w*.12f,h*1.05f-towerH+h*.12f+j*h*.12f),Size(w*.24f,h*.035f))}
+                        }
+                        drawLine(Color(0xFF64C8D9).copy(alpha=.45f),Offset(0f,h*1.13f),Offset(size.width,h*1.13f),2f)
+                        // Dark industrial deck, illuminated channels and a warm enemy side.
+                        drawRect(Brush.radialGradient(listOf(Color(0xFF3D7880).copy(alpha=.25f),Color.Transparent),Offset(size.width*.17f,size.height*.52f),size.width*.62f))
+                        drawRect(Brush.radialGradient(listOf(Color(0xFF9F4C48).copy(alpha=.22f),Color.Transparent),Offset(size.width*.85f,size.height*.52f),size.width*.55f))
+                        for(k in 0..12){
+                            val yy=k*size.height/12f
+                            drawLine(Color(0xFF91A7A4).copy(alpha=.09f),Offset(0f,yy),Offset(size.width,yy),1f)
+                        }
+                        for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
+                            val q=GridPoint(x,y)
+                            val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
+                            val hit=i>=0&&canHit(b.enemies[i])
+                            val can=reachable(q)
+                            val cx=w*(x+.8f+if(y%2==1).5f else 0f);val cy=h*(1.65f+y*.75f)
+                            val outline=Path().apply{
+                                moveTo(cx,cy-h*.48f);lineTo(cx+w*.48f,cy-h*.24f)
+                                lineTo(cx+w*.48f,cy+h*.24f);lineTo(cx,cy+h*.48f)
+                                lineTo(cx-w*.48f,cy+h*.24f);lineTo(cx-w*.48f,cy-h*.24f);close()
+                            }
+                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
+                            drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
+                            drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
+                            if(i>=0&&i==targetChoice&&!busy)drawPath(outline,Color(0xFFFFE1A5),style=Stroke(3.5f))
+                            for(j in 0..5){
+                                val dx=((x*17+y*9+j*13)%21-10)*w/38f
+                                val dy=((x*9+y*19+j*7)%17-8)*h/38f
+                                drawRect(Color.White.copy(alpha=.06f),Offset(cx+dx,cy+dy),androidx.compose.ui.geometry.Size(w*.08f,h*.035f))
+                            }
+                            if(can&&!busy){drawCircle(Color(0xFF71CAD4).copy(alpha=.16f),w*.19f,Offset(cx,cy));drawCircle(Color(0xFF71CAD4),w*.035f,Offset(cx,cy))}
+                        }
+                    }
+                    val px by animateDpAsState(spriteX(b.pos),tween(duration(300)),label="battle x")
+                    val py by animateDpAsState(spriteY(b.pos),tween(duration(300)),label="battle y")
+                    Box(Modifier.offset(px,py).size(spriteW,spriteH).zIndex(b.pos.y.toFloat()+1f)){
+                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
+                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                    }
+                    b.allies.forEachIndexed{i,u->key("ally"+i){
+                        val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
+                        val ay by animateDpAsState(spriteY(u.pos),tween(duration(300)),label="ally y")
+                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(spriteW,spriteH).zIndex(u.pos.y.toFloat()+1f)){
+                            Canvas(Modifier.fillMaxSize()){
+                                drawOval(Color(0xFF70E6CD).copy(alpha=if(actor==i).65f else .25f),Offset(size.width*.1f,size.height*.76f),Size(size.width*.8f,size.height*.20f),style=Stroke(2f))
+                            }
+                            val activeAction=when{
+                                enemyVisual<0&&attack&&visualSource==u.pos->RobotAction.ATTACK
+                                enemyVisual<0&&moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
+                                busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
+                                else->RobotAction.IDLE
+                            }
+                            RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
+                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                        }
+                    }}
+                    b.enemies.forEachIndexed{i,e->key(i){
+                        val ex by animateDpAsState(spriteX(e.pos),tween(duration(300)),label="bot x")
+                        val ey by animateDpAsState(spriteY(e.pos),tween(duration(300)),label="bot y")
+                        if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW,spriteH).zIndex(e.pos.y.toFloat()+1f)){
+                            RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
+                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter).offset(y=(-3).dp))
+                        }
+                    }}
+                    // Effects above sprites. Their progress is presentation-only.
+                    if(busy)Canvas(Modifier.fillMaxSize().zIndex(30f)){
+                        val src=visualSource;val dst=visualTarget
+                        if(src!=null&&dst!=null){
+                            val w=size.width/8.1f;val h=size.height/5.15f
+                            fun center(q:GridPoint)=Offset(w*(q.x+.8f+if(q.y%2==1).5f else 0f),h*(1.65f+q.y*.75f))
+                            val from=center(src);val to=center(dst)
+                            val t=fx.value
+                            when(visualKind){
+                                "strike"->{
+                                    val point=from+(to-from)*(t*1.8f).coerceIn(0f,1f)
+                                    if(t<.62f&&melee){
+                                        val sweep=Offset(to.x-w*.34f,to.y-w*.34f)
+                                        drawArc(Color(0xFFE2FAFF).copy(alpha=1f-t),-135f,190f*t/.62f,false,sweep,Size(w*.68f,w*.68f),style=Stroke(w*.10f,cap=StrokeCap.Round))
+                                    }else if(t<.62f){
+                                        drawLine(Color(0xFF61E9FF).copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
+                                        drawLine(Color(0xFFB5FFFF),from,point,w*.052f,StrokeCap.Round)
+                                        drawCircle(Color.White,w*.06f,point)
+                                    }
+                                    if(t>.38f){
+                                        val z=((t-.38f)/.62f).coerceIn(0f,1f)
+                                        drawCircle(Color(0xFFFFBB72).copy(alpha=(1-z)*.40f),w*(.10f+z*.47f),to)
+                                        drawCircle(Color(0xFFFFE2AA).copy(alpha=1-z),w*(.12f+z*.46f),to,style=Stroke(w*.045f))
+                                        repeat(12){i->
+                                            val a=i*6.283f/12f;val end=to+Offset(cos(a),sin(a))*w*(.10f+z*.52f)
+                                            drawLine(Color(0xFFFFC480).copy(alpha=1-z),to+(end-to)*.75f,end,w*.035f,StrokeCap.Round)
+                                        }
+                                    }
+                                }
+                                "guard","repair"->{
+                                    val col=if(visualKind=="guard")Color(0xFF8CDFFF)else Color(0xFF8BFFB1)
+                                    val radius=w*(.22f+.30f*sin(t*3.14159f))
+                                    drawCircle(col.copy(alpha=.18f),radius,from)
+                                    drawCircle(col.copy(alpha=1-t*.7f),radius,from,style=Stroke(w*.045f))
+                                    repeat(6){i->val a=i*1.0472f+t*3f;drawCircle(col,w*.035f,from+Offset(cos(a),sin(a))*radius)}
+                                }
+                                "move"->{
+                                    val point=from+(to-from)*t
+                                    drawLine(Color(0xFF9BE3DF).copy(alpha=.25f*(1-t)),from,point,w*.10f,StrokeCap.Round)
+                                }
+                            }
+                        }
+                    }
+                    damageLabels.forEach{(point,amount)->
+                        val t=response.value
+                        Box(Modifier.offset(xOf(point),yOf(point)-cell*(.15f+t*.4f)).width(cell).zIndex(31f),contentAlignment=Alignment.Center){
+                            Text(if(amount>0)"−$amount" else "+${-amount}",color=(if(amount>0)Color(0xFFFFA285)else Color(0xFF9EFFB6)).copy(alpha=(1f-t*.65f).coerceIn(0f,1f)),style=MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                }
+            }
+            }
+            if(wide){
+                BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)){
+                    val fieldHeight=maxHeight
+                    Row(Modifier.fillMaxSize(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                        battlefield(Modifier.weight(1f),fieldHeight)
+                        Column(Modifier.width(196.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal=3.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                            controls();actions()
+                        }
+                    }
+                }
+            }else{
+                BoxWithConstraints(Modifier.fillMaxWidth()){
+                    battlefield(Modifier.fillMaxWidth(),maxWidth*.91f)
+                }
+                controls()
+                actions()
+            }
+
         }
     }
     if(retreat)AlertDialog(onDismissRequest={retreat=false},title={Text("Відступити?")},text={Text("Отримані пошкодження та витрачені заряди збережуться. Вороги залишаться на карті.")},
@@ -452,5 +505,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 Text(progress,style=MaterialTheme.typography.labelSmall)
             }
         }
+    }
+}
+
+@Composable private fun ArenaUnitBadge(hp:Int,maxHp:Int,count:String,enemy:Boolean,selected:Boolean,modifier:Modifier=Modifier){
+    val color=if(enemy)Color(0xFFF37F8C)else Color(0xFF87E7D2)
+    Column(modifier.widthIn(min=35.dp,max=75.dp).background(Color(0xF2192735),RoundedCornerShape(5.dp))
+        .border(if(selected)1.5.dp else .5.dp,if(selected)Color(0xFFFFD68D)else color.copy(alpha=.55f),RoundedCornerShape(5.dp))
+        .padding(horizontal=4.dp,vertical=2.dp),horizontalAlignment=Alignment.CenterHorizontally){
+        Text(if(count.isBlank())"$hp" else "$count · $hp",style=MaterialTheme.typography.labelSmall,color=color,maxLines=1)
+        LinearProgressIndicator(progress={hp.toFloat()/maxHp.coerceAtLeast(1)},modifier=Modifier.width(32.dp).height(3.dp),color=color,trackColor=Color(0xFF405264))
     }
 }
