@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 PixubiNeedsNotifier.createChannel(context)
                 PixubiNeedsNotifier.sync(context,notificationSettings)
             }
+            LaunchedEffect(showSettings){if(showSettings)audio.setMusicScene(MusicScene.BASE)}
             LaunchedEffect(soundSettings,currentSeries,auditionSeries){
                 audio.configure(soundSettings,WorldCatalog.audio(auditionSeries?:currentSeries))
             }
@@ -93,7 +94,7 @@ class MainActivity : ComponentActivity() {
                         onTestSound={audio.effect(PixubiSound.HAPPY)},onCheckUpdates={openUpdates()},
                         isStableInstall=updater.isStableInstall,checkingForUpdates=checkingUpdates,onBack={closeSettings()}
                     )else PixubiWorldScreen(onSettings={auditionSeries=null;showSettings=true;audio.effect(PixubiSound.TAP)},
-                        onSeries={currentSeries=it},onSound={audio.effect(it)})
+                        onSeries={currentSeries=it},onSound={audio.effect(it)},onMusicScene={audio.setMusicScene(it)})
                 }
                 val notice = updateDialog
                 if (notice != null) {
