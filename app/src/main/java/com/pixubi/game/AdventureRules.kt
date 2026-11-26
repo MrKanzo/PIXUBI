@@ -38,6 +38,24 @@ internal object AdventureRules{
     fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters.indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
     fun complete(a:AdventureState)=encounters.all{id(it) in a.cleared}
     fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=20&&p.energy>0&&p.adventure.battle==null
+    // Route through explored, walkable ground. Hostile cells can only be the destination.
+    fun mapRoute(a:AdventureState,to:GridPoint):List<GridPoint>{
+        if(!inMap(to)||to==a.pos||!visible(a,to)||tile(a,to)==AdventureTile.WALL)return emptyList()
+        val queue=ArrayDeque<GridPoint>()
+        val parent=mutableMapOf<GridPoint,GridPoint>()
+        queue.add(a.pos);parent[a.pos]=a.pos
+        while(queue.isNotEmpty()){
+            val q=queue.removeFirst()
+            if(q==to){
+                val route=mutableListOf<GridPoint>();var at=q
+                while(at!=a.pos){route.add(at);at=parent.getValue(at)}
+                return route.asReversed()
+            }
+            q.neighbors().filter{inMap(it)&&it !in parent&&visible(a,it)&&tile(a,it)!=AdventureTile.WALL&&
+                (it==to||tile(a,it)!=AdventureTile.ENEMY)}.forEach{parent[it]=q;queue.add(it)}
+        }
+        return emptyList()
+    }
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
         if(a.battle!=null||!complete(a)||a.stage>=100||!canExplore(p))return p

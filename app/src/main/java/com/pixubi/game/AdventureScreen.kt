@@ -44,42 +44,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         Text("${p.name} · ${p.series.title} · ${p.tier.title}")
         Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")
         if(b==null){
-            Text("Натискай сусідні клітинки. Туман відкривається під час руху. Ворожий бот запускає бій.")
-            BoxWithConstraints(Modifier.fillMaxWidth()){
-                val cell=maxWidth/AdventureRules.MAP_W
-                Box(Modifier.fillMaxWidth().height(cell*AdventureRules.MAP_H)){
-                    Column{
-                        for(y in 0 until AdventureRules.MAP_H)Row{
-                            for(x in 0 until AdventureRules.MAP_W){
-                                val q=GridPoint(x,y);val visible=AdventureRules.visible(a,q);val tile=AdventureRules.tile(a,q)
-                                val can=AdventureRules.canExplore(p)&&a.pos.distance(q)==1&&tile!=AdventureTile.WALL
-                                val bg=if(!visible)Color(0xFF101621)else when(tile){
-                                    AdventureTile.WALL->Color(0xFF39465A);AdventureTile.ENEMY->Color(0xFF63353F)
-                                    AdventureTile.BASE->Color(0xFF2F746C);AdventureTile.EMPTY->if((x+y)%2==0)Color(0xFF29464B)else Color(0xFF253E43)
-                                    else->Color(0xFF465646)
-                                }
-                                Box(Modifier.size(cell).background(bg).border(0.7.dp,if(can)Color(0xFF91DDC1)else Color(0xFF1C2835))
-                                    .clickable(enabled=can&&!moving){
-                                        direction=if(q.x<a.pos.x)RobotView.LEFT else RobotView.RIGHT
-                                        val next=AdventureRules.move(p,q,now());if(next.adventure.pos!=a.pos)moving=true
-                                        onChange(next);onSound(PixubiSound.TAP)
-                                    },contentAlignment=Alignment.Center){
-                                    if(visible&&tile==AdventureTile.ENEMY){
-                                        RobotPreview(RobotView.LEFT,RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),RobotTier.MK1,AdventureRules.enemySeries(a,q)),phase,false,Modifier.fillMaxSize().padding(2.dp))
-                                    }else if(visible)Text(tile.symbol,style=MaterialTheme.typography.bodyMedium)
-                                    else Text("·",color=Color(0xFF374255))
-                                }
-                            }
-                        }
-                    }
-                    val px by animateDpAsState(cell*a.pos.x,tween(260),label="map x")
-                    val py by animateDpAsState(cell*a.pos.y,tween(260),label="map y")
-                    Box(Modifier.offset(px,py).size(cell).border(1.5.dp,Color(0xFFB9F8DB),RoundedCornerShape(5.dp))){
-                        RobotPreview(direction,if(moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                    }
-                }
-            }
-            Text("⌂ База · 🪙 Монети · ⚡ Заряд · 🛠 Ремонт · ▣ Боєприпаси · ▧ Перешкода",style=MaterialTheme.typography.bodySmall)
+            Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
+            FrontierMap(p,onChange,onSound)
+            Text("База · монети · енергокомірки · ремонт · боєприпаси",style=MaterialTheme.typography.bodySmall)
             Text("Переможено ботів: ${AdventureRules.encounters.count{AdventureRules.id(it) in a.cleared}}/4")
             Text(p.message)
             if(!AdventureRules.canExplore(p))Text("Повернись на базу: потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
