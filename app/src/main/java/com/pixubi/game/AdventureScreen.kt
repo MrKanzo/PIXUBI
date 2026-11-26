@@ -126,7 +126,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             Text("Загін · обери юніта для ходу",style=MaterialTheme.typography.titleMedium)
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(actor==-1,{actorChoice=-1},enabled=!busy&&-1 in available,label={Text("Командир "+if(-1 in b.acted)"✓" else "${b.hp} HP")})
-                b.allies.forEachIndexed{i,u->FilterChip(actor==i,{actorChoice=i},enabled=!busy&&i in available,label={Text(u.kind.title+" "+if(u.hp==0)"×" else if(i in b.acted)"✓" else "${u.hp} HP")})}
+                b.allies.forEachIndexed{i,u->FilterChip(actor==i,{actorChoice=i},enabled=!busy&&i in available,label={Text(u.kind.title+" ×${u.count} "+if(u.hp==0)"×" else if(i in b.acted)"✓" else "${u.hp} HP")})}
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
                 Text("Швидкість",style=MaterialTheme.typography.labelMedium)
@@ -224,12 +224,13 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             }
                             val activeAction=when{
                                 attack&&visualSource==u.pos->RobotAction.ATTACK
-                                moving&&visualTarget==u.pos->RobotAction.WALK
+                                moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
                                 busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
                                 else->RobotAction.IDLE
                             }
                             RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
-                            LinearProgressIndicator(progress={u.hp.toFloat()/u.kind.hp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFF77DCC5))
+                            LinearProgressIndicator(progress={u.hp.toFloat()/u.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFF77DCC5))
+                            Text("×${u.count}",Modifier.align(Alignment.BottomEnd).background(Color(0xFF142D3C),RoundedCornerShape(4.dp)).padding(horizontal=3.dp),color=Color(0xFFB9F8DB),style=MaterialTheme.typography.labelSmall)
                         }
                     }}
                     b.enemies.forEachIndexed{i,e->key(i){
@@ -293,7 +294,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             if(busy)Text(when(visualKind){"strike"->"⚡ Атака";"guard"->"🛡 Щит";"repair"->"✚ Ремонт";else->"Переміщення"},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.titleMedium)
             Text(b.log)
-            Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} · рух ${ally.kind.move} · атака ${ally.kind.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
+            Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} ×${ally.count} · ATK ${ally.attack} · рух ${ally.move} · дальність ${ally.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
             if(ally==null){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(selected==null,{weapon=null},label={Text("Ближній удар · 1")})
@@ -327,30 +328,38 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     Card(Modifier.fillMaxWidth()){
         Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             Row(verticalAlignment=Alignment.CenterVertically){
-                Column(Modifier.weight(1f)){Text("Бойовий загін",style=MaterialTheme.typography.titleMedium);Text("Командир + ${roster.size}/${SquadRules.MAX} юнітів")}
+                Column(Modifier.weight(1f)){Text("Казарми · рівень ${p.adventure.barracks}",style=MaterialTheme.typography.titleMedium);Text("Командир + ${roster.size}/${SquadRules.slots(p.adventure)} загонів · ${roster.keys.sumOf{SquadRules.stackCount(p.adventure,it)}} бійців")}
                 OutlinedButton(onClick={expanded=!expanded}){Text(if(expanded)"Згорнути" else "Керувати")}
             }
             if(roster.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 roster.forEach{(kind,hp)->Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(82.dp)){
                     RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,kind.loadout(),phase,false,Modifier.size(72.dp))
-                    Text(kind.title,style=MaterialTheme.typography.labelSmall);Text("$hp/${kind.hp} HP",style=MaterialTheme.typography.labelSmall)
+                    Text(kind.title+" ×${SquadRules.stackCount(p.adventure,kind)}",style=MaterialTheme.typography.labelSmall);Text("$hp/${SquadRules.maxStackHp(p.adventure,kind)} HP",style=MaterialTheme.typography.labelSmall)
                 }}
             }
             if(expanded){
-                Text(if(atBase)"Пункт найму та ремонту. Заряди юнітів поповнюються перед кожним боєм. Загиблі юніти втрачаються." else "Найм і ремонт доступні на стартовій базі.")
+                Text(if(atBase)"До 5 бійців одного класу в клітинці. Втрата бійця зменшує силу загону. Заряди поповнюються перед боєм." else "Найм, ремонт і покращення доступні на стартовій базі.")
+                if(p.adventure.barracks<3)Button(onClick={onChange(SquadRules.expand(p))},enabled=atBase&&p.coins>=SquadRules.barracksPrice(p.adventure),modifier=Modifier.fillMaxWidth()){Text("Розширити казарми · ${SquadRules.barracksPrice(p.adventure)} 🪙")}
+                Text("Рівень 2: четвертий загін та облогова машина. Рівень 3: авіація і третій ранг.",style=MaterialTheme.typography.bodySmall)
                 SquadKind.entries.forEach{k->
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,k.loadout(),phase,false,Modifier.size(68.dp))
                         Column(Modifier.weight(1f)){
-                            Text(k.title,style=MaterialTheme.typography.titleSmall)
-                            Text("HP ${k.hp} · ATK ${k.attack} · DEF ${k.defense} · рух ${k.move} · дальність ${k.range}",style=MaterialTheme.typography.bodySmall)
+                            Text(k.title+" · ранг ${SquadRules.rank(p.adventure,k)}",style=MaterialTheme.typography.titleSmall)
+                            Text("HP ${SquadRules.unitHp(k,SquadRules.rank(p.adventure,k))} · ATK ${k.attack+4*(SquadRules.rank(p.adventure,k)-1)} · DEF ${k.defense+5*(SquadRules.rank(p.adventure,k)-1)} · рух ${k.move} · дальність ${k.range}",style=MaterialTheme.typography.bodySmall)
+                            if(k.requiredBarracks>p.adventure.barracks)Text("Потрібні казарми рівня ${k.requiredBarracks}",style=MaterialTheme.typography.labelSmall)
                             if(k==SquadKind.MEDIC)Text("3 ремонти в радіусі 2 клітинок",style=MaterialTheme.typography.labelSmall)
                             if(k==SquadKind.RANGER)Text("8 власних зарядів на бій",style=MaterialTheme.typography.labelSmall)
                             val hp=roster[k]
-                            if(hp==null)Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&roster.size<SquadRules.MAX&&p.coins>=k.price){Text("Найняти · ${k.price} 🪙")}
-                            else Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                                TextButton(onClick={onChange(SquadRules.restore(p,k))},enabled=atBase&&hp<k.hp&&p.coins>=15){Text("Ремонт 15")}
-                                TextButton(onClick={dismiss=k},enabled=atBase){Text("Вивести")}
+                            val count=SquadRules.stackCount(p.adventure,k)
+                            Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&p.adventure.barracks>=k.requiredBarracks&&(hp!=null||roster.size<SquadRules.slots(p.adventure))&&count<SquadRules.MAX_STACK&&p.coins>=k.price){Text("+1 боєць · ${k.price} 🪙 · $count/5")}
+                            if(hp!=null){
+                                val rank=SquadRules.rank(p.adventure,k)
+                                if(rank<3)OutlinedButton(onClick={onChange(SquadRules.upgrade(p,k))},enabled=atBase&&rank<p.adventure.barracks&&p.coins>=SquadRules.upgradePrice(p.adventure,k)){Text("Ранг ${rank+1} · ${SquadRules.upgradePrice(p.adventure,k)} 🪙")}
+                                Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                    TextButton(onClick={onChange(SquadRules.restore(p,k))},enabled=atBase&&hp<SquadRules.maxStackHp(p.adventure,k)&&p.coins>=15){Text("Ремонт 15")}
+                                    TextButton(onClick={dismiss=k},enabled=atBase){Text("Вивести")}
+                                }
                             }
                         }
                     }
@@ -358,5 +367,5 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
         }
     }
-    dismiss?.let{k->AlertDialog(onDismissRequest={dismiss=null},title={Text("Вивести юніта?")},text={Text("Юніт покине загін без повернення монет.")},confirmButton={TextButton(onClick={onChange(SquadRules.dismiss(p,k));dismiss=null}){Text("Вивести")}},dismissButton={TextButton(onClick={dismiss=null}){Text("Скасувати")}})}
+    dismiss?.let{k->AlertDialog(onDismissRequest={dismiss=null},title={Text("Вивести юніта?")},text={Text("Увесь загін цього класу буде розформовано без повернення монет.")},confirmButton={TextButton(onClick={onChange(SquadRules.dismiss(p,k));dismiss=null}){Text("Вивести")}},dismissButton={TextButton(onClick={dismiss=null}){Text("Скасувати")}})}
 }
