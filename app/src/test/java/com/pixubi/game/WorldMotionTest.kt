@@ -2,6 +2,25 @@ package com.pixubi.game
 import org.junit.Assert.*
 import org.junit.Test
 class WorldMotionTest{
+    @Test fun homePatrolStaysInsideHabitatAndChangesPosition(){
+        val rng=kotlin.random.Random(23)
+        var x=.5f
+        var left=false;var right=false
+        repeat(100){
+            val dest=HomeRoam.destination(x,rng)
+            assertTrue(dest in HomeRoam.MIN_X..HomeRoam.MAX_X)
+            assertTrue(kotlin.math.abs(dest-x)>=.14f)
+            if(dest<x){left=true;assertEquals(RobotView.LEFT,HomeRoam.direction(x,dest))}
+            else{right=true;assertEquals(RobotView.RIGHT,HomeRoam.direction(x,dest))}
+            assertTrue(HomeRoam.pause(rng,false) in 1800L..4200L)
+            x=dest
+        }
+        assertTrue(left&&right)
+        for(series in RobotSeries.entries){
+            assertTrue(HomeRoam.duration(series,.32f,.68f)>HomeRoam.duration(series,.32f,.50f))
+            assertTrue(HomeRoam.duration(series,.32f,.68f,true)<HomeRoam.duration(series,.32f,.68f))
+        }
+    }
     @Test fun eachSeriesHasDistinctMotionTiming(){
         val styles=RobotSeries.entries.map(WorldMotion::style)
         assertEquals(8,styles.distinct().size)
