@@ -59,6 +59,11 @@ internal object WorldRules{
         val start=GenesisRules.create(s,random)
         return WorldPet(s,start.skin,name.trim().take(24).ifBlank{s.title},start.trait,last=now)
     }
+    fun adoptGenesis(s:GenesisState,now:Long):WorldPet?{
+        if(!s.born||s.energy!=100||s.careMask!=7||s.name.isBlank())return null
+        return WorldPet(s.series,s.skin,s.name.trim().take(24),s.trait,last=now,
+            message=if(s.rare)"GENESIS завершено. Рідкісне золоте ядро активоване!" else "GENESIS завершено. Системи активні!")
+    }
     private fun gain(p:WorldPet,skill:RobotSkill,xp:Int,points:Int,coins:Int):WorldPet=
         p.copy(xp=RobotProgress(p.xp).gain(xp).safeXp,coins=(p.coins+coins).coerceAtMost(999999),
             skills=p.skills.copy(points=p.skills.points+(skill to (p.skills.xp(skill)+points).coerceAtMost(RobotSkills.MAX_XP))))

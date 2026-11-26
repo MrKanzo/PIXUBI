@@ -7,7 +7,7 @@ internal enum class GenesisTrait(val title:String){
     CURIOUS("Допитливий"), CALM("Спокійний"), BRAVE("Хоробрий"), PLAYFUL("Грайливий"), PRECISE("Уважний")
 }
 internal enum class GenesisCare(val title:String,val amount:Int,val bit:Int){
-    CHARGE("Зарядити",15,1), SYNC("Синхронізувати",10,2), TOUCH("Погладити",10,4)
+    CHARGE("Зарядити",15,1), SYNC("Синхронізувати",10,2), TOUCH("Стабілізувати ядро",10,4)
 }
 internal data class GenesisState(val series:RobotSeries,val skin:RobotSkin,val trait:GenesisTrait,val mystery:Boolean,
     val energy:Int=0,val careMask:Int=0,val born:Boolean=false,val name:String="",val rare:Boolean=false){
@@ -37,16 +37,16 @@ internal object GenesisRules {
     }
 }
 internal object GenesisStorage{
-    private fun prefs(c:Context)=c.getSharedPreferences("robot_genesis_v1",Context.MODE_PRIVATE)
-    fun load(c:Context):GenesisState?{
-        val p=prefs(c)
+    private fun prefs(c:Context,world:Boolean)=c.getSharedPreferences(if(world)"pixubi_world_genesis_v1" else "robot_genesis_v1",Context.MODE_PRIVATE)
+    fun load(c:Context,world:Boolean=false):GenesisState?{
+        val p=prefs(c,world)
         val series=RobotSeries.entries.firstOrNull{it.name==p.getString("series",null)}?:return null
         val skin=RobotSkin.entries.firstOrNull{it.name==p.getString("skin",null)}?:RobotSkin.BLUE
         val trait=GenesisTrait.entries.firstOrNull{it.name==p.getString("trait",null)}?:GenesisTrait.CALM
         return GenesisState(series,skin,trait,p.getBoolean("mystery",false),p.getInt("energy",0).coerceIn(0,100),p.getInt("care",0) and 7,p.getBoolean("born",false),p.getString("name","").orEmpty(),p.getBoolean("rare",false))
     }
-    fun save(c:Context,s:GenesisState?){
-        val p=prefs(c).edit()
+    fun save(c:Context,s:GenesisState?,world:Boolean=false){
+        val p=prefs(c,world).edit()
         if(s==null){p.clear().apply();return}
         p.putString("series",s.series.name).putString("skin",s.skin.name).putString("trait",s.trait.name)
             .putBoolean("mystery",s.mystery).putInt("energy",s.energy).putInt("care",s.careMask)

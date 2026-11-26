@@ -17,8 +17,6 @@ import kotlinx.coroutines.delay
 internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,onSound:(PixubiSound)->Unit){
     val context=LocalContext.current
     var pet by remember(context){mutableStateOf(WorldStorage.load(context)?.let{WorldRules.tick(it,System.currentTimeMillis())})}
-    var selected by remember{mutableStateOf(RobotSeries.CLASSIC)}
-    var name by remember{mutableStateOf("")}
     var page by remember{mutableStateOf("home")}
     var tab by remember{mutableStateOf<RobotSlot?>(null)}
     var category by remember{mutableStateOf<WorldCategory?>(null)}
@@ -28,15 +26,25 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var archiveSeries by remember{mutableStateOf(RobotSeries.CLASSIC)}
     var archiveTier by remember{mutableStateOf(RobotTier.MK1)}
     var profileName by remember{mutableStateOf(WorldProfile.load(context))}
-    var activation by remember{mutableIntStateOf(0)}
-    var activationMask by remember{mutableIntStateOf(0)}
     fun save(p:WorldPet){WorldStorage.save(context,p);pet=p;onSeries(p.series)}
     LaunchedEffect(Unit){pet?.let{save(it)};while(true){delay(1000L);now=System.currentTimeMillis();pet?.let{val q=WorldRules.tick(it,now);if(q!=it)save(q)}}}
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
     BackHandler(enabled=page!="home"){page="home"}
     val p=pet
+    if(p==null){
+        GenesisLab(onBack=onSettings,onAdopt={ newborn->
+            if(WorldStorage.load(context)==null){
+                WorldRules.adoptGenesis(newborn,System.currentTimeMillis())?.let{
+                    save(it)
+                    GenesisStorage.save(context,null,world=true)
+                    onSound(PixubiSound.HAPPY)
+                }
+            }
+        },world=true,onSound=onSound)
+        return
+    }
     val loop=rememberInfiniteTransition(label="world")
-    val action=if(p==null)RobotAction.IDLE else when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
+    val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
     val period=when(action){RobotAction.WALK->950;RobotAction.IDLE->3200;else->1600}
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(period,easing=LinearEasing)),label="world motion")
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(14.dp),
@@ -45,32 +53,6 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
             OutlinedButton(onClick=onSettings){Text("⚙")}
         }
-        if(p==null){
-            Text("GENESIS · Активація ядра",style=MaterialTheme.typography.titleLarge)
-            Text("Обери одну з восьми серій.")
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                RobotSeries.entries.forEach{s->FilterChip(selected==s,onClick={selected=s;activation=0;activationMask=0;onSeries(s)},label={Text(s.title)})}
-            }
-            Text(WorldCatalog.info(selected).role,style=MaterialTheme.typography.titleMedium)
-            Text(WorldCatalog.info(selected).description)
-            Text(HabitatCatalog.of(selected).title)
-            HabitatScene(selected,phase,Modifier.fillMaxWidth().height(275.dp)){
-                RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(series=selected),phase,false,Modifier.fillMaxSize())
-            }
-            OutlinedTextField(name,{name=it.take(24)},label={Text("Ім’я")},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Text("Ініціалізація ядра · $activation%")
-            LinearProgressIndicator(progress={activation/100f},modifier=Modifier.fillMaxWidth())
-            GenesisCare.entries.forEachIndexed{i,kind->
-                val bit=1 shl i
-                OutlinedButton(onClick={activation=(activation+kind.amount*2).coerceAtMost(100);activationMask=activationMask or bit;onSound(PixubiSound.TAP)},
-                    enabled=activation<100||(activationMask and bit)==0,modifier=Modifier.fillMaxWidth()){
-                    Text(kind.title+if((activationMask and bit)!=0)" ✓" else "")
-                }
-            }
-            Text("Колір і характер випадкові. Початкова форма MK-1.")
-            Button(onClick={save(WorldRules.hatch(selected,name,System.currentTimeMillis()));onSound(PixubiSound.HAPPY)},
-                enabled=activation==100&&activationMask==7,modifier=Modifier.fillMaxWidth()){Text("Активувати роботика")}
-        }else{
             val prog=RobotProgress(p.xp)
             Text("${p.name} · ${p.series.title}",style=MaterialTheme.typography.titleLarge)
             Text("${p.tier.title} · Рівень ${p.level} · 🪙 ${p.coins} · ${p.trait.title}")
@@ -221,7 +203,6 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 Text("Навички")
                 RobotSkill.entries.forEach{k->Text("${k.title} · ${p.skills.level(k)}/10");LinearProgressIndicator(progress={p.skills.fraction(k)},modifier=Modifier.fillMaxWidth())}
             }
-        }
         Spacer(Modifier.height(12.dp))
     }
 }

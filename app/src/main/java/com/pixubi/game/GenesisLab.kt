@@ -137,45 +137,55 @@ private fun GenesisVessel(s:GenesisState,phase:Float,opening:Float,modifier:Modi
     }
 }
 @Composable
-internal fun GenesisLab(onBack:()->Unit,onAdopt:(GenesisState)->Unit){
+internal fun GenesisLab(onBack:()->Unit,onAdopt:(GenesisState)->Unit,world:Boolean=false,onSound:(PixubiSound)->Unit={}){
     val context=LocalContext.current
-    var state by remember(context){mutableStateOf(GenesisStorage.load(context))}
+    var state by remember(context){mutableStateOf(GenesisStorage.load(context,world))}
     var choose by remember{mutableStateOf(false)}
     var opening by remember{mutableStateOf(false)}
     var reset by remember{mutableStateOf(false)}
     val hatch=remember{Animatable(0f)}
     val loop=rememberInfiniteTransition(label="genesis")
     val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(2300,easing=LinearEasing)),label="pulse")
-    fun persist(s:GenesisState?){GenesisStorage.save(context,s);state=s}
-    BackHandler{if(choose)choose=false else onBack()}
+    fun persist(s:GenesisState?){GenesisStorage.save(context,s,world);state=s}
+    BackHandler{if(!opening){if(choose)choose=false else onBack()}}
     LaunchedEffect(opening){
         if(opening){
             hatch.snapTo(0f)
             hatch.animateTo(1f,tween(1900,easing=FastOutSlowInEasing))
-            state?.let{persist(it.hatch())}
+            state?.let{persist(it.hatch());onSound(PixubiSound.HAPPY)}
             opening=false
         }
     }
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Text("GENESIS · MK-0",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
-            OutlinedButton(onClick=onBack){Text("Назад")}
+            OutlinedButton(onClick=onBack,enabled=!opening){Text(if(world)"⚙ Налаштування" else "Назад")}
         }
-        Text("Лабораторія народження · окреме збереження",style=MaterialTheme.typography.bodySmall)
+        Text(if(world)"Початок життя · обери ядро нового роботика" else "Лабораторія народження · окреме збереження",style=MaterialTheme.typography.bodySmall)
         val s=state
         if(s==null){
             Text("Обери початок історії",style=MaterialTheme.typography.titleLarge)
             Card{Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 Text("Таємниче народження",style=MaterialTheme.typography.titleMedium)
-                Text("Невідома серія, випадковий колір і характер. 8% шанс золотого забарвлення.")
-                Button(onClick={persist(GenesisRules.create(null));choose=false},modifier=Modifier.fillMaxWidth()){Text("Випадковий зародок")}
+                Text("Одна з восьми серій. Колір і характер — сюрприз. 8% шанс золотого забарвлення.")
+                GenesisVessel(GenesisState(RobotSeries.CLASSIC,RobotSkin.PURPLE,GenesisTrait.CALM,true,energy=60),phase,0f,Modifier.fillMaxWidth().height(145.dp))
+                Button(onClick={persist(GenesisRules.create(null));choose=false;onSound(PixubiSound.TAP)},modifier=Modifier.fillMaxWidth()){Text("Випадковий зародок")}
             }}
             Card{Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 Text("Власний вибір",style=MaterialTheme.typography.titleMedium)
                 Text("Обери серію. Колір та характер залишаться сюрпризом.")
                 OutlinedButton(onClick={choose=!choose},modifier=Modifier.fillMaxWidth()){Text(if(choose)"Сховати серії" else "Обрати робота")}
                 if(choose)RobotSeries.entries.forEach{series->
-                    OutlinedButton(onClick={persist(GenesisRules.create(series));choose=false},modifier=Modifier.fillMaxWidth()){Text(series.title+" · "+GenesisRules.vessel(series))}
+                    Card(onClick={persist(GenesisRules.create(series));choose=false;onSound(PixubiSound.TAP)},modifier=Modifier.fillMaxWidth()){
+                        Row(Modifier.padding(8.dp),verticalAlignment=Alignment.CenterVertically){
+                            GenesisVessel(GenesisState(series,RobotSkin.CYAN,GenesisTrait.CALM,false,energy=60),phase,0f,Modifier.size(100.dp))
+                            Column(Modifier.weight(1f)){
+                                Text(series.title,style=MaterialTheme.typography.titleMedium)
+                                Text(GenesisRules.vessel(series),style=MaterialTheme.typography.bodySmall)
+                                Text(WorldCatalog.info(series).role,style=MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                 }
             }}
         }else{
@@ -191,23 +201,23 @@ internal fun GenesisLab(onBack:()->Unit,onAdopt:(GenesisState)->Unit){
             if(!s.born){
                 Text("Енергія · ${s.energy}%")
                 LinearProgressIndicator(progress={s.energy/100f},modifier=Modifier.fillMaxWidth())
-                Text("Догляд · ${Integer.bitCount(s.careMask)}/3")
+                Text("Протоколи активації · ${Integer.bitCount(s.careMask)}/3")
                 GenesisCare.entries.forEach{kind->
-                    OutlinedButton(onClick={persist(s.care(kind))},enabled=!opening&&(s.energy<100||(s.careMask and kind.bit)==0),modifier=Modifier.fillMaxWidth()){
+                    OutlinedButton(onClick={persist(s.care(kind));onSound(PixubiSound.TAP)},enabled=!opening&&(s.energy<100||(s.careMask and kind.bit)==0),modifier=Modifier.fillMaxWidth()){
                         Text(kind.title+" +${kind.amount}%"+if((s.careMask and kind.bit)!=0)" ✓" else "")
                     }
                 }
                 Button(onClick={opening=true},enabled=s.ready&&!opening,modifier=Modifier.fillMaxWidth()){Text(if(opening)"Народження…" else "Активувати народження")}
-                Text(if(s.ready)"Ядро готове до народження!" else "Заряди ядро до 100% та виконай усі три види догляду.",style=MaterialTheme.typography.bodySmall)
+                Text(if(s.ready)"Ядро готове до народження!" else "Заряди ядро до 100% і виконай усі три протоколи активації.",style=MaterialTheme.typography.bodySmall)
             }else{
                 Text(s.series.title+" · "+s.skin.title+if(s.rare)" · Рідкісний золотий" else "")
                 Text("Вроджена риса: "+s.trait.title)
                 OutlinedTextField(value=s.name,onValueChange={persist(s.rename(it))},label={Text("Ім’я робота")},singleLine=true,modifier=Modifier.fillMaxWidth())
-                Button(onClick={onAdopt(s)},enabled=s.name.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Перейти до Robot Lab")}
-                Text("Характер збережено; його вплив на поведінку буде реалізовано в основній грі.",style=MaterialTheme.typography.bodySmall)
+                Button(onClick={onAdopt(s)},enabled=s.name.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text(if(world)"Увійти у світ PIXUBI" else "Перейти до Robot Lab")}
+                Text(if(world)"Серія, колір, характер та ім’я будуть перенесені в основну гру без повторного розіграшу." else "Тестовий персонаж Robot Lab.",style=MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick={reset=true},enabled=!opening){Text("Почати новий тест")}
+            OutlinedButton(onClick={reset=true},enabled=!opening){Text(if(world)"Обрати інший зародок" else "Почати новий тест")}
         }
     }
-    if(reset)AlertDialog(onDismissRequest={reset=false},title={Text("Скинути зародок?")},text={Text("Буде видалено лише поточний тест GENESIS, не основне збереження.")},confirmButton={TextButton(onClick={persist(null);reset=false}){Text("Скинути")}},dismissButton={TextButton(onClick={reset=false}){Text("Скасувати")}})
+    if(reset)AlertDialog(onDismissRequest={reset=false},title={Text("Скинути зародок?")},text={Text(if(world)"Поточне ядро і його прогрес активації буде скинуто. Активне збереження гри не зміниться." else "Буде видалено лише поточний тест GENESIS, не основне збереження.")},confirmButton={TextButton(onClick={persist(null);reset=false}){Text("Скинути")}},dismissButton={TextButton(onClick={reset=false}){Text("Скасувати")}})
 }
