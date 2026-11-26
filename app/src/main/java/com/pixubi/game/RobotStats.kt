@@ -44,6 +44,8 @@ internal object RobotBalance {
         RobotGear.SHIELD_L,RobotGear.SHIELD_R->RobotStats(defense=12,speed=-5)
         RobotGear.TOOL_L,RobotGear.TOOL_R->RobotStats(intelligence=7,energy=-3)
         RobotGear.BLASTER_L,RobotGear.BLASTER_R->RobotStats(attack=14,energy=-8,heat=-5)
+        RobotGear.BLADE_L,RobotGear.BLADE_R->RobotStats(attack=22,speed=3,energy=-6)
+        RobotGear.CANNON_L,RobotGear.CANNON_R->RobotStats(attack=34,energy=-18,speed=-8,heat=-9)
         RobotGear.BATTERY->RobotStats(energy=35,speed=-5)
         RobotGear.BOOSTER->RobotStats(speed=16,energy=-10,heat=-6)
         RobotGear.BOOTS->RobotStats(durability=10,defense=6,speed=-4)

@@ -358,6 +358,7 @@ private fun DrawScope.arm(form:KageForm,x:Float,y:Float,angle:Float,far:Boolean,
                     RobotGear.SHIELD_L,RobotGear.SHIELD_R->{translate(0f,-14f){metal("M -15 -13 L 15 -13 L 17 8 L 0 20 L -17 8 Z",steel,graphite);kageCore(a,2,false)}}
                     RobotGear.TOOL_L,RobotGear.TOOL_R->{shape("M -5 8 L 5 8 L 5 23 L -5 23 Z",steel);shape("M -9 20 L 9 20 L 9 25 L -9 25 Z",a)}
                     RobotGear.BLASTER_L,RobotGear.BLASTER_R->{metal("M -9 -14 L 9 -14 L 9 19 L -9 19 Z",steel,graphite);led(-5f,16f,5f,16f,a)}
+                    RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R->drawWorldWeapon(gear,a)
                     else->if(drawSword)rotate(-90f,Offset(0f,6f)){translate(0f,7f){sword(a,true)}}
                 }
                 pivotDot(debug)

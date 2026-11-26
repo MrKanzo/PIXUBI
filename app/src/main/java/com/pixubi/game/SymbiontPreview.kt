@@ -387,7 +387,19 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
                         }
                     }
                     if(e.equipped(RobotSlot.BACK)!=null)translate(-f.length*.35f,-f.depth){plate("M -13 -8 L 13 -8 L 18 8 L -18 8 Z");line(a,-8f,0f,8f,0f)}
-                    if(e.equipped(RobotSlot.LEFT_HAND)!=null||e.equipped(RobotSlot.RIGHT_HAND)!=null)translate(if(side)f.length*.68f else f.length*.35f,15f){plate("M -7 -6 L 7 -6 L 12 12 L -9 12 Z");line(a,0f,-2f,0f,9f)}
+                    for(slot in listOf(RobotSlot.LEFT_HAND,RobotSlot.RIGHT_HAND)){
+                        val gear=e.equipped(slot)?:continue
+                        val far=slot==RobotSlot.LEFT_HAND
+                        val x=if(side)f.length*.63f+(if(far)-10f else 4f) else f.length*.46f*(if(far)-1f else 1f)
+                        translate(x,if(side&&far)4f else 14f){
+                            scale(if(side&&far).76f else 1f,if(side&&far).76f else 1f,Offset.Zero){
+                                if(gear==RobotGear.BLADE_L||gear==RobotGear.BLADE_R||gear==RobotGear.CANNON_L||gear==RobotGear.CANNON_R) rotate(if(side)-75f else 0f,Offset.Zero){drawWorldWeapon(gear,a)}
+                                else if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R){plate("M -10 -10 L 10 -10 L 13 3 L 0 14 L -13 3 Z",shade);line(a,-5f,-2f,5f,-2f)}
+                                else if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R){plate("M -7 -7 L 9 -7 L 14 1 L 9 9 L -7 9 Z",shade);line(a,8f,0f,15f,0f)}
+                                else {plate("M -7 -6 L 7 -6 L 9 10 L -9 10 Z",shade);line(a,0f,-2f,0f,7f)}
+                            }
+                        }
+                    }
                 }
                 if(hide){
                     drawContext.canvas.saveLayer(Rect(-320f,-250f,320f,180f),Paint().apply{alpha=.22f+.28f*abs(cos(phase*PI.toFloat()))})

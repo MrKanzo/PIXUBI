@@ -91,6 +91,13 @@ class MainActivity : ComponentActivity() {
             val audio = remember { PixubiAudio(applicationContext) }
             var soundSettings by remember { mutableStateOf(audioStore.load()) }
             var showSettings by remember { mutableStateOf(false) }
+            val worldPrefs=remember { getSharedPreferences("pixubi_world_mode",MODE_PRIVATE) }
+            var worldMode by remember { mutableStateOf(worldPrefs.getBoolean("world",true)) }
+            fun selectWorld(enabled:Boolean){
+                worldMode=enabled
+                worldPrefs.edit().putBoolean("world",enabled).apply()
+                showSettings=false
+            }
             var auditionRegion by remember { mutableStateOf<Region?>(null) }
             var pet by remember { mutableStateOf(storage.load()?.let { GameEngine.restoreAfterAbsence(it, System.currentTimeMillis()) }) }
             val collectionStore = remember { PlayerCollectionStore(applicationContext) }
@@ -265,8 +272,10 @@ class MainActivity : ComponentActivity() {
                             onCheckUpdates = { openUpdates() },
                             isStableInstall = updater.isStableInstall,
                             checkingForUpdates = checkingUpdates,
+                            onWorld = { selectWorld(true) },
                             onBack = { closeSettings() }
                         )
+                        worldMode -> PixubiWorldScreen(onSettings={goSettings()},onLegacy={selectWorld(false)})
                         current == null -> HatchScreen(
                             onHatch = {
                                 store(it)

@@ -640,6 +640,7 @@ private fun DrawScope.companionArm(x:Float,y:Float,angle:Float,far:Boolean,a:Col
             panel(x-11f,y+27f,22f,24f,5f,joint);panel(x-8f,y+48f,16f,12f,3f,a)
             drawLine(companionLight,Offset(x-5f,y+55f),Offset(x+5f,y+55f),3f)
         }
+        translate(x,y+43f){drawWorldWeapon(gear,a)}
     }
 }
 private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,tier:RobotTier) {

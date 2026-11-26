@@ -242,7 +242,19 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
                         }
                     }
                     if(e.equipped(RobotSlot.BACK)!=null)translate(-f.length*.3f,-f.depth){plate("M -11 -7 L 11 -7 L 14 8 L -14 8 Z",shade);line(cyan,-7f,0f,7f,0f)}
-                    if(e.equipped(RobotSlot.LEFT_HAND)!=null||e.equipped(RobotSlot.RIGHT_HAND)!=null)translate(if(side)f.length*.62f else f.length*.32f,14f){plate("M -7 -6 L 7 -6 L 9 10 L -9 10 Z",shade);line(a,0f,-2f,0f,7f)}
+                    for(slot in listOf(RobotSlot.LEFT_HAND,RobotSlot.RIGHT_HAND)){
+                        val gear=e.equipped(slot)?:continue
+                        val far=slot==RobotSlot.LEFT_HAND
+                        val x=if(side)f.length*.56f+(if(far)-10f else 4f) else f.length*.46f*(if(far)-1f else 1f)
+                        translate(x,if(side&&far)4f else 14f){
+                            scale(if(side&&far).76f else 1f,if(side&&far).76f else 1f,Offset.Zero){
+                                if(gear==RobotGear.BLADE_L||gear==RobotGear.BLADE_R||gear==RobotGear.CANNON_L||gear==RobotGear.CANNON_R) rotate(if(side)-75f else 0f,Offset.Zero){drawWorldWeapon(gear,a)}
+                                else if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R){plate("M -10 -10 L 10 -10 L 13 3 L 0 14 L -13 3 Z",shade);line(a,-5f,-2f,5f,-2f)}
+                                else if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R){plate("M -7 -7 L 9 -7 L 14 1 L 9 9 L -7 9 Z",shade);line(a,8f,0f,15f,0f)}
+                                else {plate("M -7 -6 L 7 -6 L 9 10 L -9 10 Z",shade);line(a,0f,-2f,0f,7f)}
+                            }
+                        }
+                    }
                     if(heal||bloom>0f||action==RobotAction.CHARGE)for(i in 0..15){
                         val t=i*2.4f+phase*6.28f;val r=35f+f.length*.6f
                         translate(cos(t)*r,sin(t)*f.depth-25f*phase){rotate(t*57.3f,Offset.Zero){petal(a,2f,5f+(i%3)*1.5f)}}

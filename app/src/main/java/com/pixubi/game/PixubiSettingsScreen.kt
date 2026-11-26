@@ -49,6 +49,7 @@ fun PixubiSettingsScreen(
     onCheckUpdates: () -> Unit,
     isStableInstall: Boolean,
     checkingForUpdates: Boolean,
+    onWorld: () -> Unit,
     onBack: () -> Unit
 ) {
     val context=LocalContext.current
@@ -76,8 +77,9 @@ fun PixubiSettingsScreen(
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
         }
+        Button(onClick=onWorld,modifier=Modifier.fillMaxWidth()) { Text("🌌 Світ PIXUBI · Основна гра") }
         OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
-            Text("Robot Lab · MK-1")
+            Text("Robot Lab · Режим розробника")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
             Text("📖 Про PIXUBI LAB · Світ, види та автори")
