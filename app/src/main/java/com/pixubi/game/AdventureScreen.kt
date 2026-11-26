@@ -7,6 +7,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import kotlin.math.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,18 +38,51 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var moving by remember{mutableStateOf(false)}
     var attack by remember{mutableStateOf(false)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
+    val context=LocalContext.current
+    val settings=remember(context){context.getSharedPreferences("pixubi_arena_settings",android.content.Context.MODE_PRIVATE)}
+    var speed by remember{mutableStateOf(settings.getFloat("speed",1f).takeIf{it in listOf(.5f,1f,2f,3f)}?:1f)}
+    val latestPet by rememberUpdatedState(p)
+    val latestChange by rememberUpdatedState(onChange)
+    val latestSound by rememberUpdatedState(onSound)
+    var visualTarget by remember{mutableStateOf<GridPoint?>(null)}
+    var visualSource by remember{mutableStateOf<GridPoint?>(null)}
+    var visualKind by remember{mutableStateOf("")}
+    var queued by remember{mutableStateOf<(() -> WorldPet)?>(null)}
+    val fx=remember{Animatable(0f)}
+    fun duration(ms:Int)=(ms/speed).toInt().coerceAtLeast(1)
     val now={System.currentTimeMillis()}
     val loop=rememberInfiniteTransition(label="adventure")
-    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(1000,easing=LinearEasing)),label="actors")
-    LaunchedEffect(a.pos,b?.pos){if(moving){delay(300);moving=false}}
-    LaunchedEffect(attack){if(attack){delay(350);attack=false}}
-    fun back(){if(b!=null)retreat=true else onBack()}
+    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(duration(1000),easing=LinearEasing)),label="actors")
+    val busy=queued!=null||moving||attack
+    fun perform(kind:String,source:GridPoint,target:GridPoint,action:()->WorldPet){
+        if(queued!=null||moving||attack)return
+        visualKind=kind;visualSource=source;visualTarget=target
+        attack=kind=="strike";moving=kind=="move"
+        queued=action
+    }
+    LaunchedEffect(queued){
+        val action=queued?:return@LaunchedEffect
+        try{
+            fx.snapTo(0f)
+            if(visualKind=="move"){
+                latestChange(action())
+                fx.animateTo(1f,tween(duration(460),easing=LinearEasing))
+            }else{
+                fx.animateTo(1f,tween(duration(520),easing=LinearEasing))
+                latestChange(action())
+            }
+            delay(duration(180).toLong())
+        }finally{
+            moving=false;attack=false;visualTarget=null;visualSource=null;visualKind="";queued=null
+        }
+    }
+    fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
     BackHandler{back()}
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=MaterialTheme.typography.headlineSmall)
-                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · твій хід")
+                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+if(busy)"Виконується дія" else "Твій хід")
             }
             OutlinedButton(onClick={back()}){Text(if(b==null)"База" else "Відступ")}
         }
@@ -59,6 +98,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(AdventureRules.complete(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+                Text("Швидкість",style=MaterialTheme.typography.labelMedium,modifier=Modifier.weight(1f))
+                listOf(.5f,1f,2f,3f).forEach{v->FilterChip(speed==v,{speed=v;settings.edit().putFloat("speed",v).apply()},enabled=!busy,label={Text(if(v==.5f)"0,5×" else "${v.toInt()}×")})}
+            }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 Card(Modifier.weight(1f)){Column(Modifier.padding(8.dp)){
                     Text("Твій робот · HP");Text("${b.hp}/${b.maxHp}");LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.fillMaxWidth())
@@ -74,8 +117,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 val rowStep=hexH*.75f
                 fun xOf(q:GridPoint)=cell*(q.x+if(q.y%2==1).5f else 0f)
                 fun yOf(q:GridPoint)=rowStep*q.y
-                Box(Modifier.fillMaxWidth().height(rowStep*(AdventureRules.ARENA_H-1)+hexH).background(Color(0xFF162237))){
-                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,moving,attack){
+                Box(Modifier.fillMaxWidth().height(rowStep*(AdventureRules.ARENA_H-1)+hexH).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
+                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed){
                         detectTapGestures{tap->
                             val w=size.width/(AdventureRules.ARENA_W+.5f)
                             val h=w*1.1547f
@@ -88,19 +131,27 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 if(dx<=w/2f&&dy<=h/2f-dx*h/(2f*w))hitCell=GridPoint(x,y)
                             }
                             val q=hitCell
-                            if(q!=null&&!moving&&!attack){
+                            if(q!=null&&!busy){
                                 val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
                                 if(i>=0&&AdventureRules.canHit(p,b,b.enemies[i],selected)){
-                                    attack=true;onChange(AdventureRules.strike(p,i,selected,now()));onSound(PixubiSound.TAP)
+                                    direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
+                                    perform("strike",b.pos,q){latestSound(PixubiSound.TAP);AdventureRules.strike(latestPet,i,selected,now())}
                                 }else if(AdventureRules.reachable(p,b,q)){
                                     direction=if(q.x<b.pos.x)RobotView.LEFT else RobotView.RIGHT
-                                    moving=true;onChange(AdventureRules.moveArena(p,q,now()));onSound(PixubiSound.TAP)
+                                    perform("move",b.pos,q){latestSound(PixubiSound.TAP);AdventureRules.moveArena(latestPet,q,now())}
                                 }
                             }
                         }
                     }){
                         val w=size.width/(AdventureRules.ARENA_W+.5f)
                         val h=w*1.1547f
+                        // Dark industrial deck, illuminated channels and a warm enemy side.
+                        drawRect(Brush.radialGradient(listOf(Color(0xFF3D7880).copy(alpha=.25f),Color.Transparent),Offset(size.width*.17f,size.height*.52f),size.width*.62f))
+                        drawRect(Brush.radialGradient(listOf(Color(0xFF9F4C48).copy(alpha=.22f),Color.Transparent),Offset(size.width*.85f,size.height*.52f),size.width*.55f))
+                        for(k in 0..12){
+                            val yy=k*size.height/12f
+                            drawLine(Color(0xFF91A7A4).copy(alpha=.09f),Offset(0f,yy),Offset(size.width,yy),1f)
+                        }
                         for(y in 0 until AdventureRules.ARENA_H)for(x in 0 until AdventureRules.ARENA_W){
                             val q=GridPoint(x,y)
                             val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
@@ -112,33 +163,74 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 lineTo(cx+w*.48f,cy+h*.24f);lineTo(cx,cy+h*.48f)
                                 lineTo(cx-w*.48f,cy+h*.24f);lineTo(cx-w*.48f,cy-h*.24f);close()
                             }
-                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF254F58);i>=0->Color(0xFF523846);q==b.pos->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF343D53)else Color(0xFF30394D)}
-                            drawPath(outline,fill)
+                            val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==b.pos->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
+                            drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
                             drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
                             for(j in 0..5){
                                 val dx=((x*17+y*9+j*13)%21-10)*w/38f
                                 val dy=((x*9+y*19+j*7)%17-8)*h/38f
                                 drawRect(Color.White.copy(alpha=.06f),Offset(cx+dx,cy+dy),androidx.compose.ui.geometry.Size(w*.08f,h*.035f))
                             }
-                            if(can)drawCircle(Color(0xFF71CAD4),w*.035f,Offset(cx,cy))
+                            if(can&&!busy){drawCircle(Color(0xFF71CAD4).copy(alpha=.16f),w*.19f,Offset(cx,cy));drawCircle(Color(0xFF71CAD4),w*.035f,Offset(cx,cy))}
                         }
                     }
-                    val px by animateDpAsState(xOf(b.pos),tween(240),label="battle x")
-                    val py by animateDpAsState(yOf(b.pos)+hexH*.08f,tween(240),label="battle y")
+                    val px by animateDpAsState(xOf(b.pos),tween(duration(300)),label="battle x")
+                    val py by animateDpAsState(yOf(b.pos)+hexH*.08f,tween(duration(300)),label="battle y")
                     Box(Modifier.offset(px,py).size(cell)){
                         RobotPreview(direction,if(attack)RobotAction.ATTACK else if(moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
                         LinearProgressIndicator(progress={b.hp.toFloat()/b.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp))
                     }
                     b.enemies.forEachIndexed{i,e->key(i){
-                        val ex by animateDpAsState(xOf(e.pos),tween(240),label="bot x")
-                        val ey by animateDpAsState(yOf(e.pos)+hexH*.08f,tween(240),label="bot y")
+                        val ex by animateDpAsState(xOf(e.pos),tween(duration(300)),label="bot x")
+                        val ey by animateDpAsState(yOf(e.pos)+hexH*.08f,tween(duration(300)),label="bot y")
                         if(e.hp>0)Box(Modifier.offset(ex,ey).size(cell)){
-                            RobotPreview(RobotView.LEFT,RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
+                            RobotPreview(RobotView.LEFT,if(busy&&visualKind=="move")RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
                             LinearProgressIndicator(progress={e.hp.toFloat()/e.maxHp},modifier=Modifier.align(Alignment.TopCenter).fillMaxWidth().height(3.dp),color=Color(0xFFF07586))
                         }
                     }}
+                    // Effects above sprites. Their progress is presentation-only.
+                    if(busy)Canvas(Modifier.fillMaxSize()){
+                        val src=visualSource;val dst=visualTarget
+                        if(src!=null&&dst!=null){
+                            val w=size.width/(AdventureRules.ARENA_W+.5f);val h=w*1.1547f
+                            fun center(q:GridPoint)=Offset(w*(q.x+.5f+if(q.y%2==1).5f else 0f),h*(.5f+q.y*.75f))
+                            val from=center(src);val to=center(dst)
+                            val t=fx.value
+                            when(visualKind){
+                                "strike"->{
+                                    val point=from+(to-from)*(t*1.8f).coerceIn(0f,1f)
+                                    if(t<.62f){
+                                        drawLine(Color(0xFF61E9FF).copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
+                                        drawLine(Color(0xFFB5FFFF),from,point,w*.052f,StrokeCap.Round)
+                                        drawCircle(Color.White,w*.06f,point)
+                                    }
+                                    if(t>.38f){
+                                        val z=((t-.38f)/.62f).coerceIn(0f,1f)
+                                        drawCircle(Color(0xFFFFBB72).copy(alpha=(1-z)*.40f),w*(.10f+z*.47f),to)
+                                        drawCircle(Color(0xFFFFE2AA).copy(alpha=1-z),w*(.12f+z*.46f),to,style=Stroke(w*.045f))
+                                        repeat(12){i->
+                                            val a=i*6.283f/12f;val end=to+Offset(cos(a),sin(a))*w*(.10f+z*.52f)
+                                            drawLine(Color(0xFFFFC480).copy(alpha=1-z),to+(end-to)*.75f,end,w*.035f,StrokeCap.Round)
+                                        }
+                                    }
+                                }
+                                "guard","repair"->{
+                                    val col=if(visualKind=="guard")Color(0xFF8CDFFF)else Color(0xFF8BFFB1)
+                                    val radius=w*(.22f+.30f*sin(t*3.14159f))
+                                    drawCircle(col.copy(alpha=.18f),radius,from)
+                                    drawCircle(col.copy(alpha=1-t*.7f),radius,from,style=Stroke(w*.045f))
+                                    repeat(6){i->val a=i*1.0472f+t*3f;drawCircle(col,w*.035f,from+Offset(cos(a),sin(a))*radius)}
+                                }
+                                "move"->{
+                                    val point=from+(to-from)*t
+                                    drawLine(Color(0xFF9BE3DF).copy(alpha=.25f*(1-t)),from,point,w*.10f,StrokeCap.Round)
+                                }
+                            }
+                        }
+                    }
                 }
             }
+            if(busy)Text(when(visualKind){"strike"->"⚡ Атака";"guard"->"🛡 Щит";"repair"->"✚ Ремонт";else->"Переміщення"},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.titleMedium)
             Text(b.log)
             Text("Зброя · рух до ${AdventureRules.movement(p)} клітинок")
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
@@ -149,8 +241,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 }
             }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                Button(onClick={onChange(AdventureRules.guard(p,now()));onSound(PixubiSound.TAP)},enabled=!moving&&!attack,modifier=Modifier.weight(1f)){Text("Захист")}
-                OutlinedButton(onClick={onChange(AdventureRules.repair(p,now()));onSound(PixubiSound.HAPPY)},enabled=p.repair>0&&b.hp<b.maxHp&&!moving&&!attack,modifier=Modifier.weight(1f)){Text("Ремонт")}
+                Button(onClick={perform("guard",b.pos,b.pos){latestSound(PixubiSound.TAP);AdventureRules.guard(latestPet,now())}},enabled=!busy,modifier=Modifier.weight(1f)){Text("Захист")}
+                OutlinedButton(onClick={perform("repair",b.pos,b.pos){latestSound(PixubiSound.HAPPY);AdventureRules.repair(latestPet,now())}},enabled=p.repair>0&&b.hp<b.maxHp&&!busy,modifier=Modifier.weight(1f)){Text("Ремонт")}
             }
         }
     }
