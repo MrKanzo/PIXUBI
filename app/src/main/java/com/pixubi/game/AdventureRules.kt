@@ -14,15 +14,34 @@ internal enum class AdventureTile(val title:String,val symbol:String){
 internal data class ArenaBot(val series:RobotSeries,val tier:RobotTier,val pos:GridPoint,val hp:Int,val maxHp:Int,val attack:Int,val defense:Int,val speed:Int)
 internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,val maxHp:Int,val enemies:List<ArenaBot>,val turn:Int=1,val log:String="Твій хід")
 internal data class AdventureState(val stage:Int=1,val pos:GridPoint=GridPoint(0,2),val cleared:Set<Int> = emptySet(),
-    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null)
+    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false)
 internal object AdventureRules{
-    const val MAP_W=8;const val MAP_H=6;const val ARENA_W=7;const val ARENA_H=5
+    const val MAP_W=16;const val MAP_H=10;const val ARENA_W=7;const val ARENA_H=5
     val base=GridPoint(0,2)
-    val encounters=listOf(GridPoint(3,1),GridPoint(5,3),GridPoint(7,0),GridPoint(7,5))
-    private val walls=setOf(GridPoint(2,0),GridPoint(2,1),GridPoint(4,2),GridPoint(4,3),GridPoint(4,4),GridPoint(6,1),GridPoint(6,4),GridPoint(1,5))
-    private val resources=mapOf(GridPoint(1,1) to AdventureTile.COINS,GridPoint(2,3) to AdventureTile.ENERGY,
+    val legacyEncounters=listOf(GridPoint(3,1),GridPoint(5,3),GridPoint(7,0),GridPoint(7,5))
+    private val legacyWalls=setOf(GridPoint(2,0),GridPoint(2,1),GridPoint(4,2),GridPoint(4,3),GridPoint(4,4),GridPoint(6,1),GridPoint(6,4),GridPoint(1,5))
+    private val legacyResources=mapOf(GridPoint(1,1) to AdventureTile.COINS,GridPoint(2,3) to AdventureTile.ENERGY,
         GridPoint(3,5) to AdventureTile.REPAIR,GridPoint(5,0) to AdventureTile.AMMO,GridPoint(6,2) to AdventureTile.COINS,
         GridPoint(5,5) to AdventureTile.ENERGY,GridPoint(7,3) to AdventureTile.REPAIR)
+    // The original 8x6 corner is preserved. The rest is a deterministic frontier
+    // with open main roads; each sector has a different arrangement of objects.
+    internal data class SectorLayout(val encounters:List<GridPoint>,val walls:Set<GridPoint>,val resources:Map<GridPoint,AdventureTile>)
+    private val sectors=java.util.concurrent.ConcurrentHashMap<Int,SectorLayout>()
+    fun mainRoad(q:GridPoint):Boolean=(q.x>=8&&(q.y in listOf(0,2,5,6,9)||q.x in listOf(8,12,15)))||
+        (q.y>=6&&(q.y in listOf(6,9)||q.x in listOf(0,3,5,7,8,12,15)))
+    fun layout(stage:Int):SectorLayout=sectors.computeIfAbsent(stage){n->
+        val rng=kotlin.random.Random(n*7907+31)
+        val extension=(0 until MAP_W*MAP_H).map{GridPoint(it%MAP_W,it/MAP_W)}.filter{it.x>=8||it.y>=6}
+        val river=setOf(GridPoint(4,7),GridPoint(4,8))
+        val candidates=extension.filter{!mainRoad(it)&&it !in river&&it.neighbors().any(::mainRoad)}.shuffled(rng)
+        val newEnemies=candidates.take(6)
+        val newResources=candidates.drop(6).take(18)
+        val terrain=extension.filter{!mainRoad(it)&&it !in newEnemies&&it !in newResources&&it !in river}.shuffled(rng).take(12)
+        val kinds=listOf(AdventureTile.COINS,AdventureTile.ENERGY,AdventureTile.REPAIR,AdventureTile.AMMO)
+        SectorLayout(legacyEncounters+newEnemies,legacyWalls+river+terrain,
+            legacyResources+newResources.mapIndexed{i,q->q to kinds[(i+n)%kinds.size]}.toMap())
+    }
+    fun encounters(a:AdventureState)=layout(a.stage).encounters
     fun id(q:GridPoint)=q.y*MAP_W+q.x
     fun inMap(q:GridPoint)=q.x in 0 until MAP_W&&q.y in 0 until MAP_H
     fun inArena(q:GridPoint)=q.x in 0 until ARENA_W&&q.y in 0 until ARENA_H
@@ -41,18 +60,19 @@ internal object AdventureRules{
     }
     fun tile(a:AdventureState,q:GridPoint):AdventureTile=when{
         q==base->AdventureTile.BASE
-        q in walls->AdventureTile.WALL
+        q in layout(a.stage).walls->AdventureTile.WALL
         id(q) in a.cleared->AdventureTile.EMPTY
-        q in encounters->AdventureTile.ENEMY
-        else->resources[q]?:AdventureTile.EMPTY
+        q in encounters(a)->AdventureTile.ENEMY
+        else->layout(a.stage).resources[q]?:AdventureTile.EMPTY
     }
     // Keep explored cells navigable, but hide live objects outside the scanner radius.
     fun inSight(a:AdventureState,q:GridPoint)=inMap(q)&&(a.pos.distance(q)<=2||q==base)
     fun visible(a:AdventureState,q:GridPoint)=inMap(q)&&(inSight(a,q)||id(q) in a.seen)
     fun knownTile(a:AdventureState,q:GridPoint):AdventureTile?=if(inSight(a,q))tile(a,q)else null
     private fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{q.distance(GridPoint(it%MAP_W,it/MAP_W))<=2}
-    fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters.indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
-    fun complete(a:AdventureState)=encounters.all{id(it) in a.cleared}
+    fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters(a).indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
+    fun complete(a:AdventureState)=encounters(a).all{id(it) in a.cleared}
+    fun canAdvance(a:AdventureState)=complete(a)||a.credited
     fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=20&&p.energy>0&&p.adventure.battle==null
     // Route through explored, walkable ground. Hostile cells can only be the destination.
     fun mapRoute(a:AdventureState,to:GridPoint):List<GridPoint>{
@@ -74,7 +94,7 @@ internal object AdventureRules{
     }
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
-        if(a.battle!=null||!complete(a)||a.stage>=100||!canExplore(p))return p
+        if(a.battle!=null||!canAdvance(a)||a.stage>=100||!canExplore(p))return p
         return p.copy(adventure=AdventureState(stage=a.stage+1),message="Відкрито сектор ${a.stage+1}")
     }
     fun move(p:WorldPet,to:GridPoint,now:Long):WorldPet{
@@ -105,7 +125,7 @@ internal object AdventureRules{
     }
     private fun begin(p:WorldPet,at:GridPoint):ArenaBattle{
         val a=p.adventure
-        val encounter=encounters.indexOf(at).coerceAtLeast(0)
+        val encounter=encounters(a).indexOf(at).coerceAtLeast(0)
         val tier=RobotTier.entries[(p.tier.ordinal-(if(encounter<2)1 else 0)).coerceAtLeast(0)]
         val count=if(encounter>=2)2 else 1
         val bots=(0 until count).map{i->
@@ -208,8 +228,9 @@ internal object AdventureRules{
         val xp=if(win)70+b.enemies.size*30+a.stage*5 else if(retreat)0 else 10
         val coins=if(win)25+b.enemies.size*15+a.stage*4 else 0
         val updated=a.copy(battle=null,cleared=cleared,pos=pos)
-        val q=p.copy(adventure=updated,integrity=integrity,wins=p.wins+if(win)1 else 0,
-            expeditions=p.expeditions+if(win&&complete(updated))1 else 0,last=now,
+        val earnsCredit=win&&!a.credited&&complete(updated)
+        val q=p.copy(adventure=updated.copy(credited=a.credited||earnsCredit),integrity=integrity,wins=p.wins+if(win)1 else 0,
+            expeditions=p.expeditions+if(earnsCredit)1 else 0,last=now,
             message=if(win)"Перемога! +$xp XP · +$coins монет" else if(retreat)"Відступ. Ворог залишився на карті." else "Поразка. Повернення на базу — потрібен ремонт.")
         return WorldRules.gain(q,RobotSkill.COMBAT,xp,if(win)30 else 0,coins)
     }
@@ -221,20 +242,27 @@ internal object AdventureCodec{
         val b=a.battle
         val battle=if(b==null)"" else listOf(b.encounter.toString(),point(b.pos),b.hp.toString(),b.maxHp.toString(),b.turn.toString(),
             b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")}).joinToString("~")
-        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle).joinToString("|")
+        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0").joinToString("|")
     }
     fun decode(s:String):AdventureState=runCatching{
         val v=s.split("|")
-        fun ids(value:String)=value.split(",").mapNotNull{it.toIntOrNull()}.filter{it in 0 until AdventureRules.MAP_W*AdventureRules.MAP_H}.toSet()
+        val stage=v[0].toInt().coerceIn(1,100)
+        val old=v.getOrNull(6)!="16"
+        fun migrateId(id:Int):Int?=if(old){
+            if(id !in 0 until 48)null else AdventureRules.id(GridPoint(id%8,id/8))
+        }else id.takeIf{it in 0 until AdventureRules.MAP_W*AdventureRules.MAP_H}
+        fun ids(value:String)=value.split(",").mapNotNull{it.toIntOrNull()?.let(::migrateId)}.toSet()
+        val cleared=ids(v[2])
+        val credited=v.getOrNull(7)=="1"||(old&&AdventureRules.legacyEncounters.all{AdventureRules.id(it) in cleared})
         val pos=parse(v[1]);require(AdventureRules.inMap(pos))
         val b=v.getOrElse(5){""}.takeIf{it.isNotBlank()}?.let{value->
             val z=value.split("~");val p=parse(z[1]);val max=z[3].toInt();require(AdventureRules.inArena(p)&&max>0)
             val bots=z[5].split(";").map{line->val e=line.split(",");val pt=GridPoint(e[2].toInt(),e[3].toInt());val m=e[5].toInt()
                 require(AdventureRules.inArena(pt)&&m>0);ArenaBot(RobotSeries.valueOf(e[0]),RobotTier.valueOf(e[1]),pt,e[4].toInt().coerceIn(0,m),m,e[6].toInt(),e[7].toInt(),e[8].toInt())}
             require(bots.isNotEmpty()&&bots.any{it.hp>0}&&bots.size<=2)
-            val encounter=z[0].toInt();require(AdventureRules.encounters.any{AdventureRules.id(it)==encounter})
+            val encounter=migrateId(z[0].toInt())?:error("Invalid encounter");require(AdventureRules.layout(stage).encounters.any{AdventureRules.id(it)==encounter})
             ArenaBattle(encounter,p,z[2].toInt().coerceIn(1,max),max,bots,z[4].toInt().coerceAtLeast(1),"Бій відновлено. Твій хід.")
         }
-        AdventureState(v[0].toInt().coerceIn(1,100),pos,ids(v[2]),ids(v[3]),v[4].toInt().coerceAtLeast(0),b)
+        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited)
     }.getOrElse{AdventureState()}
 }
