@@ -8,8 +8,8 @@ import kotlin.math.min
  * The plane narrows toward the horizon; models stay upright in screen space.
  */
 internal class ArenaProjection(val width:Float,val height:Float){
-    val cell=width/6.35f
-    val row=min(cell*.86f,height/4.35f)
+    val cell=width/5.85f
+    val row=min(cell*.86f,height/3.9f)
     val groundBottom=height-row*.46f
     private fun depth(y:Float)=((y+.5f)/3f).coerceIn(0f,1f)
     fun perspective(y:Float)=.87f+.13f*depth(y)
