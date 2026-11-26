@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import kotlin.math.*
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,6 +42,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val a=p.adventure;val b=a.battle
     var retreat by remember{mutableStateOf(false)}
     var tacticsPanel by remember{mutableStateOf(false)}
+    var skillsPanel by remember{mutableStateOf(false)}
     var weapon by remember{mutableStateOf<RobotGear?>(null)}
     var moving by remember{mutableStateOf(false)}
     var attack by remember{mutableStateOf(false)}
@@ -126,7 +129,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=if(wide)MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
-                Text(if(b==null)"Сектор ${a.stage} · дослідження" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
+                Text(if(b==null)"Сектор ${a.stage} · дослідження" else if(b.deploying)"Розстановка · до початку бою" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
             }
             if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
             OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"База" else "Відступ")}
@@ -145,7 +148,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
             val combos=SquadTactics.active(b)
-            val available=SquadRules.available(b)
+            val available=if(b.deploying)listOf(-1)+b.allies.indices.filter{b.allies[it].hp>0} else SquadRules.available(b)
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
             val ally=b.allies.getOrNull(actor)
@@ -153,7 +156,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             val damagePreview=AdventureRules.previewDamage(p,b,actor,targetChoice,selected)
             val nextEnemy=AdventureRules.nextEnemy(b)
             fun canHit(enemy:ArenaBot)=if(actor==-1)AdventureRules.canHit(p,b,enemy,selected)else SquadRules.canHit(b,actor,enemy)
-            fun reachable(q:GridPoint)=SquadRules.reachable(p,b,actor,q)
+            fun reachable(q:GridPoint)=if(b.deploying)AdventureRules.deploymentCell(q) else SquadRules.reachable(p,b,actor,q)
             val controls: @Composable ()->Unit = {
                 Text(if(b.enemyPending)"Відповідає: "+(nextEnemy?.series?.title?:"—") else "Наступний ворог: "+(nextEnemy?.series?.title?:"—"),color=Color(0xFFE9B5AE),style=MaterialTheme.typography.labelMedium)
                 if(combos.isNotEmpty())Text("Активні зв’язки: "+combos.joinToString(" · "){it.title},color=MaterialTheme.colorScheme.secondary,style=MaterialTheme.typography.labelSmall)
@@ -221,8 +224,20 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             BoxWithConstraints(modifier.height(boardHeight)){
                 val projection=ArenaProjection(maxWidth.value,boardHeight.value)
                 val cell=projection.cell.dp
-                fun spriteW(q:GridPoint)=(projection.cell*2.16f*projection.scale(q)).dp
-                fun spriteH(q:GridPoint)=(minOf(projection.cell*2.5f,boardHeight.value*.50f)*projection.scale(q)).dp
+                val occupied=buildList{add(b.pos);b.allies.filter{it.hp>0}.forEach{add(it.pos)};b.enemies.filter{it.hp>0}.forEach{add(it.pos)}}
+                fun envelope(q:GridPoint):Pair<Float,Float>{
+                    val foot=projection.foot(q)
+                    var w=projection.cell*1.65f*projection.scale(q)
+                    var h=minOf(projection.cell*2.05f,boardHeight.value*.56f)*projection.scale(q)
+                    for(other in occupied.filter{it!=q}){
+                        val dest=projection.foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
+                        if(dx>=projection.cell*.64f&&dy<projection.row*.85f)w=minOf(w,dx*.94f)
+                        else if(dx<projection.cell*1.30f&&dy>=projection.row*.45f)h=minOf(h,dy*.91f)
+                    }
+                    return w to h
+                }
+                fun spriteW(q:GridPoint)=envelope(q).first.dp
+                fun spriteH(q:GridPoint)=envelope(q).second.dp
                 fun spriteX(q:GridPoint)=projection.foot(q).x.dp-spriteW(q)/2
                 fun spriteY(q:GridPoint)=projection.foot(q).y.dp-spriteH(q)*.89f
                 fun xOf(q:GridPoint)=projection.center(q).x.dp-cell/2
@@ -232,6 +247,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         detectTapGestures{tap->
                             val q=ArenaProjection(size.width.toFloat(),size.height.toFloat()).hit(tap)
                             if(q!=null&&!busy){
+                                if(b.deploying){
+                                    if(AdventureRules.deploymentCell(q))latestChange(AdventureRules.deployUnit(latestPet,actor,q))
+                                    return@detectTapGestures
+                                }
                                 val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
                                 val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
                                 if(q==b.pos&&-1 in available){actorChoice=-1}
@@ -249,7 +268,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         val plane=ArenaProjection(size.width,size.height)
                         val w=plane.cell;val h=plane.row
                         // Horizon, distant city silhouette and raised combat platform.
-                        val horizon=plane.project(3f,-.5f).y
+                        val horizon=plane.project(2.25f,-.5f).y
                         drawRect(Brush.verticalGradient(listOf(Color(0xFF0D1727),Color(0xFF30475A),Color(0xFF51616A)),endY=horizon.coerceAtLeast(1f)),size=Size(size.width,horizon.coerceAtLeast(1f)))
                         for(i in 0..19){
                             val x=i*size.width/19f
@@ -258,16 +277,16 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             drawRect(Color(0xFF7394A5).copy(alpha=.55f),Offset(x-w*.22f,horizon-towerH),Size(w*.44f,h*.055f))
                             repeat(3){j->drawRect(Color(0xFF6FD9E3).copy(alpha=.32f),Offset(x-w*.12f,horizon-towerH+h*.13f+j*h*.16f),Size(w*.24f,h*.035f))}
                         }
-                        val leftBack=plane.project(-.63f,-.62f);val rightBack=plane.project(6.63f,-.62f)
-                        val leftFront=plane.project(-.63f,4.63f);val rightFront=plane.project(6.63f,4.63f)
+                        val leftBack=plane.project(-.63f,-.62f);val rightBack=plane.project(5.13f,-.62f)
+                        val leftFront=plane.project(-.63f,2.63f);val rightFront=plane.project(5.13f,2.63f)
                         fun surface(points:List<Offset>)=Path().apply{moveTo(points[0].x,points[0].y);points.drop(1).forEach{lineTo(it.x,it.y)};close()}
                         val lip=h*.24f
                         drawPath(surface(listOf(leftFront,rightFront,rightFront+Offset(0f,lip),leftFront+Offset(0f,lip))),Color(0xFF101C29))
                         drawPath(surface(listOf(leftBack,rightBack,rightFront,leftFront)),Brush.verticalGradient(listOf(Color(0xFF344653),Color(0xFF172A36)),startY=horizon,endY=leftFront.y))
                         drawLine(Color(0xFF6D8D9C),leftBack,rightBack,2f)
                         drawLine(Color(0xFF56B9C3).copy(alpha=.65f),leftFront,rightFront,2f)
-                        for(i in 0..8){
-                            val v=plane.project(i*.75f,4.68f)
+                        for(i in 0..6){
+                            val v=plane.project(i*.75f,2.68f)
                             drawLine(Color(0xFF70D5D4).copy(alpha=.42f),v,v+Offset(0f,lip*.7f),2f)
                         }
                         for(q in AdventureRules.arenaCells){
@@ -292,15 +311,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     }
                     val px by animateDpAsState(spriteX(b.pos),tween(duration(300)),label="battle x")
                     val py by animateDpAsState(spriteY(b.pos),tween(duration(300)),label="battle y")
-                    Box(Modifier.offset(px,py).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f)){
+                    Box(Modifier.offset(px,py).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f).clipToBounds()){
                         ArenaGroundShadow(false,actor==-1&&!busy)
                         RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),phase,false,Modifier.fillMaxSize())
-                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
+                        ArenaUnitBadge(b.hp,b.maxHp,"",false,actor==-1&&!busy,Modifier.align(Alignment.BottomCenter))
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
                         val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
                         val ay by animateDpAsState(spriteY(u.pos),tween(duration(300)),label="ally y")
-                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(spriteW(u.pos),spriteH(u.pos)).zIndex(projection.depth(u.pos)+1f)){
+                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(spriteW(u.pos),spriteH(u.pos)).zIndex(projection.depth(u.pos)+1f).clipToBounds()){
                             ArenaGroundShadow(false,actor==i&&!busy)
                             val activeAction=when{
                                 enemyVisual<0&&attack&&visualSource==u.pos->RobotAction.ATTACK
@@ -309,16 +328,16 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 else->RobotAction.IDLE
                             }
                             RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout(),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
+                            ArenaUnitBadge(u.hp,u.maxHp,"×${u.count}",false,actor==i&&!busy,Modifier.align(Alignment.BottomCenter))
                         }
                     }}
                     b.enemies.forEachIndexed{i,e->key(i){
                         val ex by animateDpAsState(spriteX(e.pos),tween(duration(300)),label="bot x")
                         val ey by animateDpAsState(spriteY(e.pos),tween(duration(300)),label="bot y")
-                        if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW(e.pos),spriteH(e.pos)).zIndex(projection.depth(e.pos)+1f)){
+                        if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW(e.pos),spriteH(e.pos)).zIndex(projection.depth(e.pos)+1f).clipToBounds()){
                             ArenaGroundShadow(true,targetChoice==i)
                             RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series),phase,false,Modifier.fillMaxSize())
-                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter).offset(y=(-5).dp))
+                            ArenaUnitBadge(e.hp,e.maxHp,"",true,targetChoice==i,Modifier.align(Alignment.BottomCenter))
                         }
                     }}
                     // Effects above sprites. Their progress is presentation-only.
@@ -373,44 +392,70 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 }
             }
             }
-            if(wide){
-                BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)){
-                    battlefield(Modifier.fillMaxWidth(),maxHeight)
-                }
-                // One compact action strip replaces the permanent 196dp side panel.
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    OutlinedButton(onClick={tacticsPanel=true},enabled=!busy){Text("Тактика · ${speed}×")}
-                    Text(if(ally==null)"Командир · ${b.hp} HP" else "${ally.kind.title} · ${ally.hp} HP",style=MaterialTheme.typography.labelMedium)
-                    if(chosenEnemy!=null&&damagePreview!=null&&!busy){
+            val actionStrip:@Composable ()->Unit={
+                if(b.deploying){
+                    Text("Обери свого юніта, потім клітинку. Зайняті позиції міняються місцями.",style=MaterialTheme.typography.labelSmall)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        FilterChip(actor==-1,{actorChoice=-1},label={Text("Командир")})
+                        b.allies.forEachIndexed{i,u->if(u.hp>0)FilterChip(actor==i,{actorChoice=i},label={Text(u.kind.title)})}
+                    }
+                    Button(onClick={latestChange(AdventureRules.startBattle(latestPet));targetChoice=-1},modifier=Modifier.fillMaxWidth()){Text("Почати бій")}
+                }else{
+                    val repairTarget=if(actor==-1)null else SquadRules.repairTarget(b,actor)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
                         Button(onClick={
-                            val i=targetChoice;val dest=chosenEnemy.pos
+                            val dest=chosenEnemy?.pos?:return@Button
+                            val i=targetChoice
                             direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
                             perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
                                 latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
                             }
-                        }){Text("Атака −${minOf(damagePreview,chosenEnemy.hp)} HP")}
-                    }else{
-                        Button(onClick={perform("guard",source,source){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.guard(latestPet,now())else AdventureRules.allyGuard(latestPet,actor,now())}},enabled=!busy&&actor in available){Text("Захист")}
+                        },enabled=!busy&&damagePreview!=null,modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("Атака")}
+                        OutlinedButton(onClick={perform("guard",source,source){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.guard(latestPet,now())else AdventureRules.allyGuard(latestPet,actor,now())}},enabled=!busy&&actor in available,modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("Захист")}
+                        OutlinedButton(onClick={skillsPanel=true},enabled=!busy&&actor in available,modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("⚡ Навички")}
+                        if(actor==-1||ally?.kind==SquadKind.MEDIC)OutlinedButton(onClick={
+                            val dest=repairTarget?.let{SquadRules.position(b,it)}?:source
+                            perform("repair",source,dest){latestSound(PixubiSound.HAPPY);if(actor==-1)AdventureRules.repair(latestPet,now())else AdventureRules.allyRepair(latestPet,actor,now())}
+                        },enabled=!busy&&actor in available&&(if(actor==-1)p.repair>0&&b.hp<b.maxHp else repairTarget!=null),modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("Ремонт")}
                     }
-                    val repairTarget=if(actor==-1)null else SquadRules.repairTarget(b,actor)
-                    if(actor==-1||ally?.kind==SquadKind.MEDIC)OutlinedButton(onClick={
-                        val dest=repairTarget?.let{SquadRules.position(b,it)}?:source
-                        perform("repair",source,dest){latestSound(PixubiSound.HAPPY);if(actor==-1)AdventureRules.repair(latestPet,now())else AdventureRules.allyRepair(latestPet,actor,now())}
-                    },enabled=!busy&&actor in available&&(if(actor==-1)p.repair>0&&b.hp<b.maxHp else repairTarget!=null)){Text("Ремонт")}
-                    if(chosenEnemy!=null)TextButton(onClick={targetChoice=-1},enabled=!busy){Text("Скасувати")}
-                    Text(b.log,style=MaterialTheme.typography.labelSmall,maxLines=1)
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        Text(if(chosenEnemy!=null)"Ціль: ${chosenEnemy.series.title} · ${damagePreview?.let{"−$it HP"}?:"поза дальністю"}" else b.log,modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,maxLines=1)
+                        TextButton(onClick={tacticsPanel=true},enabled=!busy){Text("Тактика · ${speed}×")}
+                    }
                 }
-                if(tacticsPanel)AlertDialog(onDismissRequest={tacticsPanel=false},title={Text("Тактика та спорядження")},text={
-                    Column(Modifier.heightIn(max=220.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                        controls();actions()
-                    }
-                },confirmButton={TextButton(onClick={tacticsPanel=false}){Text("До бою")}})
+            }
+            if(wide){
+                BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)){
+                    battlefield(Modifier.fillMaxWidth(),maxHeight)
+                }
+                actionStrip()
             }else{
                 BoxWithConstraints(Modifier.fillMaxWidth()){
-                    battlefield(Modifier.fillMaxWidth(),maxWidth*1.02f)
+                    battlefield(Modifier.fillMaxWidth(),maxWidth*.79f)
                 }
-                controls()
-                actions()
+                actionStrip()
+                if(!b.deploying)controls()
+            }
+            if(tacticsPanel&&!b.deploying)AlertDialog(onDismissRequest={tacticsPanel=false},title={Text("Тактика та спорядження")},text={
+                Column(Modifier.heightIn(max=220.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(4.dp)){controls();actions()}
+            },confirmButton={TextButton(onClick={tacticsPanel=false}){Text("До бою")}})
+            if(skillsPanel&&!b.deploying){
+                val hit=AdventureRules.skillDamage(p,b,actor,targetChoice,selected)
+                AlertDialog(onDismissRequest={skillsPanel=false},title={Text("Навички юніта")},text={
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+                        Text(AdventureRules.skillName(b,actor),style=MaterialTheme.typography.titleMedium)
+                        Text("Посилена атака: +50% шкоди, один раз за бій для кожного юніта. Витрачає звичайний заряд і хід.")
+                        Text(if(actor in b.skillUsed)"Навичку вже використано" else if(hit==null)"Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
+                        if(ally?.kind==SquadKind.MEDIC)Text("Ремонт: відновлює союзника в радіусі двох клітинок.")
+                    }
+                },confirmButton={Button(onClick={
+                    val dest=chosenEnemy?.pos?:return@Button
+                    val i=targetChoice;skillsPanel=false
+                    direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
+                    perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
+                        latestSound(PixubiSound.TAP);AdventureRules.skillStrike(latestPet,actor,i,selected,now())
+                    }
+                },enabled=hit!=null&&!busy){Text("Застосувати")}},dismissButton={TextButton(onClick={skillsPanel=false}){Text("Закрити")}})
             }
 
         }
@@ -531,11 +576,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
 }
 
 @Composable private fun ArenaUnitBadge(hp:Int,maxHp:Int,count:String,enemy:Boolean,selected:Boolean,modifier:Modifier=Modifier){
-    val color=if(enemy)Color(0xFFF37F8C)else Color(0xFF87E7D2)
-    Column(modifier.widthIn(min=35.dp,max=75.dp).background(Color(0xF2192735),RoundedCornerShape(5.dp))
-        .border(if(selected)1.5.dp else .5.dp,if(selected)Color(0xFFFFD68D)else color.copy(alpha=.55f),RoundedCornerShape(5.dp))
-        .padding(horizontal=4.dp,vertical=2.dp),horizontalAlignment=Alignment.CenterHorizontally){
-        Text(if(count.isBlank())"$hp" else "$count · $hp",style=MaterialTheme.typography.labelSmall,color=color,maxLines=1)
-        LinearProgressIndicator(progress={hp.toFloat()/maxHp.coerceAtLeast(1)},modifier=Modifier.width(32.dp).height(3.dp),color=color,trackColor=Color(0xFF405264))
-    }
+    val color=if(enemy)Color(0xFFFFA1AA)else Color(0xFFBEFFEF)
+    Text(if(count.isBlank())"$hp" else "$count · $hp",modifier=modifier,color=color,maxLines=1,
+        style=MaterialTheme.typography.labelLarge.copy(shadow=Shadow(Color.Black,Offset(1f,1f),4f)))
 }
