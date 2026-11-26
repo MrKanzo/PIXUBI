@@ -39,6 +39,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var attack by remember{mutableStateOf(false)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
     var actorChoice by remember{mutableIntStateOf(-1)}
+    var targetChoice by remember{mutableIntStateOf(-1)}
     var enemyVisual by remember{mutableIntStateOf(-1)}
     val context=LocalContext.current
     val settings=remember(context){context.getSharedPreferences("pixubi_arena_settings",android.content.Context.MODE_PRIVATE)}
@@ -61,6 +62,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val busy=queued!=null||moving||attack||b?.enemyPending==true
     fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,action:()->WorldPet){
         if(queued!=null||moving||attack)return
+        targetChoice=-1
         visualKind=kind;visualSource=source;visualTarget=target;melee=closeCombat
         attack=kind=="strike";moving=kind=="move"
         queued=action
@@ -132,6 +134,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
             val ally=b.allies.getOrNull(actor)
+            val chosenEnemy=b.enemies.getOrNull(targetChoice)?.takeIf{it.hp>0}
+            val damagePreview=AdventureRules.previewDamage(p,b,actor,targetChoice,selected)
+            val nextEnemy=AdventureRules.nextEnemy(b)
+            Text(if(b.enemyPending)"Відповідає: "+(nextEnemy?.series?.title?:"—") else "Наступний ворог: "+(nextEnemy?.series?.title?:"—"),color=Color(0xFFE9B5AE),style=MaterialTheme.typography.labelMedium)
             fun canHit(enemy:ArenaBot)=if(actor==-1)AdventureRules.canHit(p,b,enemy,selected)else SquadRules.canHit(b,actor,enemy)
             fun reachable(q:GridPoint)=SquadRules.reachable(p,b,actor,q)
             Text("Загін · обери юніта для ходу",style=MaterialTheme.typography.titleMedium)
@@ -151,7 +157,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     Text("Вороги · HP");b.enemies.forEach{Text("${it.series.title} ${it.hp}/${it.maxHp}",style=MaterialTheme.typography.bodySmall)}
                 }}
             }
-            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
+            Text("Блакитні шестикутники — доступні для ходу. Червона рамка — ворог у радіусі атаки. Торкнись ворога для прогнозу, потім підтвердь атаку. Після кожної твоєї дії ходить один ворог. Кожен твій загін діє один раз за раунд.",style=MaterialTheme.typography.bodySmall)
             BoxWithConstraints(Modifier.fillMaxWidth()){
                 val cell=maxWidth/(AdventureRules.ARENA_W+.5f)
                 val hexH=cell*1.1547f
@@ -159,7 +165,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 fun xOf(q:GridPoint)=cell*(q.x+if(q.y%2==1).5f else 0f)
                 fun yOf(q:GridPoint)=rowStep*q.y
                 Box(Modifier.fillMaxWidth().height(rowStep*(AdventureRules.ARENA_H-1)+hexH).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
-                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor){
+                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
                         detectTapGestures{tap->
                             val w=size.width/(AdventureRules.ARENA_W+.5f)
                             val h=w*1.1547f
@@ -177,11 +183,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
                                 if(q==b.pos&&-1 in available){actorChoice=-1}
                                 else if(friend>=0&&friend in available){actorChoice=friend}
-                                else if(i>=0&&canHit(b.enemies[i])){
-                                    direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                                    perform("strike",source,q,if(ally!=null)ally.kind.range==1 else selected==null||AdventureRules.range(selected)==1){
-                                        latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
-                                    }
+                                else if(i>=0){
+                                    targetChoice=i
+                                    latestSound(PixubiSound.TAP)
                                 }else if(reachable(q)){
                                     direction=if(q.x<source.x)RobotView.LEFT else RobotView.RIGHT
                                     perform("move",source,q){latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.moveArena(latestPet,q,now())else AdventureRules.allyMove(latestPet,actor,q,now())}
@@ -212,6 +216,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val fill=when{hit->Color(0xFF743844);can->Color(0xFF285D5A);i>=0->Color(0xFF523846);q==source->Color(0xFF246B83);q==b.pos||b.allies.any{it.hp>0&&it.pos==q}->Color(0xFF244C66);else->if((x+y)%2==0)Color(0xFF34454B)else Color(0xFF293A43)}
                             drawPath(outline,Brush.verticalGradient(listOf(Color(0xFF8FACA6).copy(alpha=.30f),fill,Color(0xFF11232C)),startY=cy-h*.5f,endY=cy+h*.5f))
                             drawPath(outline,when{hit->Color(0xFFFF8490);can->Color(0xFF65DBE8);else->Color(0xFF59647E)},style=Stroke(if(hit||can)2f else 1f))
+                            if(i>=0&&i==targetChoice&&!busy)drawPath(outline,Color(0xFFFFE1A5),style=Stroke(3.5f))
                             for(j in 0..5){
                                 val dx=((x*17+y*9+j*13)%21-10)*w/38f
                                 val dy=((x*9+y*19+j*7)%17-8)*h/38f
@@ -300,6 +305,25 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         Box(Modifier.offset(xOf(point),yOf(point)-cell*(.15f+t*.4f)).width(cell),contentAlignment=Alignment.Center){
                             Text(if(amount>0)"−$amount" else "+${-amount}",color=(if(amount>0)Color(0xFFFFA285)else Color(0xFF9EFFB6)).copy(alpha=(1f-t*.65f).coerceIn(0f,1f)),style=MaterialTheme.typography.titleMedium)
                         }
+                    }
+                }
+            }
+            if(chosenEnemy!=null&&!busy){
+                Card(Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                        Text("Ціль: ${chosenEnemy.series.title}",style=MaterialTheme.typography.titleMedium)
+                        Text("HP ${chosenEnemy.hp}/${chosenEnemy.maxHp} · захист ${chosenEnemy.defense} · відстань ${AdventureRules.arenaDistance(source,chosenEnemy.pos)}")
+                        if(damagePreview!=null){
+                            Text("Прогноз: −${minOf(damagePreview,chosenEnemy.hp)} HP · "+if(damagePreview>=chosenEnemy.hp)"знищення" else "залишиться ${chosenEnemy.hp-damagePreview} HP",color=MaterialTheme.colorScheme.secondary)
+                            Button(onClick={
+                                val i=targetChoice;val dest=chosenEnemy.pos
+                                direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
+                                perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
+                                    latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
+                                }
+                            },modifier=Modifier.fillMaxWidth()){Text("Підтвердити атаку")}
+                        }else Text("Ціль недоступна для цієї атаки: перевір дальність, заряди та чергу ходу.",style=MaterialTheme.typography.bodySmall)
+                        TextButton(onClick={targetChoice=-1}){Text("Скасувати вибір")}
                     }
                 }
             }

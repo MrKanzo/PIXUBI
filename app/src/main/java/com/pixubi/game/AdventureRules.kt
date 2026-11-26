@@ -176,14 +176,24 @@ internal object AdventureRules{
         if(!reachable(p,b,to))return p
         return afterAction(p,b.copy(pos=to),-1,false,"Переміщення командира",now)
     }
+    fun previewDamage(p:WorldPet,b:ArenaBattle,actor:Int,index:Int,gear:RobotGear?):Int?{
+        val e=b.enemies.getOrNull(index)?:return null
+        if(actor==-1){
+            if(!canHit(p,b,e,gear))return null
+            val base=(p.stats.attack-weapons(p).sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
+            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)
+        }
+        val ally=b.allies.getOrNull(actor)?:return null
+        if(!SquadRules.canHit(b,actor,e))return null
+        return damage(ally.attack+p.level/3+SquadTactics.attackBonus(b,ally.kind),e.defense)
+    }
     fun strike(p:WorldPet,index:Int,gear:RobotGear?,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         val e=b.enemies.getOrNull(index)?:return p
         if(!canHit(p,b,e,gear))return p.copy(message="Ціль поза досяжністю або немає зарядів.")
         val cost=attackCost(gear)
         val q=if(cost==null)p else p.copy(supplies=p.supplies+(cost to p.stock(cost)-1))
-        val base=(p.stats.attack-weapons(p).sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
-        val hit=damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)
+        val hit=previewDamage(p,b,-1,index,gear)?:return p
         val enemies=b.enemies.mapIndexed{i,bot->if(i==index)bot.copy(hp=(bot.hp-hit).coerceAtLeast(0))else bot}
         val next=b.copy(enemies=enemies)
         if(enemies.none{it.hp>0})return finish(q,next,true,now)
@@ -217,7 +227,7 @@ internal object AdventureRules{
         val ally=b.allies.getOrNull(index)?:return p
         val enemy=b.enemies.getOrNull(target)?:return p
         if(!SquadRules.canHit(b,index,enemy))return p
-        val hit=damage(ally.attack+p.level/3+SquadTactics.attackBonus(b,ally.kind),enemy.defense)
+        val hit=previewDamage(p,b,index,target,null)?:return p
         val next=b.copy(allies=b.allies.mapIndexed{i,u->if(i==index&&u.kind.range>1)u.copy(charges=u.charges-1)else u},
             enemies=b.enemies.mapIndexed{i,e->if(i==target)e.copy(hp=(e.hp-hit).coerceAtLeast(0))else e})
         if(next.enemies.none{it.hp>0})return finish(p,next,true,now)
@@ -255,6 +265,7 @@ internal object AdventureRules{
             .minWithOrNull(compareBy<GridPoint>{arenaDistance(it,position)}.thenBy{it.y}.thenBy{it.x})?:e.pos
         return EnemyAction(i,e.pos,next,null)
     }
+    fun nextEnemy(b:ArenaBattle):ArenaBot?=(b.enemies.indices).map{(b.enemyCursor+it)%b.enemies.size}.firstOrNull{b.enemies[it].hp>0}?.let{b.enemies[it]}
     fun enemyTurn(p:WorldPet,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         val plan=enemyPlan(b)?:return p

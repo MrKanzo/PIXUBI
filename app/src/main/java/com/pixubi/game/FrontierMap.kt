@@ -165,6 +165,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
           }
         }
     }
+    FrontierOverview(a)
     Text("Темне — невідоме · приглушене — розвідане · яскраве — зона сканера",style=MaterialTheme.typography.labelSmall)
     if(target!=null)TextButton(onClick={target=null}){Text("Зупинити рух")}
 }
@@ -479,4 +480,30 @@ private fun DrawScope.techTower(p:FrontierPalette,phase:Float,seed:Int){
     drawCircle(p.glow.copy(alpha=.18f),9f+pulse*6f,Offset(0f,-86f))
     drawCircle(p.glow,3f,Offset(0f,-86f))
     drawLine(p.glow.copy(alpha=.8f),Offset(-25f,-5f),Offset(17f,-5f),2f)
+}
+
+@Composable private fun FrontierOverview(a:AdventureState){
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
+        Canvas(Modifier.width(132.dp).height(84.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF101827))){
+            val w=size.width/AdventureRules.MAP_W;val h=size.height/AdventureRules.MAP_H
+            for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
+                val q=GridPoint(x,y)
+                val visible=AdventureRules.visible(a,q);val live=AdventureRules.inSight(a,q)
+                val c=when{
+                    q==a.pos->Color(0xFFEAFFF8)
+                    q==AdventureRules.base->Color(0xFF77CEDE)
+                    !visible->Color(0xFF151C2B)
+                    live->Color(0xFF4E9293)
+                    else->Color(0xFF334C60)
+                }
+                drawRect(c,Offset(x*w+.5f,y*h+.5f),Size((w-1f).coerceAtLeast(1f),(h-1f).coerceAtLeast(1f)))
+            }
+            // No resource, enemy, obstacle or portal location is shown here.
+            drawCircle(Color(0xFFA5FFE1),w*.65f,Offset((a.pos.x+.5f)*w,(a.pos.y+.5f)*h),style=Stroke(1.5f))
+        }
+        Column(Modifier.weight(1f)){
+            Text("Радар сектору",style=MaterialTheme.typography.titleSmall)
+            Text("Світла точка — робот, блакитна — база. Радар не розкриває невідомі об'єкти.",style=MaterialTheme.typography.labelSmall)
+        }
+    }
 }
