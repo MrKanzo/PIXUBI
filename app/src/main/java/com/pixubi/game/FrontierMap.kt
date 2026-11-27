@@ -52,7 +52,7 @@ private fun palette(stage:Int)=when((stage-1)%4){
     else->FrontierPalette("Промисловий каньйон",Color(0xFF62585A),Color(0xFF958477),Color(0xFF3D3948),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
 }
 @Composable
-internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit,returnHome:Boolean=false){
+internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit,returnHome:Boolean=false,speech:RobotSpeech?=null){
     val a=p.adventure
     val latest by rememberUpdatedState(p)
     val change by rememberUpdatedState(onChange)
@@ -127,6 +127,9 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                 }
             }
         }
+        val actorSize=mapWidth*(126.96f/FrontierProjection.W)
+        val px by animateDpAsState(mapWidth*(center.x/FrontierProjection.W)-actorSize/2,tween(315,easing=LinearEasing),label="hero x")
+        val py by animateDpAsState(mapHeight*(center.y/FrontierProjection.H)-actorSize*.83f,tween(315,easing=LinearEasing),label="hero y")
         Box(Modifier.fillMaxWidth().height(viewportHeight).clip(RoundedCornerShape(14.dp)).background(Color(0xFF182E36))){
           Column(Modifier.fillMaxSize().verticalScroll(vScroll)){
             Row(Modifier.fillMaxWidth().horizontalScroll(hScroll)){
@@ -143,7 +146,6 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                         landscape(a,colors,phase,route)
                     }
                 }
-                val actorSize=mapWidth*(126.96f/FrontierProjection.W)
                 for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
                     val q=GridPoint(x,y)
                     if(AdventureRules.knownTile(a,q)==AdventureTile.ENEMY){
@@ -155,8 +157,6 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                     }
                 }
                 val c=FrontierProjection.center(a.pos)
-                val px by animateDpAsState(mapWidth*(c.x/FrontierProjection.W)-actorSize/2,tween(315,easing=LinearEasing),label="hero x")
-                val py by animateDpAsState(mapHeight*(c.y/FrontierProjection.H)-actorSize*.83f,tween(315,easing=LinearEasing),label="hero y")
                 Box(Modifier.offset(px,py).size(actorSize).zIndex(c.y+1)){
                     Canvas(Modifier.fillMaxSize()){
                         drawOval(Color(0xFF0C2021).copy(alpha=.55f),Offset(size.width*.17f,size.height*.78f),Size(size.width*.66f,size.height*.18f))
@@ -172,6 +172,11 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                 }))
             }
             }
+          }
+          if(speech!=null){
+              val sx=px+actorSize/2-with(density){hScroll.value.toDp()}
+              val sy=py+actorSize*.18f-with(density){vScroll.value.toDp()}
+              if(sx>=0.dp&&sx<=maxWidth&&sy>=-actorSize&&sy<=viewportHeight)ComicAt(speech,sx,sy,compact=true)
           }
         }
     }

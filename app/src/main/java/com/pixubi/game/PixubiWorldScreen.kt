@@ -91,6 +91,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+            TextButton(onClick={toggleSpeech()},contentPadding=PaddingValues(horizontal=4.dp)){Text(if(speechEnabled)"💬" else "◌")}
             TextButton(onClick={guideOpen=true}){Text("Академія")}
             OutlinedButton(onClick=onSettings){Text("⚙")}
         }
@@ -106,7 +107,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     Column(Modifier.fillMaxWidth().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){PixubiGlyph(id,active);Text(label,style=MaterialTheme.typography.labelSmall,maxLines=1)}
                 }}
             }}
-            RobotSpeechBubble(speech.line,speechEnabled,{toggleSpeech()})
+            if(page!="home"&&!(page=="missions"&&p.mission!=null)&&speechEnabled)ComicPortrait(p,speech.line)
             if(page=="shop"||page=="construction"){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                     FilterChip(page=="shop",{page="shop"},label={Text("Предмети")},modifier=Modifier.weight(1f))
@@ -128,7 +129,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                         if(p.mode==WorldMode.AWAKE&&p.mission==null){
                             careAnimation=RobotAction.WAVE;careEvent++;effect(WorldFx.CONTACT);onSound(PixubiSound.TAP)
                         }
-                    })
+                    },speech=if(speechEnabled)speech.line else null)
                 BaseLocationPanel(p,onReturn={requestReturn()},onWake={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))})
                 BaseDistrict(p,onOpen={building=it})
                 WorldMeter("Енергія",p.energy);WorldMeter("Міцність",p.integrity);WorldMeter("Настрій",p.mood)
@@ -165,7 +166,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 if(m!=null){
                     Text("${m.task.title} · ${((m.until-now+999)/1000).coerceAtLeast(0)} с")
                     LinearProgressIndicator(progress={1f-((m.until-now).coerceAtLeast(0L).toFloat()/(m.task.seconds*1000f)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
-                    WorldShowcase(p,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,fx,fxEvent,Modifier.fillMaxWidth().height(265.dp),roam=true)
+                    WorldShowcase(p,action,if(action==RobotAction.ATTACK)RobotFace.ANGRY else RobotFace.NEUTRAL,fx,fxEvent,Modifier.fillMaxWidth().height(265.dp),roam=true,speech=if(speechEnabled)speech.line else null)
                 }
                 val ammoCost=WorldGearCatalog.ammoCost(p.equipment)
                 if(ammoCost.isNotEmpty())Text("Арена · "+ammoCost.entries.joinToString(" · "){(kind,n)->kind.title+" "+p.stock(kind)+"/"+n})
@@ -198,6 +199,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 Text(HabitatCatalog.of(archiveSeries).title)
             }else if(page=="profile"){
                 Text("Профіль оператора",style=MaterialTheme.typography.titleLarge)
+                Row(verticalAlignment=Alignment.CenterVertically){Text("Діалоги роботів",Modifier.weight(1f));Switch(checked=speechEnabled,onCheckedChange={toggleSpeech()})}
                 OutlinedButton(onClick={guideOpen=true}){Text("Академія · ${guideProgress.completed.size}/${GuideLesson.entries.size}")}
                 TextButton(onClick={updateGuide(GuideProgress());guideOpen=true}){Text("Повторити навчання з початку")}
                 OutlinedTextField(profileName,{profileName=it.take(24);WorldProfile.save(context,profileName)},label={Text("Ім’я оператора")},singleLine=true,modifier=Modifier.fillMaxWidth())

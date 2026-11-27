@@ -24,7 +24,7 @@ internal class RobotSpeechState {
         val wait=if(cue.urgent)2300L else if(cue.event==SpeechEvent.WALK)13000L else 9000L
         if(!force&&last!=0L&&now-last<wait)return
         val series=cue.series?:p.series
-        line=RobotSpeech(cue.speaker?:p.name,deck.pick(SpeechLibrary.choices(series,cue.event)),cue.enemy)
+        line=RobotSpeech(cue.speaker?:p.name,deck.pick(SpeechLibrary.choices(series,cue.event)),cue.enemy,SpeechEvents.isThought(cue.event),cue.actor)
         last=now
     }
 }
@@ -47,8 +47,7 @@ internal class RobotSpeechState {
         }
         if(event!=null)state.say(p,event,event.event in setOf(SpeechEvent.VICTORY,SpeechEvent.DEFEAT,SpeechEvent.RETREAT,SpeechEvent.WAKE))
         else if(changed)state.say(p,SpeechCue(SpeechEvents.scene(page)),true)
-        else if(tapped)state.say(p,SpeechCue(SpeechEvent.TAP))
-        else if(state.line==null)state.say(p,SpeechCue(SpeechEvents.scene(page)),true)
+        else if(tapped)state.say(p,SpeechCue(SpeechEvent.TAP),true)
     }
     LaunchedEffect(page,foreground,enabled,p.mode){
         if(!foreground||!enabled||page=="contact"||p.mode!=WorldMode.AWAKE)return@LaunchedEffect
@@ -59,25 +58,7 @@ internal class RobotSpeechState {
         }
     }
     LaunchedEffect(state.line){
-        if(state.line!=null){delay(13000L);state.clear()}
+        state.line?.let{delay((2600L+it.text.length*45L).coerceIn(3000L,6500L));state.clear()}
     }
     return state
-}
-@Composable internal fun RobotSpeechBubble(line:RobotSpeech?,enabled:Boolean,onToggle:()->Unit,compact:Boolean=false){
-    if(!enabled){
-        Text("◉ Репліки вимкнено · увімкнути",Modifier.clickable(onClick=onToggle).padding(vertical=3.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        return
-    }
-    if(line==null){
-        Text("◉ Репліки · тихий режим",Modifier.clickable(onClick=onToggle).padding(vertical=2.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        return
-    }
-    val tint=if(line.enemy)Color(0xFFFFAB9D)else Color(0xFF8BE8DB)
-    Surface(color=Color(0xFF182C3C),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth()){
-        Row(Modifier.padding(horizontal=7.dp,vertical=if(compact)2.dp else 5.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
-            Text(if(line.enemy)"◇" else "◉",color=tint,style=MaterialTheme.typography.labelMedium)
-            Text(line.speaker+": "+line.text,modifier=Modifier.weight(1f),color=tint,style=MaterialTheme.typography.labelSmall,maxLines=if(compact)1 else 3,overflow=TextOverflow.Ellipsis)
-            Text("×",modifier=Modifier.clickable(onClick=onToggle).padding(horizontal=5.dp,vertical=3.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelMedium)
-        }
-    }
 }

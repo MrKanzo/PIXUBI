@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:WorldFx,event:Int,
-    modifier:Modifier=Modifier,roam:Boolean=false,onTap:(()->Unit)?=null){
+    modifier:Modifier=Modifier,roam:Boolean=false,onTap:(()->Unit)?=null,speech:RobotSpeech?=null){
     val series=p.series
     val accent=p.skin.accent
     val foreground=LocalPixubiForeground.current
@@ -88,6 +88,10 @@ internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:World
                 // Darken corners softly, keeping the actor readable.
                 drawRect(Brush.radialGradient(listOf(Color.Transparent,Color.Transparent,Color.Black.copy(alpha=.32f)),Offset(w/2,h*.48f),max(w,h)*.67f))
                 if(p.mode==WorldMode.HIBERNATE)drawRect(Color(0xFF10192D).copy(alpha=.19f))
+            }
+            if(speech!=null)BoxWithConstraints(Modifier.fillMaxSize()){
+                val animal=series==RobotSeries.SYMBIONT||series==RobotSeries.MYCELIA
+                ComicAt(speech,maxWidth*(if(roam)roomX.value else .5f),maxHeight*(if(animal).42f else .25f))
             }
         }
     }

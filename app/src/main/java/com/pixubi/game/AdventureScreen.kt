@@ -148,12 +148,11 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             TextButton(onClick=onGuide,enabled=!busy){Text("?")}
             OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"Меню" else "Відступ")}
         }
-        if(a.contact==null)RobotSpeechBubble(speech,speechEnabled,onSpeechToggle,compact=wide)
         if(!wide&&b==null){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
         Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")}
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
-            FrontierMap(p,onChange,onSound,returnHome)
+            FrontierMap(p,onChange,onSound,returnHome,if(speechEnabled)speech else null)
             MiningPanel(p,onChange)
             if(a.contact!=null)EncounterDialog(p,onChange,onSound,speechEnabled)
             SquadPanel(p,onChange)
@@ -351,6 +350,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)attackAction() else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,ArenaAttackStyle.combatEquipment(p.series,p.equipment,attack&&attackStyle==ArenaAttackStyle.KATANA&&enemyVisual<0&&visualSource==b.pos),p.tier,p.series,arena=true),if(busy&&enemyVisual<0&&(visualSource==b.pos||moving&&visualTarget==b.pos))fx.value else phase,false,Modifier.fillMaxSize())
 
                     }
+                    if(speechEnabled&&speech!=null&&!speech.enemy&&speech.actor==-1)ComicAt(speech,px+spriteW(b.pos)/2+lungeOffset(b.pos).x.dp,py+spriteH(b.pos)*.18f+lungeOffset(b.pos).y.dp,compact=wide,modifier=Modifier.zIndex(100f))
                     b.allies.forEachIndexed{i,u->key("ally"+i){
                         val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
                         val ay by animateDpAsState(spriteY(u.pos),tween(duration(300)),label="ally y")
@@ -366,6 +366,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout().let{it.copy(arena=true,equipment=ArenaAttackStyle.combatEquipment(it.series,it.equipment,attack&&attackStyle==ArenaAttackStyle.KATANA&&enemyVisual<0&&visualSource==u.pos))},if(activeAction==RobotAction.IDLE)phase else fx.value,false,Modifier.fillMaxSize())
 
                         }
+                        if(u.hp>0&&speechEnabled&&speech!=null&&!speech.enemy&&speech.actor==i)ComicAt(speech,ax+spriteW(u.pos)/2+lungeOffset(u.pos).x.dp,ay+spriteH(u.pos)*.18f+lungeOffset(u.pos).y.dp,compact=wide,modifier=Modifier.zIndex(100f))
                     }}
                     b.enemies.forEachIndexed{i,e->key(i){
                         val ex by animateDpAsState(spriteX(e.pos),tween(duration(300)),label="bot x")
@@ -375,6 +376,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)attackAction() else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,ArenaAttackStyle.combatEquipment(e.series,RobotEquipment()),e.tier,e.series,arena=true),if(enemyVisual==i)fx.value else phase,false,Modifier.fillMaxSize())
 
                         }
+                        if(e.hp>0&&speechEnabled&&speech!=null&&speech.enemy&&speech.actor==i)ComicAt(speech,ex+spriteW(e.pos)/2+lungeOffset(e.pos).x.dp,ey+spriteH(e.pos)*.18f+lungeOffset(e.pos).y.dp,compact=wide,modifier=Modifier.zIndex(100f))
                     }}
                     // Numbers are on the ground, separate from the model, never a box covering its body.
                     val hpAt: @Composable (GridPoint,Int,Int,String,Boolean,Boolean)->Unit = {q,hp,max,count,enemy,active->

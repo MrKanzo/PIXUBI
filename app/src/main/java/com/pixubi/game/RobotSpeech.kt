@@ -106,9 +106,10 @@ internal class SpeechDeck(private val historySize:Int=40,private val random:kotl
         return line
     }
 }
-internal data class RobotSpeech(val speaker:String,val text:String,val enemy:Boolean=false)
-internal data class SpeechCue(val event:SpeechEvent,val series:RobotSeries?=null,val speaker:String?=null,val enemy:Boolean=false,val urgent:Boolean=false)
+internal data class RobotSpeech(val speaker:String,val text:String,val enemy:Boolean=false,val thought:Boolean=false,val actor:Int=-1)
+internal data class SpeechCue(val event:SpeechEvent,val series:RobotSeries?=null,val speaker:String?=null,val enemy:Boolean=false,val urgent:Boolean=false,val actor:Int=-1)
 internal object SpeechEvents {
+    fun isThought(event:SpeechEvent)=event in setOf(SpeechEvent.IDLE,SpeechEvent.HOME,SpeechEvent.WALK,SpeechEvent.LOW_ENERGY,SpeechEvent.LOW_HP,SpeechEvent.LOW_MOOD,SpeechEvent.SLEEP,SpeechEvent.SHOP,SpeechEvent.INVENTORY,SpeechEvent.STATS,SpeechEvent.ARCHIVE,SpeechEvent.PROFILE,SpeechEvent.BUILD_MENU,SpeechEvent.MISSIONS,SpeechEvent.MAP)
     fun scene(page:String)=when(page){
         "home"->SpeechEvent.HOME;"shop"->SpeechEvent.SHOP;"inventory"->SpeechEvent.INVENTORY;"construction"->SpeechEvent.BUILD_MENU;"missions"->SpeechEvent.MISSIONS
         "adventure"->SpeechEvent.MAP;"battle"->SpeechEvent.BATTLE;"stats"->SpeechEvent.STATS;"archive"->SpeechEvent.ARCHIVE;"profile"->SpeechEvent.PROFILE
@@ -131,7 +132,7 @@ internal object SpeechEvents {
             if(old.enemyPending&&!now.enemyPending){
                 val e=AdventureRules.nextEnemy(old)
                 val hit=now.hp<old.hp||old.allies.zip(now.allies).any{(x,y)->y.hp<x.hp}
-                if(hit)return if(now.hp<old.hp&&now.hp*100/now.maxHp.coerceAtLeast(1)<30)cue(SpeechEvent.HIT) else SpeechCue(SpeechEvent.ENEMY,e?.series,e?.series?.title,true)
+                if(hit)return if(now.hp<old.hp&&now.hp*100/now.maxHp.coerceAtLeast(1)<30)cue(SpeechEvent.HIT) else SpeechCue(SpeechEvent.ENEMY,e?.series,e?.series?.title,true,actor=AdventureRules.enemyPlan(old)?.index?:-1)
                 return null
             }
             val idx=(now.acted-old.acted).firstOrNull()
@@ -144,7 +145,7 @@ internal object SpeechEvents {
                     old.enemies.zip(now.enemies).any{(x,y)->y.hp<x.hp}->SpeechEvent.ATTACK
                     else->null
                 }
-                return event?.let{SpeechCue(it,ally?.kind?.series,ally?.kind?.title)}
+                return event?.let{SpeechCue(it,ally?.kind?.series,ally?.kind?.title,actor=idx)}
             }
             return null
         }

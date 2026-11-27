@@ -25,8 +25,12 @@ import androidx.compose.ui.unit.dp
                 Text("«"+d.message+"»",style=MaterialTheme.typography.bodyLarge)
                 if(speechEnabled){
                     val (enemy,own)=SpeechLibrary.dialogue(p,d)
-                    Text(first.series.title+": "+enemy,color=Color(0xFFFFAB9D),style=MaterialTheme.typography.bodySmall)
-                    Text(p.name+": "+own,color=Color(0xFF8BE8DB),style=MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                        RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),first.tier,first.series),phase,false,Modifier.size(46.dp))
+                        ComicBubble(RobotSpeech(first.series.title,enemy,true),Modifier.weight(1f),showName=true)
+                    }
+                    ComicPortrait(p,RobotSpeech(p.name,own),reverse=true)
+
                 }
                 when(d.offer){
                     EncounterOffer.JOIN->Button(onClick={onChange(EncounterRules.accept(p,System.currentTimeMillis()));onSound(PixubiSound.HAPPY)},modifier=Modifier.fillMaxWidth()){Text("Прийняти · +1 "+d.recruit?.title.orEmpty())}
