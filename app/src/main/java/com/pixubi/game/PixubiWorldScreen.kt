@@ -19,6 +19,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     val context=LocalContext.current
     var pet by remember(context){mutableStateOf(WorldStorage.load(context))}
     var page by rememberSaveable{mutableStateOf("home")}
+    var returnTo by rememberSaveable{mutableStateOf<String?>(null)}
     var guideProgress by remember(context){mutableStateOf(GuideStore.load(context))}
     var guideOpen by remember{mutableStateOf(false)}
     fun updateGuide(next:GuideProgress){guideProgress=next;GuideStore.save(context,next)}
@@ -68,8 +69,12 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         guideOpen=false
         if(p.adventure.battle==null){page=destination;tab=null;category=null}
     },initialLesson=when{p.adventure.battle!=null->GuideLesson.BATTLE;page=="adventure"->GuideLesson.MAP;else->null})
+    LaunchedEffect(p.adventure.pos,p.adventure.battle,p.adventure.contact,returnTo){
+        if(returnTo!=null&&p.adventure.pos==AdventureRules.base&&p.adventure.battle==null&&p.adventure.contact==null){page=returnTo!!;returnTo=null}
+    }
+    fun requestReturn(){returnTo=page;building=null;page="adventure"}
     if(page=="adventure"||p.adventure.battle!=null||p.adventure.contact!=null){
-        AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound,onGuide={guideOpen=true})
+        AdventureScreen(p,onChange={save(it)},onBack={returnTo=null;page="home"},onSound=onSound,onGuide={guideOpen=true},returnHome=returnTo!=null)
         return
     }
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
@@ -110,6 +115,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                             careAnimation=RobotAction.WAVE;careEvent++;effect(WorldFx.CONTACT);onSound(PixubiSound.TAP)
                         }
                     })
+                BaseLocationPanel(p,onReturn={requestReturn()},onWake={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))})
                 BaseDistrict(p,onOpen={building=it},onShop={page="construction";building=null})
                 WorldMeter("Енергія",p.energy);WorldMeter("Міцність",p.integrity);WorldMeter("Настрій",p.mood)
                 Text(p.message,style=MaterialTheme.typography.bodyMedium)
@@ -137,6 +143,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     }
                 }else Button(onClick={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))}){Text("Розбудити")}
             }else if(page=="construction"){
+                BaseLocationPanel(p,onReturn={requestReturn()},onWake={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))})
                 BaseConstructionShop(p,onBuy={save(BaseRules.buy(p,it))},onOpen={building=it})
             }else if(page=="missions"){
                 Text("Центр місій",style=MaterialTheme.typography.titleLarge)

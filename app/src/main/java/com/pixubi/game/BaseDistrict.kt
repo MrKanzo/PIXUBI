@@ -16,17 +16,45 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 @Composable private fun BuildingIcon(kind:BaseBuilding,built:Boolean){
-    Canvas(Modifier.size(64.dp)){
-        val c=if(built)Color(0xFF74E5DB)else Color(0xFF667A92)
+    Canvas(Modifier.size(62.dp)){
         val w=size.width;val h=size.height
-        fun block(x:Float,y:Float,dx:Float,dy:Float){drawRect(Color(0xFF24364B),Offset(w*x,h*y),Size(w*dx,h*dy));drawRect(c,Offset(w*x,h*y),Size(w*dx,h*dy),style=Stroke(2f))}
-        drawOval(Color.Black.copy(alpha=.25f),Offset(w*.08f,h*.78f),Size(w*.84f,h*.15f))
+        val c=when(kind){BaseBuilding.BARRACKS->Color(0xFF69E4D1);BaseBuilding.FOUNDRY->Color(0xFFF5AD69);BaseBuilding.NEURAL->Color(0xFFAB9CFF);BaseBuilding.SERVICE->Color(0xFF8EE7A4);BaseBuilding.WORKSHOP->Color(0xFF67C9FF)}
+        fun poly(col:Color,vararg xy:Float){
+            val path=Path().apply{moveTo(xy[0]*w,xy[1]*h);for(i in 2 until xy.size step 2)lineTo(xy[i]*w,xy[i+1]*h);close()}
+            drawPath(path,col);drawPath(path,Color(0xFF102238),style=Stroke(1.dp.toPx()))
+        }
+        fun block(x:Float,y:Float,dx:Float,dy:Float){
+            val d=.13f
+            poly(Color(0xFF53758D),x,y,x+d,y-d,x+dx+d,y-d,x+dx,y)
+            poly(Color(0xFF294258),x,y,x+dx,y,x+dx,y+dy,x,y+dy)
+            poly(Color(0xFF203347),x+dx,y,x+dx+d,y-d,x+dx+d,y+dy-d,x+dx,y+dy)
+            drawLine(c,Offset((x+.025f)*w,(y+.03f)*h),Offset((x+dx-.025f)*w,(y+.03f)*h),2.dp.toPx())
+        }
+        drawOval(Color(0xFF0B1524),Offset(w*.05f,h*.77f),Size(w*.90f,h*.18f))
         when(kind){
-            BaseBuilding.BARRACKS->{block(.13f,.31f,.74f,.49f);block(.39f,.53f,.22f,.27f);for(i in 0..2)drawRect(c,Offset(w*(.24f+i*.22f),h*.40f),Size(w*.10f,h*.06f))}
-            BaseBuilding.FOUNDRY->{block(.12f,.40f,.76f,.40f);block(.19f,.15f,.13f,.30f);block(.63f,.22f,.14f,.20f);drawCircle(c,w*.13f,Offset(w*.50f,h*.58f),style=Stroke(3f))}
-            BaseBuilding.NEURAL->{block(.18f,.14f,.64f,.48f);block(.42f,.62f,.16f,.19f);drawLine(c,Offset(w*.28f,h*.32f),Offset(w*.72f,h*.32f),3f);drawLine(c,Offset(w*.28f,h*.43f),Offset(w*.58f,h*.43f),3f)}
-            BaseBuilding.WORKSHOP->{block(.12f,.28f,.76f,.52f);block(.30f,.12f,.40f,.22f);drawCircle(c,w*.15f,Offset(w*.50f,h*.53f),style=Stroke(3f));drawLine(c,Offset(w*.50f,h*.38f),Offset(w*.50f,h*.68f),3f)}
-            BaseBuilding.SERVICE->{block(.16f,.28f,.68f,.52f);drawLine(c,Offset(w*.50f,h*.39f),Offset(w*.50f,h*.68f),6f);drawLine(c,Offset(w*.35f,h*.535f),Offset(w*.65f,h*.535f),6f)}
+            BaseBuilding.BARRACKS->{block(.09f,.42f,.67f,.38f);block(.28f,.30f,.32f,.12f);drawRect(Color(0xFF101F30),Offset(w*.34f,h*.59f),Size(w*.18f,h*.21f));for(i in 0..2)drawRect(c,Offset(w*(.16f+i*.22f),h*.51f),Size(w*.09f,h*.05f))}
+            BaseBuilding.FOUNDRY->{block(.10f,.45f,.65f,.36f);block(.14f,.20f,.13f,.26f);block(.57f,.29f,.13f,.17f);drawCircle(c,w*.13f,Offset(w*.43f,h*.63f),style=Stroke(3.dp.toPx()));drawCircle(Color(0xFF122536),w*.07f,Offset(w*.43f,h*.63f))}
+            BaseBuilding.NEURAL->{block(.25f,.73f,.44f,.10f);block(.43f,.50f,.10f,.23f);poly(Color(0xFF253B64),.12f,.22f,.80f,.14f,.80f,.51f,.12f,.59f);for(i in 0..2)drawLine(c,Offset(w*.22f,h*(.32f+i*.07f)),Offset(w*(.68f-i*.08f),h*(.26f+i*.07f)),2.dp.toPx())}
+            BaseBuilding.WORKSHOP->{block(.12f,.42f,.66f,.38f);block(.32f,.26f,.30f,.17f);drawCircle(c,w*.15f,Offset(w*.45f,h*.61f),style=Stroke(2.5.dp.toPx()));drawLine(c,Offset(w*.45f,h*.50f),Offset(w*.45f,h*.72f),2.dp.toPx())}
+            BaseBuilding.SERVICE->{block(.12f,.40f,.66f,.41f);block(.30f,.28f,.31f,.13f);drawLine(c,Offset(w*.45f,h*.48f),Offset(w*.45f,h*.71f),4.dp.toPx());drawLine(c,Offset(w*.31f,h*.595f),Offset(w*.59f,h*.595f),4.dp.toPx())}
+        }
+        if(built)drawCircle(Color(0xFF6DF6AE),w*.055f,Offset(w*.88f,h*.13f))
+    }
+}
+@Composable internal fun BaseLocationPanel(p:WorldPet,onReturn:()->Unit,onWake:()->Unit){
+    val at=p.adventure.pos==AdventureRules.base
+    val route=remember(p.adventure){AdventureRules.homeRoute(p.adventure)}
+    Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B3043))){
+        Column(Modifier.padding(9.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+            Text(if(at)"⌂ Робот на базі" else "◇ Робот в експедиції · сектор ${p.adventure.stage}",style=MaterialTheme.typography.titleSmall,color=Color(0xFF89E8DE))
+            if(p.mode!=WorldMode.AWAKE)TextButton(onClick=onWake){Text("Розбудити робота")}
+            else if(!at){
+                val can=AdventureRules.canExplore(p)
+                Text(if(route.isNotEmpty())"Відкритий маршрут · ${route.size} кроків" else "Безпечний маршрут ще не відкрито",style=MaterialTheme.typography.labelSmall)
+                Button(onClick=onReturn,enabled=can,modifier=Modifier.fillMaxWidth()){Text(if(route.isNotEmpty())"Повернутися на базу" else "Відкрити карту")}
+                if(!can)Text("Потрібен заряд, ремонт або завершення місії",style=MaterialTheme.typography.labelSmall)
+            }
+            else if(p.mission!=null)Text("Будівництво після завершення місії",style=MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -46,18 +74,19 @@ import androidx.compose.ui.unit.dp
 }
 @Composable internal fun BaseConstructionShop(p:WorldPet,onBuy:(BaseBuilding)->Unit,onOpen:(BaseBuilding)->Unit){
     Text("Будівництво · ${p.coins} 🪙",style=MaterialTheme.typography.titleLarge)
-    Text(p.message)
-    BaseBuilding.entries.forEach{b->Card(Modifier.fillMaxWidth()){
-        Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    val location=BaseRules.locationReason(p)
+    BaseBuilding.entries.forEach{b->Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B293C))){
+        Row(Modifier.padding(8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
             BuildingIcon(b,b in p.buildings)
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                Text(b.title,style=MaterialTheme.typography.titleMedium);Text(b.code,color=MaterialTheme.colorScheme.secondary)
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){
+                Text(b.title,style=MaterialTheme.typography.titleSmall)
+                Text(b.code+" · рів. "+b.level,color=Color(0xFF8AD9E6),style=MaterialTheme.typography.labelSmall)
                 Text(b.description,style=MaterialTheme.typography.bodySmall)
                 if(b in p.buildings)OutlinedButton(onClick={onOpen(b)}){Text("Відкрити")}
                 else{
                     val reason=BaseRules.buyReason(p,b)
-                    if(reason!=null)Text(reason,style=MaterialTheme.typography.labelSmall)
-                    Button(onClick={onBuy(b)},enabled=reason==null){Text("Побудувати · ${b.price} 🪙")}
+                    if(reason!=null&&reason!=location)Text(reason,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.error)
+                    Button(onClick={onBuy(b)},enabled=reason==null,contentPadding=PaddingValues(horizontal=12.dp,vertical=4.dp)){Text("Побудувати · ${b.price} 🪙",style=MaterialTheme.typography.labelMedium)}
                 }
             }
         }

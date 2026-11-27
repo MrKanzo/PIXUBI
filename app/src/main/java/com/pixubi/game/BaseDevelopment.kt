@@ -43,9 +43,16 @@ internal enum class BaseBuilding(val title:String,val code:String,val price:Int,
 internal object BaseRules{
     fun buildingFor(k:SquadKind)=if(k.requiredBarracks>1)BaseBuilding.FOUNDRY else BaseBuilding.BARRACKS
     fun available(p:WorldPet)=SquadRules.atBase(p)&&p.mode==WorldMode.AWAKE
+    fun locationReason(p:WorldPet):String?=when{
+        p.adventure.battle!=null||p.adventure.contact!=null->"Заверши зустріч із ворогом"
+        p.mission!=null->"Заверши місію"
+        p.mode!=WorldMode.AWAKE->"Розбуди робота"
+        p.adventure.pos!=AdventureRules.base->"Робот у секторі ${p.adventure.stage}, поза базою"
+        else->null
+    }
     fun buyReason(p:WorldPet,b:BaseBuilding):String?=when{
         b in p.buildings->"Уже побудовано"
-        !available(p)->"Потрібно повернутися на базу й розбудити робота"
+        locationReason(p)!=null->locationReason(p)
         p.level<b.level->"Потрібен рівень ${b.level}"
         b==BaseBuilding.FOUNDRY&&BaseBuilding.BARRACKS !in p.buildings->"Спочатку побудуй казарми"
         p.coins<b.price->"Не вистачає монет"

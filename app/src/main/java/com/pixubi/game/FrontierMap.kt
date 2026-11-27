@@ -52,12 +52,12 @@ private fun palette(stage:Int)=when((stage-1)%4){
     else->FrontierPalette("Промисловий каньйон",Color(0xFF62585A),Color(0xFF958477),Color(0xFF3D3948),Color(0xFF286D7C),Color(0xFFD78A53),Color(0xFFFFD389))
 }
 @Composable
-internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit){
+internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit,returnHome:Boolean=false){
     val a=p.adventure
     val latest by rememberUpdatedState(p)
     val change by rememberUpdatedState(onChange)
     val sound by rememberUpdatedState(onSound)
-    var target by remember(a.stage){mutableStateOf<GridPoint?>(null)}
+    var target by remember(a.stage){mutableStateOf<GridPoint?>(if(returnHome&&a.pos!=AdventureRules.base)AdventureRules.base else null)}
     var zoom by remember{mutableIntStateOf(1)}
     var follow by remember{mutableStateOf(true)}
     var centerRequest by remember{mutableIntStateOf(0)}
@@ -72,7 +72,9 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         val goal=target?:return@LaunchedEffect
         // One logical step per animation; interruption never grants unearned resources.
         var current=latest
-        val route=AdventureRules.mapRoute(current.adventure,goal)
+        val returning=goal==AdventureRules.base
+        val route=if(returning)AdventureRules.homeRoute(current.adventure)else AdventureRules.mapRoute(current.adventure,goal)
+        if(returning&&route.isEmpty()&&current.adventure.pos!=goal)change(current.copy(message="Немає відкритого безпечного маршруту до бази. Досліди прохід."))
         for(q in route){
             current=latest
             if(!AdventureRules.canExplore(current))break
@@ -80,7 +82,8 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             val next=EncounterRules.approach(current,q,System.currentTimeMillis())
             if(next==current)break
             change(next);sound(PixubiSound.TAP)
-            if(next.adventure.contact!=null||next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE)||MiningRules.node(next.adventure,q)!=null)break
+            val expected=if(returning)FrontierNetwork.destination(current.adventure.stage,q)?:q else q
+            if(next.adventure.contact!=null||next.adventure.battle!=null||next.adventure.pos!=expected||(!returning&&(AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE)||MiningRules.node(next.adventure,q)!=null)))break
             delay(340L)
         }
         target=null
@@ -89,7 +92,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     Row(verticalAlignment=Alignment.CenterVertically){
         Column(Modifier.weight(1f)){
             Text(colors.name,style=MaterialTheme.typography.titleLarge)
-            Text(if(target!=null)"Робот прямує до цілі" else "Сектор ${a.stage} · відкрий територію",style=MaterialTheme.typography.labelSmall)
+            Text(if(target==AdventureRules.base)"Повернення на базу" else if(target!=null)"Робот прямує до цілі" else if(a.pos==AdventureRules.base)"На базі" else "Сектор ${a.stage} · відкрий територію",style=MaterialTheme.typography.labelSmall)
             val explored=(0 until AdventureRules.MAP_W*AdventureRules.MAP_H).count{AdventureRules.visible(a,GridPoint(it%AdventureRules.MAP_W,it/AdventureRules.MAP_W))}
             Text("Відкрито ${explored*100/(AdventureRules.MAP_W*AdventureRules.MAP_H)}% · $explored/${AdventureRules.MAP_W*AdventureRules.MAP_H} зон",style=MaterialTheme.typography.labelSmall,color=Color(0xFF9CE2C7))
         }
@@ -99,10 +102,14 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         FilterChip(follow,{follow=!follow},label={Text("Стежити за роботом")})
         OutlinedButton(onClick={centerRequest++}){Text("До робота")}
     }
+    if(a.pos!=AdventureRules.base&&target==null){
+        val home=remember(a){AdventureRules.homeRoute(a)}
+        OutlinedButton(onClick={target=AdventureRules.base;follow=true},enabled=home.isNotEmpty()&&AdventureRules.canExplore(p),modifier=Modifier.fillMaxWidth()){Text(if(home.isEmpty())"Немає відкритого шляху додому" else "⌂ Повернутися на базу · ${home.size} кр.")}
+    }
     BoxWithConstraints(Modifier.fillMaxWidth()){
         val mapWidth=maxWidth*listOf(1f,3.2f,4.5f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
-        val route=remember(a,target){target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()}
+        val route=remember(a,target){target?.let{if(it==AdventureRules.base)AdventureRules.homeRoute(a)else AdventureRules.mapRoute(a,it)}?:emptyList()}
         val viewportHeight=minOf(mapHeight,maxWidth*1.05f)
         val hScroll=rememberScrollState()
         val vScroll=rememberScrollState()
@@ -128,7 +135,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                     detectTapGestures{tap->
                         if(target==null&&AdventureRules.canExplore(p)){
                             val q=FrontierProjection.at(tap.x/size.width*FrontierProjection.W,tap.y/size.height*FrontierProjection.H)
-                            if(q!=null&&AdventureRules.mapRoute(a,q).isNotEmpty())target=q
+                            if(q!=null&&(if(q==AdventureRules.base)AdventureRules.homeRoute(a)else AdventureRules.mapRoute(a,q)).isNotEmpty())target=q
                         }
                     }
                 }){

@@ -95,6 +95,29 @@ internal object AdventureRules{
         }
         return emptyList()
     }
+    // Search actual movement edges, including already discovered portal pairs.
+    // Each route entry is a cell to step on, not the remote portal exit.
+    fun homeRoute(a:AdventureState):List<GridPoint>{
+        if(a.pos==base)return emptyList()
+        val queue=ArrayDeque<GridPoint>();queue.add(a.pos)
+        val previous=mutableMapOf<GridPoint,Pair<GridPoint,GridPoint>>()
+        val visited=mutableSetOf(a.pos)
+        while(queue.isNotEmpty()){
+            val from=queue.removeFirst()
+            if(from==base){
+                val route=mutableListOf<GridPoint>();var q=from
+                while(q!=a.pos){val edge=previous.getValue(q);route.add(edge.second);q=edge.first}
+                return route.asReversed()
+            }
+            for(step in from.neighbors()){
+                if(!visible(a,step)||tile(a,step)==AdventureTile.WALL||FrontierSites.hostile(tile(a,step)))continue
+                val exit=FrontierNetwork.destination(a.stage,step)?:step
+                if(!visible(a,exit)||tile(a,exit)==AdventureTile.WALL||FrontierSites.hostile(tile(a,exit)))continue
+                if(visited.add(exit)){previous[exit]=from to step;queue.add(exit)}
+            }
+        }
+        return emptyList()
+    }
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
         if(a.battle!=null||!canAdvance(a)||a.stage>=100||!canExplore(p))return p

@@ -38,7 +38,7 @@ import android.content.pm.ActivityInfo
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit,onGuide:()->Unit={}){
+internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit,onGuide:()->Unit={},returnHome:Boolean=false){
     val a=p.adventure;val b=a.battle
     var retreat by remember{mutableStateOf(false)}
     var tacticsPanel by remember{mutableStateOf(false)}
@@ -146,13 +146,13 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
             TextButton(onClick=onGuide,enabled=!busy){Text("?")}
-            OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"База" else "Відступ")}
+            OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"Меню" else "Відступ")}
         }
         if(!wide&&b==null){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
         Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")}
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
-            FrontierMap(p,onChange,onSound)
+            FrontierMap(p,onChange,onSound,returnHome)
             MiningPanel(p,onChange)
             if(a.contact!=null)EncounterDialog(p,onChange,onSound)
             SquadPanel(p,onChange)
