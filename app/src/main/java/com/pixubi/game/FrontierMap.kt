@@ -63,11 +63,12 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     var centerRequest by remember{mutableIntStateOf(0)}
     var handledCenter by remember{mutableIntStateOf(0)}
     var direction by remember{mutableStateOf(RobotView.RIGHT)}
-    val loop=rememberInfiniteTransition(label="frontier scenery")
-    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(7000,easing=LinearEasing)),label="river")
-    val gait by loop.animateFloat(0f,1f,infiniteRepeatable(tween(WorldMotion.period(p.series,RobotAction.WALK),easing=LinearEasing)),label="walk")
-    val idle by loop.animateFloat(0f,1f,infiniteRepeatable(tween(WorldMotion.period(p.series,RobotAction.IDLE),easing=LinearEasing)),label="idle")
-    LaunchedEffect(target,a.stage){
+    val phase by rememberGamePhase(7000,RenderBudget.SCENERY_FPS)
+    val gait by rememberGamePhase(WorldMotion.period(p.series,RobotAction.WALK),enabled=target!=null)
+    val idle by rememberGamePhase(WorldMotion.period(p.series,RobotAction.IDLE),RenderBudget.SCENERY_FPS)
+    val foreground=LocalPixubiForeground.current
+    LaunchedEffect(target,a.stage,foreground){
+        if(!foreground)return@LaunchedEffect
         val goal=target?:return@LaunchedEffect
         // One logical step per animation; interruption never grants unearned resources.
         var current=latest
@@ -101,7 +102,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
     BoxWithConstraints(Modifier.fillMaxWidth()){
         val mapWidth=maxWidth*listOf(1f,2.5f,3.5f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
-        val route=target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()
+        val route=remember(a,target){target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()}
         val viewportHeight=minOf(mapHeight,maxWidth*1.05f)
         val hScroll=rememberScrollState()
         val vScroll=rememberScrollState()
@@ -157,9 +158,11 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                     RobotPreview(direction,if(target!=null)RobotAction.WALK else RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series),if(target!=null)gait else idle,false,Modifier.fillMaxSize())
                 }
                 // Draw the opaque shroud last, above terrain AND every actor.
-                Canvas(Modifier.fillMaxSize().zIndex(10000f)){
-                    scale(size.width/FrontierProjection.W,size.height/FrontierProjection.H,Offset.Zero){fogOfWar(a)}
-                }
+                Box(Modifier.fillMaxSize().zIndex(10000f).then(remember(a.pos,a.seen){
+                    Modifier.cachedScene{
+                        scale(size.width/FrontierProjection.W,size.height/FrontierProjection.H,Offset.Zero){fogOfWar(a)}
+                    }
+                }))
             }
             }
           }
