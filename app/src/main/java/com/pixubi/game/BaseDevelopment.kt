@@ -32,10 +32,10 @@ internal object GearAccess{
 }
 internal enum class BaseBuilding(val title:String,val code:String,val price:Int,val level:Int,val description:String){
     BARRACKS("Казарми","UNIT HUB",120,1,"Створення звичайних загонів, ремонт та ранги."),
-    FOUNDRY("Завод прототипів","OMEGA FORGE",420,6,"Важкі та повітряні юніти після відкриття технологій."),
-    NEURAL("Голографічний термінал","NEURAL LINK",180,2,"Купівля рівнів бойового модуля командира."),
-    SERVICE("Сервісна станція","REPAIR LAB",150,1,"Купівля зарядних, ремонтних і синхромодулів."),
-    WORKSHOP("Майстерня","FABRICATOR",160,2,"Крафт спорядження й бойових юнітів із видобутих матеріалів.");
+    FOUNDRY("Завод прототипів","OMEGA FORGE",420,10,"Важкі та повітряні юніти після відкриття технологій."),
+    NEURAL("Голографічний термінал","NEURAL LINK",180,7,"Купівля рівнів бойового модуля командира."),
+    SERVICE("Сервісна станція","REPAIR LAB",150,3,"Купівля зарядних, ремонтних і синхромодулів."),
+    WORKSHOP("Майстерня","FABRICATOR",160,5,"Крафт спорядження й бойових юнітів із видобутих матеріалів.");
     companion object{
         fun decode(raw:String)=raw.split(",").mapNotNull{id->entries.firstOrNull{it.name==id}}.toSet()
     }
@@ -50,10 +50,11 @@ internal object BaseRules{
         p.adventure.pos!=AdventureRules.base->"Робот у секторі ${p.adventure.stage}, поза базою"
         else->null
     }
+    fun unlocked(p:WorldPet,b:BaseBuilding)=b in p.buildings||p.level>=b.level
     fun buyReason(p:WorldPet,b:BaseBuilding):String?=when{
         b in p.buildings->"Уже побудовано"
-        locationReason(p)!=null->locationReason(p)
-        p.level<b.level->"Потрібен рівень ${b.level}"
+        !unlocked(p,b)->"Відкриється на рівні ${b.level}"
+        p.adventure.battle!=null||p.adventure.contact!=null->"Заверши зустріч із ворогом"
         b==BaseBuilding.FOUNDRY&&BaseBuilding.BARRACKS !in p.buildings->"Спочатку побудуй казарми"
         p.coins<b.price->"Не вистачає монет"
         else->null
@@ -78,7 +79,7 @@ internal object BaseRules{
         BaseBuilding.NEURAL !in p.buildings->"Потрібен NEURAL LINK"
         !available(p)->"Потрібно повернутися на базу"
         p.neuralRank>=3->"Максимальний рівень"
-        p.level<2+p.neuralRank*4->"Потрібен рівень ${2+p.neuralRank*4}"
+        p.level<BaseBuilding.NEURAL.level+p.neuralRank*4->"Потрібен рівень ${BaseBuilding.NEURAL.level+p.neuralRank*4}"
         p.coins<neuralPrice(p)->"Не вистачає монет"
         else->null
     }

@@ -25,8 +25,28 @@ class BaseDevelopmentTest{
         assertEquals(built.coins-225,q.coins)
         assertEquals(q.coins,BaseRules.recruit(q,SquadKind.ASSAULT,3).coins)
     }
+    @Test fun constructionUnlocksInLevelOrderAndWorksAwayFromBase(){
+        val p=pet().copy(adventure=AdventureState(pos=GridPoint(1,2)))
+        assertFalse(BaseRules.available(p))
+        assertNull(BaseRules.buyReason(p,BaseBuilding.BARRACKS))
+        val built=BaseRules.buy(p,BaseBuilding.BARRACKS)
+        assertEquals(p.adventure,built.adventure)
+        assertEquals(p.coins-120,built.coins)
+        assertTrue(BaseBuilding.BARRACKS in built.buildings)
+        assertEquals(0,BaseRules.recruitLimit(built,SquadKind.ASSAULT))
+        for(b in BaseBuilding.entries.filter{it.level>1}){
+            val low=built.copy(xp=RobotProgress.requiredXp(b.level-1))
+            assertFalse(BaseRules.unlocked(low,b))
+            assertEquals(low.coins,BaseRules.buy(low,b).coins)
+            val high=low.copy(xp=RobotProgress.requiredXp(b.level))
+            assertTrue(BaseRules.unlocked(high,b))
+            assertTrue(b in BaseRules.buy(high,b).buildings)
+        }
+        val veteran=p.copy(buildings=setOf(BaseBuilding.FOUNDRY))
+        assertTrue(BaseRules.unlocked(veteran,BaseBuilding.FOUNDRY))
+    }
     @Test fun neuralRequiresBuildingAndLevel(){
-        val p=pet().copy(xp=RobotProgress.requiredXp(2))
+        val p=pet().copy(xp=RobotProgress.requiredXp(BaseBuilding.NEURAL.level))
         assertEquals(0,BaseRules.buyNeural(p).neuralRank)
         val built=BaseRules.buy(p,BaseBuilding.NEURAL)
         val q=BaseRules.buyNeural(built)
