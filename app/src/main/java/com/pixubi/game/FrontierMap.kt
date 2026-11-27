@@ -107,7 +107,8 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         OutlinedButton(onClick={target=AdventureRules.base;follow=true},enabled=home.isNotEmpty()&&AdventureRules.canExplore(p),modifier=Modifier.fillMaxWidth()){Text(if(home.isEmpty())"Немає відкритого шляху додому" else "⌂ Повернутися на базу · ${home.size} кр.")}
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
-        val mapWidth=maxWidth*listOf(1f,3.2f,4.5f)[zoom]
+        val viewportWidth=maxWidth
+        val mapWidth=viewportWidth*listOf(1f,3.2f,4.5f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
         val route=remember(a,target){target?.let{if(it==AdventureRules.base)AdventureRules.homeRoute(a)else AdventureRules.mapRoute(a,it)}?:emptyList()}
         val viewportHeight=minOf(mapHeight,maxWidth*1.05f)
@@ -176,7 +177,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
           if(speech!=null){
               val sx=px+actorSize/2-with(density){hScroll.value.toDp()}
               val sy=py+actorSize*.18f-with(density){vScroll.value.toDp()}
-              if(sx>=0.dp&&sx<=maxWidth&&sy>=-actorSize&&sy<=viewportHeight)ComicAt(speech,sx,sy,compact=true)
+              if(sx>=0.dp&&sx<=viewportWidth&&sy>=-actorSize&&sy<=viewportHeight)ComicAt(speech,sx,sy,compact=true)
           }
         }
     }
