@@ -387,6 +387,7 @@ private fun DrawScope.headGear(g:RobotGear?,side:Boolean,a:Color) {
         }
         else -> Unit
     }
+    translate(100f,55f){drawVariantHelmet(g,side,a,1)}
 }
 private fun DrawScope.chestGear(g:RobotGear?,side:Boolean,a:Color) {
     if(g==RobotGear.ARMOR) {
@@ -407,6 +408,7 @@ private fun DrawScope.chestGear(g:RobotGear?,side:Boolean,a:Color) {
             drawCircle(shell,3f,Offset(100f,104f))
         }
     }
+    translate(100f,90f){drawVariantArmor(g,side,a,1)}
 }
 private fun DrawScope.backGear(g:RobotGear?,side:Boolean,a:Color) {
     if(g!=RobotGear.BATTERY && g!=RobotGear.BOOSTER)return

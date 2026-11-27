@@ -59,9 +59,9 @@ internal object SymbiontCatalog {
     }
 }
 private val ink=Color(0xFF080D12)
-private val shell=Color(0xFF20292B)
-private val pearl=Color(0xFFC1C4AE)
-private val shade=Color(0xFF4D5752)
+private val shell=Color(0xFF242634)
+private val pearl=Color(0xFF727A8E)
+private val shade=Color(0xFF3C4358)
 private val tendon=Color(0xFF643F49)
 private val fang=Color(0xFFE1DCC4)
 private fun DrawScope.plate(s:String,c:Color=pearl){
@@ -248,6 +248,7 @@ private fun DrawScope.body(f:SymbiontForm,a:Color,side:Boolean,phase:Float,grow:
     drawCircle(ink,11f,core);drawCircle(a.copy(alpha=.22f),15f,core)
     drawCircle(a,8f,core,style=Stroke(2f));drawCircle(a,4f+sin(phase*6.28f),core)
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(Color.White,12f,core,style=Stroke(1.5f))
+    drawVariantArmor(gear,side,a,f.grade,true)
 }
 private fun DrawScope.symbiontEye(a:Color,x:Float,y:Float,face:RobotFace){
     if(face==RobotFace.HAPPY){
@@ -271,12 +272,12 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
     val jaw=if(sleepy)0f else if(action==RobotAction.ATTACK)(18f+g*3f)*sin(phase*PI.toFloat()).coerceAtLeast(0f) else when(face){RobotFace.HAPPY->7f;RobotFace.SURPRISE->14f;RobotFace.ANGRY->6f;else->2f+g*1.1f}
     if(side){
         val shape=when(g){
-            0->"M -25 -11 Q -30 -34 0 -36 Q 28 -36 34 -12 L 39 2 Q 32 22 8 23 L -17 17 Z"
+            0->"M -25 -11 L -17 -34 L 8 -32 L 28 -13 L 49 -1 L 42 7 L 15 18 L -17 17 Z"
             1->"M -28 -12 L -15 -35 L 15 -37 L 34 -20 L 46 1 L 31 16 L 2 24 L -20 17 Z"
             2->"M -31 -12 L -18 -38 L 15 -35 L 37 -16 L 53 0 L 43 12 L 16 25 L -22 18 Z"
             else->"M -35 -12 L -22 -40 L 17 -38 L 36 -20 L 59 -5 L 56 9 L 24 22 L 2 28 L -24 17 Z"
         }
-        if(g<2)for(i in 0..1)translate(-13f+i*9f,-27f){rotate(-16f+sin(phase*6.28f+i)*7f,Offset.Zero){plate("M -6 4 L -12 -24 L 7 -11 L 12 2 Z");line(a,-5f,-15f,4f,-2f)}}
+        if(g<2)for(i in 0..1)translate(-13f+i*9f,-27f){rotate(-16f+sin(phase*6.28f+i)*7f,Offset.Zero){plate("M -7 4 L -22 -34 L 10 -15 L 13 2 Z");line(a,-5f,-15f,4f,-2f)}}
         else for(i in 0 until f.horns)translate(-24f+i*10f,-26f){rotate(-35f+i*12f,Offset.Zero){crystal(a,7f,22f+g*3f)}}
         plate(shape)
         plate("M 0 -25 L 23 -25 L 37 -13 L 28 0 L 6 7 L -5 -6 Z",ink)
@@ -333,6 +334,7 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
     }
     if(gear==RobotGear.SCANNER)translate(0f,-36f){plate("M -9 -6 L 9 -6 L 14 2 L -14 2 Z");line(a,-7f,-2f,7f,-2f)}
     if(gear==RobotGear.HELMET)plate("M -23 -26 Q 0 -47 23 -26 L 17 -21 Q 0 -36 -17 -21 Z")
+    drawVariantHelmet(gear,side,a,g,true)
 }
 @Composable
 internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,debug:Boolean,modifier:Modifier){
@@ -347,7 +349,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
     Canvas(modifier){
         val frameWidth=if(side)if(f.grade==4)510f else 470f else if(f.grade==4)360f else 340f
         val frameHeight=if(f.grade==4){if(flight)405f else 350f}else 285f
-        val fit=if(loadout.arena)size.height*.70f/(f.leg+f.depth*1.1f+38f+f.grade*4f) else min(size.width/frameWidth,size.height/frameHeight)*f.scale
+        val fit=if(loadout.arena)min(size.height*.45f/(f.leg+f.depth*1.1f+38f+f.grade*4f),size.width*.58f/frameWidth) else min(size.width/frameWidth,size.height/frameHeight)*f.scale
         val floor=size.height*(if(loadout.arena).89f else .87f)
         val lift=when{flight->38f+9f*sin(phase*6.28f);action==RobotAction.JUMP->sin(phase*PI.toFloat()).coerceAtLeast(0f)*35f;else->0f}
         val squat=if(action==RobotAction.SLEEP)f.leg*.42f else 0f
@@ -382,7 +384,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
                     for(i in if(side)listOf(2,3)else listOf(1,3))paw(i)
                     translate(if(side)f.length*.90f else 0f,-f.depth*.68f-f.shoulderRise*.75f-(if(side)0f else 5f)){
                         rotate(if(side&&action==RobotAction.ATTACK)sin(phase*PI.toFloat())*9f else if(side&&flight)-4f+sin(phase*6.28f)*2f else 0f,Offset.Zero){
-                            val headScale=if(f.grade==0)1.06f else .98f+f.grade*.045f
+                            val headScale=if(f.grade==0).88f else .83f+f.grade*.025f
                             scale(headScale,headScale,Offset.Zero){head(f,a,side,face,phase,action,e.equipped(RobotSlot.HEAD))}
                         }
                     }

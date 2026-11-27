@@ -125,6 +125,7 @@ private fun DrawScope.nexusHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Boo
         RobotGear.HELMET->plate("M -27 -31 Q 0 -55 27 -31 L 21 -27 Q 0 -45 -21 -27 Z")
         else->Unit
     }
+    drawVariantHelmet(gear,side,a,g)
 }
 private fun DrawScope.nexusBody(f:NexusForm,side:Boolean,a:Color,e:RobotEquipment,phase:Float,sep:Float){
     val g=f.grade;val h=f.hips;val w=if(side)23f else f.shoulder-2f
@@ -158,6 +159,7 @@ private fun DrawScope.nexusBody(f:NexusForm,side:Boolean,a:Color,e:RobotEquipmen
         reactor(a,coreR,e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)
     }
     if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR)for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){plate("M 16 -8 L 30 -8 L 34 12 L 19 20 Z",slate)}
+    drawVariantArmor(e.equipped(RobotSlot.CHEST),side,a,f.grade)
 }
 private fun DrawScope.nexusOrbit(f:NexusForm,side:Boolean,a:Color,phase:Float,sep:Float,gear:RobotGear?){
     if(f.grade>=2){

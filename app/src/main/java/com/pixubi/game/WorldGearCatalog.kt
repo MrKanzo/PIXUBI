@@ -28,6 +28,7 @@ internal object WorldGearCatalog {
     fun category(g:RobotGear)=when(g){
         RobotGear.BLASTER_L,RobotGear.BLASTER_R,RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R,
         RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R->WorldCategory.WEAPONS
+        RobotGear.HELMET_SHADOW,RobotGear.HELMET_TITAN,RobotGear.HELMET_PRISM,RobotGear.ARMOR_SHADOW,RobotGear.ARMOR_PRISM,
         RobotGear.HELMET,RobotGear.ARMOR,RobotGear.LIGHT_ARMOR,RobotGear.HEAVY_ARMOR,RobotGear.SHIELD_L,RobotGear.SHIELD_R,
         RobotGear.BOOTS,RobotGear.MAG_BOOTS->WorldCategory.ARMOR
         RobotGear.REACTOR,RobotGear.BATTERY,RobotGear.POWERBANK_MINI,RobotGear.POWERBANK_MAX->WorldCategory.ENERGY
@@ -57,8 +58,6 @@ internal object WorldGearCatalog {
         else->ammo(g)?.let{(a,n)->"${a.title}: $n шт. за бойову місію."}?:if(category(g)==WorldCategory.WEAPONS)"Енергетична зброя ближнього бою · не потребує касет." else "Постійний модуль спорядження."
     }
     fun visual(g:RobotGear)=when(g){
-        RobotGear.VISOR->RobotGear.SCANNER
-        RobotGear.LIGHT_ARMOR,RobotGear.HEAVY_ARMOR->RobotGear.ARMOR
         RobotGear.POWERBANK_MINI,RobotGear.POWERBANK_MAX->RobotGear.BATTERY
         RobotGear.REPAIR_DRONE->RobotGear.BOOSTER
         RobotGear.MAG_BOOTS->RobotGear.BOOTS

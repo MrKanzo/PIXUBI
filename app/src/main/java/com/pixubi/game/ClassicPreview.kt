@@ -119,6 +119,7 @@ private fun DrawScope.classicHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:B
         RobotGear.HELMET->plate("M -28 -31 Q 0 -55 28 -31 L 22 -27 Q 0 -45 -22 -27 Z")
         else->Unit
     }
+    drawVariantHelmet(gear,side,a,g)
 }
 private fun DrawScope.reactor(a:Color,r:Float,upgraded:Boolean){
     drawCircle(edge,r+3f,Offset.Zero);drawCircle(slate,r+1f,Offset.Zero)
@@ -158,6 +159,7 @@ private fun DrawScope.classicBody(f:ClassicForm,side:Boolean,a:Color,e:RobotEqui
         else plate("M -19 ${h-5} L -7 ${h-7} L 0 ${h+9} L -12 ${h+12} Z",slate)
     }
     if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR){plate("M -27 -7 L -15 -11 L -12 18 L -24 27 L -32 7 Z");if(!side)scale(-1f,1f,Offset.Zero){plate("M -27 -7 L -15 -11 L -12 18 L -24 27 L -32 7 Z")}}
+    drawVariantArmor(e.equipped(RobotSlot.CHEST),side,a,f.grade)
 }
 private fun DrawScope.arm(form:ClassicForm,x:Float,angle:Float,elbow:Float,wrist:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,debug:Boolean){
     val g=form.grade

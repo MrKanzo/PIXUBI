@@ -133,6 +133,7 @@ private fun DrawScope.body(f:MyceliaForm,a:Color,side:Boolean,phase:Float,bloom:
     if(f.grade>=2)translate(if(side)l*.67f else 0f,7f){flower(a,10f+f.grade,phase)}
     else drawCircle(cyan,5f,Offset(if(side)l*.67f else 0f,7f))
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(cyan,13f,Offset(0f,0f),style=Stroke(1.5f))
+    drawVariantArmor(gear,side,a,f.grade,true)
 }
 private fun DrawScope.myceliaEye(a:Color,x:Float,y:Float,face:RobotFace){
     if(face==RobotFace.HAPPY){
@@ -162,7 +163,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
     val ear=if(g==0)37f else 32f+g*2f
     for(s in if(side)listOf(-1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){
         translate(if(side)15f else 19f,-18f){rotate(25f+sin(phase*6.28f)*6f,Offset.Zero){
-            petal(a,15f,ear)
+            petal(a,12f,ear*1.24f)
             if(g>=2)rotate(26f,Offset.Zero){petal(a,9f,ear*.74f)}
         }}
     }
@@ -170,12 +171,12 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
         for(s in if(side)listOf(-1f)else listOf(-1f,1f))scale(s,1f,Offset.Zero){translate(5f,-24f){tendril(a,22f+g*3f,-30f-g*4f,phase+s*.12f,9f)}}
     }
     if(side){
-        plate(if(g==0)"M -23 -12 Q -25 -32 1 -34 Q 27 -32 31 -10 L 35 1 Q 27 20 5 24 Q -25 19 -23 -12 Z" else "M -25 -9 Q -22 -35 4 -34 Q 22 -30 28 -15 L 44 -3 L 38 9 L 17 19 L -9 21 Q -27 8 -25 -9 Z")
+        plate(if(g==0)"M -23 -12 Q -22 -33 2 -34 L 25 -18 L 46 -2 L 37 8 L 13 20 L -13 17 Q -25 9 -23 -12 Z" else "M -25 -9 Q -22 -35 4 -34 Q 22 -30 28 -15 L 44 -3 L 38 9 L 17 19 L -9 21 Q -27 8 -25 -9 Z")
         drawOval(shade,Offset(6f,-18f),Size(22f,17f))
         if(blink)line(ink,9f,-10f,25f,-10f,1.8f)else{
-            myceliaEye(a,17f,-10f,face)
+            myceliaEye(cyan,17f,-10f,face)
         }
-        drawCircle(ink,2.8f,Offset(if(g==0)30f else 39f,0f))
+        drawCircle(ink,2.8f,Offset(if(g==0)43f else 39f,0f))
         myceliaMouth(25f,10f,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face)
     }else{
         plate(if(g==0)"M 0 -35 Q 34 -34 35 -6 Q 31 24 0 28 Q -31 24 -35 -6 Q -34 -34 0 -35 Z" else "M 0 -36 Q 27 -34 34 -13 Q 37 12 18 23 L 0 28 L -18 23 Q -37 12 -34 -13 Q -27 -34 0 -36 Z")
@@ -193,6 +194,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
     if(g==4)translate(0f,-65f){drawOval(cyan,Offset(-24f,-6f),Size(48f,12f),style=Stroke(1.6f))}
     if(gear==RobotGear.SCANNER)translate(0f,-33f){plate("M -10 -5 L 10 -5 L 14 2 L -14 2 Z");line(a,-7f,-2f,7f,-2f)}
     if(gear==RobotGear.HELMET)plate("M -25 -26 Q 0 -48 25 -26 L 19 -20 Q 0 -35 -19 -20 Z")
+    drawVariantHelmet(gear,side,a,g,true)
 }
 @Composable
 internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,debug:Boolean,modifier:Modifier){
@@ -204,7 +206,7 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
     val bloom=if(action==RobotAction.MYCO_BLOOM)sin(phase*PI.toFloat()).coerceAtLeast(0f)else 0f
     val heal=action==RobotAction.BIO_REGENERATE
     Canvas(modifier){
-        val fit=if(loadout.arena)size.height*.70f/(f.leg+f.depth*.65f+42f+f.grade*5f) else min(size.width/(if(side)390f else 310f),size.height/(if(f.grade==4)310f else 245f))*f.scale
+        val fit=if(loadout.arena)min(size.height*.45f/(f.leg+f.depth*.65f+42f+f.grade*5f),size.width*.58f/(if(side)390f else 310f)) else min(size.width/(if(side)390f else 310f),size.height/(if(f.grade==4)310f else 245f))*f.scale
         val floor=size.height*(if(loadout.arena).89f else .88f)
         val lift=when{flight->36f+5f*sin(phase*6.28f);action==RobotAction.JUMP->32f*sin(phase*PI.toFloat()).coerceAtLeast(0f);else->0f}
         val squat=if(action==RobotAction.SLEEP)f.leg*.46f else 0f

@@ -38,6 +38,11 @@ internal object WorldRules{
     }
     val shop=RobotGear.entries.map{g->
         when(g){
+            RobotGear.HELMET_SHADOW->WorldOffer(g,220,4)
+            RobotGear.HELMET_TITAN->WorldOffer(g,360,8)
+            RobotGear.HELMET_PRISM->WorldOffer(g,480,12)
+            RobotGear.ARMOR_SHADOW->WorldOffer(g,320,6)
+            RobotGear.ARMOR_PRISM->WorldOffer(g,520,12)
             RobotGear.VISOR->WorldOffer(g,160,3)
             RobotGear.LIGHT_ARMOR->WorldOffer(g,145,3)
             RobotGear.HEAVY_ARMOR->WorldOffer(g,480,12)

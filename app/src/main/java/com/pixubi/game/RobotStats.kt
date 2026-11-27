@@ -38,6 +38,11 @@ internal object RobotBalance {
     }
     fun spec(g:RobotGear):RobotGearSpec=RobotGearSpec(when(g) {
         RobotGear.SCANNER->RobotStats(energy=-5,intelligence=12)
+        RobotGear.HELMET_SHADOW->RobotStats(defense=7,speed=5)
+        RobotGear.HELMET_TITAN->RobotStats(durability=22,defense=14,speed=-5)
+        RobotGear.HELMET_PRISM->RobotStats(intelligence=15,defense=9,energy=4)
+        RobotGear.ARMOR_SHADOW->RobotStats(durability=20,defense=12,speed=8)
+        RobotGear.ARMOR_PRISM->RobotStats(durability=35,defense=16,energy=14)
         RobotGear.HELMET->RobotStats(durability=8,defense=5,speed=-2)
         RobotGear.ARMOR->RobotStats(durability=25,defense=15,speed=-10,heat=-3)
         RobotGear.REACTOR->RobotStats(energy=30,attack=4,heat=-8)

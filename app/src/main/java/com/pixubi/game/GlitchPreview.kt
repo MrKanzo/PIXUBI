@@ -130,6 +130,7 @@ private fun DrawScope.glitchHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Bo
         RobotGear.HELMET->plate("M -27 -30 Q 0 -53 27 -30 L 20 -27 Q 0 -44 -20 -27 Z")
         else->Unit
     }
+    drawVariantHelmet(gear,side,a,g)
 }
 private fun DrawScope.body(form:GlitchForm,side:Boolean,a:Color,e:RobotEquipment){
     val g=form.grade;val h=form.hips
@@ -160,6 +161,7 @@ private fun DrawScope.body(form:GlitchForm,side:Boolean,a:Color,e:RobotEquipment
     poly("M -21 -12 L 0 -4 L 21 -12 L 17 0 L 0 7 L -17 0 Z",dark)
     if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR)plate("M -24 -5 L -14 -9 L -10 18 L -23 25 L -29 7 Z")
     if(e.equipped(RobotSlot.CHEST)==RobotGear.REACTOR)drawCircle(a,13f,Offset(if(side)9f else 0f,11f),style=Stroke(1.5f))
+    drawVariantArmor(e.equipped(RobotSlot.CHEST),side,a,form.grade)
 }
 private fun DrawScope.terminal(a:Color,phase:Float){
     drawRoundRect(a.copy(alpha=.14f),Offset(-30f,-24f),Size(60f,43f),CornerRadius(3f))

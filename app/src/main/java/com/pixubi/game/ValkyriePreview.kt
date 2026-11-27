@@ -179,6 +179,7 @@ private fun DrawScope.valkHead(g:Int,side:Boolean,a:Color,f:RobotFace,blink:Bool
         RobotGear.HELMET->plate("M -27 -31 Q 0 -55 27 -31 L 21 -27 Q 0 -45 -21 -27 Z")
         else->Unit
     }
+    drawVariantHelmet(gear,side,a,g)
 }
 private fun DrawScope.reactor(a:Color,r:Float,upgraded:Boolean){
     drawCircle(edge,r+3f,Offset.Zero);drawCircle(gold,r+1f,Offset.Zero)
@@ -226,6 +227,7 @@ private fun DrawScope.valkBody(f:ValkyrieForm,side:Boolean,a:Color,e:RobotEquipm
         }
     }
     if(e.equipped(RobotSlot.CHEST)==RobotGear.ARMOR){plate("M -25 -7 L -13 -11 L -10 17 L -22 24 L -29 6 Z");if(!side)scale(-1f,1f,Offset.Zero){plate("M -25 -7 L -13 -11 L -10 17 L -22 24 L -29 6 Z")}}
+    drawVariantArmor(e.equipped(RobotSlot.CHEST),side,a,f.grade)
 }
 private fun DrawScope.arm(form:ValkyrieForm,x:Float,angle:Float,elbow:Float,wrist:Float,side:Boolean,far:Boolean,a:Color,gear:RobotGear?,debug:Boolean){
     val g=form.grade

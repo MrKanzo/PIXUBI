@@ -192,6 +192,7 @@ private fun DrawScope.hood(side:Boolean,g:Int,a:Color,f:RobotFace,blink:Boolean,
         RobotGear.HELMET->{metal("M -24 -34 Q 0 -54 24 -34 L 17 -30 Q 0 -44 -17 -30 Z",steel,graphite)}
         else->Unit
     }
+    drawVariantHelmet(gear,side,a,g)
 }
 private fun DrawScope.scarfTail(form:KageForm,side:Boolean,a:Color,phase:Float,action:RobotAction,trail:Float) {
     val swing=sin(phase*2f*PI.toFloat())*(if(action==RobotAction.SLEEP)0f else 6f+trail*8f)
@@ -526,7 +527,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                         rotate(lean,Offset(0f,hips)){rear();arm(form,if(g==4)-3f else -4f,4f,farA,true,a,e.equipped(view.farHand()),swordReady&&view.farHand()==RobotSlot.LEFT_HAND,bends.farElbow,bends.wrist,showSockets,profile=true)}
                         leg(form,nearX,hips,nt,ns,true,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
                         rotate(lean,Offset(0f,hips)){
-                            torso(form,true,a,e)
+                            torso(form,true,a,e);drawVariantArmor(e.equipped(RobotSlot.CHEST),true,a,g)
                             arm(form,if(g==4)-3f else 0f,4f,nearA,false,a,e.equipped(view.nearHand()),swordReady&&view.nearHand()==RobotSlot.LEFT_HAND,bends.nearElbow,bends.wrist,showSockets,profile=true)
                             translate(if(g==4)-5f else 0f,if(g==4)-34f else -32f){scale(if(g==4)form.head*.94f else form.head,if(g==4)form.head*.94f else form.head,Offset(0f,22f)){hood(true,g,a,if(action==RobotAction.SLEEP)RobotFace.SLEEP else face,phase>.95f&&action==RobotAction.IDLE,e.equipped(RobotSlot.HEAD))}}
                         }
@@ -534,7 +535,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                         leg(form,farX,hips,ft,fs,false,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
                         leg(form,nearX,hips,nt,ns,false,false,a,boots,dash!=null||action==RobotAction.WALK||action==RobotAction.RUN,bends.ankle,showSockets)
                         rotate(lean,Offset(0f,hips)){
-                            rear();torso(form,false,a,e)
+                            rear();torso(form,false,a,e);drawVariantArmor(e.equipped(RobotSlot.CHEST),false,a,g)
                             // Shoulder bridges remain visible between the chest and shoulder armor.
                             for(s in listOf(-1f,1f)){line(s*22f,3f,s*form.shoulders,3f,graphite,10f)}
                             arm(form,-form.shoulders,4f,RobotMotion.frontArmAngle(farA,false),false,a,e.equipped(RobotSlot.RIGHT_HAND),false,-bends.farElbow,bends.wrist,showSockets)

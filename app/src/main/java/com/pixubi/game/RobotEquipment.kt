@@ -34,7 +34,9 @@ internal enum class RobotGear(val title:String,val slot:RobotSlot) {
     ARC_L("Дуговий випромінювач",RobotSlot.LEFT_HAND),
     ARC_R("Дуговий випромінювач",RobotSlot.RIGHT_HAND),
     REPAIR_L("Мультитул ремонту",RobotSlot.LEFT_HAND),
-    REPAIR_R("Мультитул ремонту",RobotSlot.RIGHT_HAND);
+    REPAIR_R("Мультитул ремонту",RobotSlot.RIGHT_HAND),
+    HELMET_SHADOW("Шолом SHADOW",RobotSlot.HEAD), HELMET_TITAN("Шолом TITAN",RobotSlot.HEAD), HELMET_PRISM("Шолом PRISM",RobotSlot.HEAD),
+    ARMOR_SHADOW("Броня SHADOW",RobotSlot.CHEST), ARMOR_PRISM("Броня PRISM",RobotSlot.CHEST);
     companion object {
         fun forSlot(slot:RobotSlot)=entries.filter { it.slot==slot }
     }
