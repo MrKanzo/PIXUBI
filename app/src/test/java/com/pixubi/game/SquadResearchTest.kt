@@ -30,7 +30,7 @@ class SquadResearchTest{
     @Test fun advancePreservesVictoriesAndOldRosterLicense(){
         val a=AdventureState(cleared=AdventureRules.encounters(AdventureState()).map{AdventureRules.id(it)}.toSet())
         val next=AdventureRules.advanceMap(pet().copy(adventure=a)).adventure
-        assertEquals(2,next.stage);assertEquals(10,SquadResearch.victories(next))
+        assertEquals(2,next.stage);assertEquals(AdventureRules.encounters(a).size,SquadResearch.victories(next))
         val migrated=AdventureCodec.decode("1|0,2|||0||16|0|SIEGE,125|2|")
         assertTrue(SquadKind.SIEGE in migrated.licensed)
         val p=pet().copy(adventure=migrated)

@@ -4,7 +4,7 @@ import org.junit.Test
 class ExpandedShopTest{
     private fun pet()=WorldRules.hatch(RobotSeries.CLASSIC,"Test",1000L).copy(xp=RobotProgress.requiredXp(20),coins=2000)
     @Test fun everyGearHasCategoryAndPrice(){
-        assertEquals(31,RobotGear.entries.size)
+        assertEquals(36,RobotGear.entries.size)
         assertEquals(RobotGear.entries.size,WorldRules.shop.size)
         RobotGear.entries.forEach{g->assertTrue(WorldRules.shop.first{it.gear==g}.price>0);assertTrue(WorldGearCatalog.category(g).title.isNotBlank())}
     }

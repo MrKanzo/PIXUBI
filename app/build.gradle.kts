@@ -15,8 +15,8 @@ android {
         minSdk = 26
         targetSdk = 36
         buildConfigField("boolean", "PLAY_DISTRIBUTION", playDistribution.toString())
-        versionCode = 130
-        versionName = "0.99.6"
+        versionCode = 131
+        versionName = "0.99.7"
     }
     // Release uses a permanent package ID. Debug is installed alongside it.
     signingConfigs {

@@ -90,7 +90,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             val navigation=listOf(listOf("home" to "База","missions" to "Місії","adventure" to "Експедиція","shop" to "Магазин"),
                 listOf("construction" to "Будівництво","inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
             navigation.forEach{group->Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                group.forEach{(id,label)->FilterChip(page==id,{page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
+                group.forEach{(id,label)->FilterChip(page==id,{page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(navSymbol(id)+" "+label)})}
             }}
             if(page=="home"){
                 if(!guideProgress.finished&&!guideProgress.dismissed)Card(Modifier.fillMaxWidth()){
@@ -188,60 +188,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 OutlinedButton(onClick={page="archive";archiveSeries=p.series;archiveTier=p.tier}){Text("Відкрити архів")}
                 OutlinedButton(onClick={page="stats"}){Text("Характеристики")}
             }else if(page=="shop"||page=="inventory"){
-                Text(p.message)
-                if(page=="shop"){
-                    Text("Витратні матеріали · 25 монет за 3 шт.")
-                    listOf("Енергокомірки","Ремонтні набори","Модулі синхронізації").forEachIndexed{i,label->
-                        OutlinedButton(onClick={save(WorldRules.supplies(p,i))},enabled=p.coins>=25,modifier=Modifier.fillMaxWidth()){Text("$label +3 · 25 🪙")}
-                    }
-                }
-                Text(if(page=="shop")"Модулі для ${p.series.title}" else "Інвентар · ${p.series.title}")
-                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    FilterChip(category==null,{category=null;tab=null},label={Text("Усі")})
-                    WorldCategory.entries.forEach{c->FilterChip(category==c,{category=c;tab=null},label={Text(c.title)})}
-                }
-                val consumables=WorldSupply.entries.filter{(category==null||category==it.category)&&(page=="shop"||p.stock(it)>0)}
-                if(consumables.isNotEmpty())Text("Боєприпаси й витратні модулі",style=MaterialTheme.typography.titleMedium)
-                consumables.forEach{kind->
-                    Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-                        Text(kind.title+" · "+p.stock(kind)+" шт.",style=MaterialTheme.typography.titleMedium)
-                        Text(kind.description)
-                        if(page=="shop")Button(onClick={save(WorldRules.buySupply(p,kind))},enabled=p.coins>=kind.price&&p.level>=kind.level&&p.stock(kind)+kind.pack<=99){
-                            Text("+${kind.pack} шт. · ${kind.price} 🪙 · рівень ${kind.level}")
-                        }
-                        else if(!kind.isAmmo)OutlinedButton(onClick={save(WorldRules.useSupply(p,kind));onSound(PixubiSound.HAPPY)},enabled=p.mode==WorldMode.AWAKE&&p.mission==null){Text("Використати")}
-                    }}
-                }
-                WorldShowcase(p,RobotAction.IDLE,RobotFace.NEUTRAL,WorldFx.NONE,0,Modifier.fillMaxWidth().height(230.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    FilterChip(tab==null,{tab=null},label={Text("Усі слоти")})
-                    RobotSlot.entries.forEach{slot->FilterChip(tab==slot,{tab=slot},label={Text(WorldCatalog.slots(p.series,slot))})}
-                }
-                val offers=WorldRules.shop.filter{(tab==null||it.gear.slot==tab)&&(category==null||WorldGearCatalog.category(it.gear)==category)&&(page=="shop"||it.gear in p.owned)}
-                if(offers.isEmpty())Text("Поки порожньо.")
-                WorldGearCatalog.groupOffers(offers).forEach{group->
-                    val g=group.first().gear
-                    Card(Modifier.fillMaxWidth()){
-                        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-                            Text(GearAccess.title(p.series,g),style=MaterialTheme.typography.titleMedium)
-                            Text(RobotBalance.spec(g).delta.summary(),style=MaterialTheme.typography.bodySmall)
-                            Text(WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
-                            group.forEach{o->
-                                val item=o.gear
-                                val owned=item in p.owned
-                                val equipped=p.equipment.equipped(item.slot)==item
-                                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                    Column(Modifier.weight(1f)){
-                                        Text(WorldCatalog.slots(p.series,item.slot),style=MaterialTheme.typography.bodySmall)
-                                        GearAccess.reason(p,item)?.let{Text(it,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.error)}
-                                    }
-                                    if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,item))},enabled=p.mission==null&&p.adventure.battle==null&&(equipped||GearAccess.reason(p,item)==null)){Text(if(equipped)"Зняти" else "Одягнути")}
-                                    else Button(onClick={save(WorldRules.buy(p,item))},enabled=p.level>=o.level&&p.coins>=o.price){Text("${o.price} 🪙 · рівень ${o.level}")}
-                                }
-                            }
-                        }
-                    }
-                }
+                CompactMarket(p,inventory=page=="inventory",onChange={save(it)},onSound=onSound)
             }else{
                 Text("Характеристики · ${p.tier.title}",style=MaterialTheme.typography.titleMedium)
                 RobotStat.entries.forEach{stat->Row(Modifier.fillMaxWidth()){Text(stat.title,Modifier.weight(1f));Text(p.stats[stat].toString())}}
