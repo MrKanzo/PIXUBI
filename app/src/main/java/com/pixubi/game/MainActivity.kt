@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                 checkingUpdates=true
                 updater.check{result->checkingUpdates=false;updateDialog=result}
             }
-            LaunchedEffect(Unit){updater.checkDaily{release->updateDialog=PixubiUpdateResult.NewRelease(release)}}
+            LaunchedEffect(Unit){if(!BuildConfig.PLAY_DISTRIBUTION)updater.checkDaily{release->updateDialog=PixubiUpdateResult.NewRelease(release)}}
             CompositionLocalProvider(LocalPixubiForeground provides foreground){
             MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF98E6CD),secondary=Color(0xFFFFD58A),
                 background=Color(0xFF101A2E),surface=Color(0xFF19253C),onBackground=Color.White,onSurface=Color.White)){
