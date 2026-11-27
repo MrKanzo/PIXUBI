@@ -1,6 +1,7 @@
 package com.pixubi.game
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -10,7 +11,7 @@ import kotlin.math.min
 internal class ArenaProjection(val width:Float,val height:Float){
     val cell=width/5.85f
     val row=min(cell*.86f,height/3.9f)
-    val groundBottom=height-row*.46f
+    val groundBottom=height-row*.55f
     private fun depth(y:Float)=((y+.5f)/3f).coerceIn(0f,1f)
     fun perspective(y:Float)=.87f+.13f*depth(y)
     fun depth(q:GridPoint)=q.y+if(q.x%2==1).5f else 0f
@@ -26,6 +27,22 @@ internal class ArenaProjection(val width:Float,val height:Float){
     }
     fun foot(q:GridPoint)=project(q.x*.75f,depth(q)+.12f)
     fun scale(q:GridPoint)=.94f+.12f*(depth(q)/2f).coerceIn(0f,1f)
+    // Fit upright sprites within disjoint screen-space envelopes at rest.
+    // Use vertical separation for a shared lane and horizontal separation for nearby lanes.
+    fun envelope(q:GridPoint,occupied:List<GridPoint>):Size{
+        val foot=foot(q)
+        var w=min(cell*1.95f,2f*min(foot.x,width-foot.x)-2f)*scale(q).coerceAtMost(1f)
+        var h=min(cell*2.25f,min(height*.62f,foot.y/.89f))*scale(q).coerceAtMost(1f)
+        for(other in occupied.distinct().filter{it!=q}){
+            val dest=foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
+            if(dx>=cell*.60f){
+                // Wide separation in neighboring lanes: don't shrink for far-away opponents.
+                if(dy<row*1.15f)w=min(w,dx*.94f)
+                else if(dx<cell*1.65f)h=min(h,dy*.86f)
+            }else if(dy>.01f)h=min(h,dy*.82f)
+        }
+        return Size(w.coerceAtLeast(1f),h.coerceAtLeast(1f))
+    }
     fun hit(p:Offset):GridPoint?=AdventureRules.arenaCells.firstOrNull{q->
         val v=vertices(q)
         var positive=false;var negative=false
