@@ -85,7 +85,7 @@ internal object SquadRules{
     }
     fun canHit(b:ArenaBattle,i:Int,e:ArenaBot):Boolean{
         val u=b.allies.getOrNull(i)?:return false
-        return ready(b,i)&&e.hp>0&&(u.kind.range==1||u.charges>0)&&(if(u.kind==SquadKind.ASSAULT)AdventureRules.dashReachable(b,u.pos,e.pos,ArenaAttackStyle.KATANA.reach) else AdventureRules.arenaDistance(u.pos,e.pos)<=u.kind.range)
+        return ready(b,i)&&e.hp>0&&(u.kind.range==1||u.charges>0)&&AdventureRules.arenaDistance(u.pos,e.pos)<=u.kind.range
     }
     fun repairTarget(b:ArenaBattle,i:Int):Int?{
         val u=b.allies.getOrNull(i)?:return null

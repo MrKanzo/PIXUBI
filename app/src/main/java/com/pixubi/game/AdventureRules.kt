@@ -171,28 +171,42 @@ internal object AdventureRules{
         if(!b.deploying)return p
         return p.copy(adventure=p.adventure.copy(battle=b.copy(deploying=false,log="Твій хід")))
     }
-    fun skillName(b:ArenaBattle,actor:Int)=when(b.allies.getOrNull(actor)?.kind){
+    fun isNinja(p:WorldPet,b:ArenaBattle,actor:Int)=if(actor==-1)p.series==RobotSeries.KAGE else b.allies.getOrNull(actor)?.kind==SquadKind.ASSAULT
+    fun skillName(b:ArenaBattle,actor:Int,series:RobotSeries?=null)=when(b.allies.getOrNull(actor)?.kind){
         SquadKind.RANGER->"Точний постріл"
-        SquadKind.ASSAULT->"Посилений удар"
+        SquadKind.ASSAULT->"Ривок катаною"
         SquadKind.GUARD->"Захисний купол"
         SquadKind.MEDIC->"Масовий ремонт"
         SquadKind.SIEGE->"Перевантаження"
         SquadKind.AERIAL->"Енергоімпульс"
-        else->"Бойовий імпульс"
+        else->if(series==RobotSeries.KAGE)"Ривок катаною" else "Бойовий імпульс"
     }
     fun skillSupport(b:ArenaBattle,actor:Int)=b.allies.getOrNull(actor)?.kind in listOf(SquadKind.GUARD,SquadKind.MEDIC)
-    fun skillDescription(b:ArenaBattle,actor:Int)=when(b.allies.getOrNull(actor)?.kind){
+    fun skillDescription(b:ArenaBattle,actor:Int,series:RobotSeries?=null)=when(b.allies.getOrNull(actor)?.kind){
         SquadKind.RANGER->"Точний постріл: +75% шкоди."
-        SquadKind.ASSAULT->"Посилений удар: подвійна шкода в ближньому бою."
+        SquadKind.ASSAULT->"Ривок катаною: максимум 2 клітинки до цілі, подвійна шкода та повернення."
         SquadKind.GUARD->"Захисний купол: усі живі союзники отримують щит до наступного влучання."
         SquadKind.MEDIC->"Масовий ремонт: відновлює 25% максимального HP пораненим союзникам у радіусі 2. Витрачає заряд."
         SquadKind.SIEGE->"Перевантаження: +25% шкоди цілі та половина цього удару сусіднім ворогам."
         SquadKind.AERIAL->"Енергоімпульс: +50% шкоди та чверть удару іншим ворогам у радіусі 2 від цілі."
-        else->"Бойовий імпульс: +50% шкоди."
+        else->if(series==RobotSeries.KAGE)"Ривок катаною: до 2 клітинок до цілі, удар і повернення. +50% шкоди." else "Бойовий імпульс: +50% шкоди."
     }
     fun skillDamage(p:WorldPet,b:ArenaBattle,actor:Int,index:Int,gear:RobotGear?):Int?{
         if(actor in b.skillUsed||skillSupport(b,actor))return null
-        val hit=previewDamage(p,b,actor,index,gear)?:return null
+        val hit=if(isNinja(p,b,actor)){
+            val enemy=b.enemies.getOrNull(index)?:return null
+            if(!SquadRules.ready(b,actor)||enemy.hp<=0||!dashReachable(b,SquadRules.position(b,actor),enemy.pos,ArenaAttackStyle.KATANA.reach))return null
+            if(actor==-1){
+                val base=(p.stats.attack-p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
+                val blades=weapons(p)
+                val bonusBlade=blades.firstOrNull()?.let{RobotBalance.spec(it).delta.attack}?:0
+                val dual=if(p.level>=GearAccess.DUAL_LEVEL&&blades.size==2)11 else 0
+                damage(base+bonusBlade+dual,enemy.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
+            }else{
+                val ally=b.allies[actor]
+                damage(ally.attack+p.level/3+SquadTactics.attackBonus(b,ally.kind),enemy.defense)
+            }
+        }else previewDamage(p,b,actor,index,gear)?:return null
         val bonus=when(b.allies.getOrNull(actor)?.kind){SquadKind.RANGER->hit*3/4;SquadKind.ASSAULT->hit;SquadKind.SIEGE->hit/4;else->hit/2}
         return hit+maxOf(1,bonus)+if(actor==-1)hit*p.neuralRank.coerceIn(0,3)*15/100 else 0
     }
@@ -223,7 +237,7 @@ internal object AdventureRules{
     fun skillStrike(p:WorldPet,actor:Int,index:Int,gear:RobotGear?,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         val hit=skillDamage(p,b,actor,index,gear)?:return p
-        val cost=if(actor==-1)attackCost(gear)else null
+        val cost=if(actor==-1&&!isNinja(p,b,actor))attackCost(gear)else null
         val q=if(cost==null)p else p.copy(supplies=p.supplies+(cost to p.stock(cost)-1))
         val kind=b.allies.getOrNull(actor)?.kind
         val target=b.enemies[index].pos
@@ -235,7 +249,7 @@ internal object AdventureRules{
             },
             allies=b.allies.mapIndexed{i,u->if(i==actor&&u.range>1)u.copy(charges=u.charges-1)else u})
         if(next.enemies.none{it.hp>0})return finish(q,next,true,now)
-        return afterAction(q,next,actor,false,skillName(b,actor)+": −$hit HP",now)
+        return afterAction(q,next,actor,false,skillName(b,actor,p.series)+": −$hit HP",now)
     }
     fun movement(p:WorldPet)=(1+p.stats.speed/45).coerceIn(2,4)
     fun path(from:GridPoint,to:GridPoint,blocked:Set<GridPoint>):Int?{
@@ -267,7 +281,7 @@ internal object AdventureRules{
     }
     fun canHit(p:WorldPet,b:ArenaBattle,enemy:ArenaBot,g:RobotGear?):Boolean{
         if(!SquadRules.ready(b,-1)||enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>commanderRange(p,g))return false
-        if(p.series==RobotSeries.KAGE&&!dashReachable(b,b.pos,enemy.pos,commanderRange(p,g)))return false
+        if(p.series==RobotSeries.KAGE&&g!=null)return false
         if(g!=null&&g !in weapons(p))return false
         return attackCost(g)?.let{p.stock(it)>0}?:true
     }
@@ -282,8 +296,7 @@ internal object AdventureRules{
         if(actor==-1){
             if(!canHit(p,b,e,gear))return null
             val base=(p.stats.attack-p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
-            val dual=if(p.series==RobotSeries.KAGE&&p.level>=GearAccess.DUAL_LEVEL&&weapons(p).size==2)11 else 0
-            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0)+dual,e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
+            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
         }
         val ally=b.allies.getOrNull(actor)?:return null
         if(!SquadRules.canHit(b,actor,e))return null

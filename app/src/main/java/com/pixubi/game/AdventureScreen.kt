@@ -133,7 +133,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             delay(duration(180).toLong())
             enemyVisual=plan.index
             val style=ArenaAttackStyle.of(b.enemies[plan.index].series)
-            perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,style.lunge,style=style){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
+            perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,style.closeCombat,style=style){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
         }
     }
     fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
@@ -176,13 +176,14 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             if(AdventureRules.canAdvance(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
-            val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
+            val selected=weapon?.takeIf{p.series!=RobotSeries.KAGE&&it in AdventureRules.weapons(p)}
             val combos=SquadTactics.active(b)
             val available=if(b.deploying)listOf(-1)+b.allies.indices.filter{b.allies[it].hp>0} else SquadRules.available(b)
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
             val ally=b.allies.getOrNull(actor)
             val chosenStyle=if(ally==null)ArenaAttackStyle.of(p.series,selected) else ArenaAttackStyle.of(ally.kind.series,ally.kind.gear)
+            val chosenSkillStyle=if(AdventureRules.isNinja(p,b,actor))ArenaAttackStyle.KATANA else chosenStyle
             val chosenEnemy=b.enemies.getOrNull(targetChoice)?.takeIf{it.hp>0}
             val damagePreview=AdventureRules.previewDamage(p,b,actor,targetChoice,selected)
             val nextEnemy=AdventureRules.nextEnemy(b)
@@ -221,7 +222,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             Button(onClick={
                                 val i=targetChoice;val dest=chosenEnemy.pos
                                 direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                                perform("strike",source,dest,chosenStyle.lunge,style=chosenStyle){
+                                perform("strike",source,dest,chosenStyle.closeCombat,style=chosenStyle){
                                     latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
                                 }
                             },modifier=Modifier.fillMaxWidth()){Text("Підтвердити атаку")}
@@ -236,7 +237,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(ally==null){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 FilterChip(selected==null,{weapon=null},label={Text(ArenaAttackStyle.of(p.series).title+" · "+AdventureRules.commanderRange(p,null))})
-                AdventureRules.weapons(p).forEach{g->
+                AdventureRules.weapons(p).filter{p.series!=RobotSeries.KAGE}.forEach{g->
                     val ammo=AdventureRules.attackCost(g)
                     FilterChip(selected==g,{weapon=g},label={Text(g.title+" · "+AdventureRules.commanderRange(p,g)+(ammo?.let{" · ${p.stock(it)} зар."}?:""))})
                 }
@@ -344,7 +345,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val py by animateDpAsState(spriteY(b.pos),tween(duration(300)),label="battle y")
                     Box(Modifier.offset(px+(if(enemyVisual<0)lungeOffset(b.pos).x.dp else 0.dp),py+(if(enemyVisual<0)lungeOffset(b.pos).y.dp else 0.dp)).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f)){
                         ArenaGroundShadow(false,actor==-1&&!busy)
-                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)attackAction() else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,ArenaAttackStyle.combatEquipment(p.series,p.equipment),p.tier,p.series,arena=true),if(busy&&enemyVisual<0&&(visualSource==b.pos||moving&&visualTarget==b.pos))fx.value else phase,false,Modifier.fillMaxSize())
+                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)attackAction() else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,ArenaAttackStyle.combatEquipment(p.series,p.equipment,attack&&attackStyle==ArenaAttackStyle.KATANA&&enemyVisual<0&&visualSource==b.pos),p.tier,p.series,arena=true),if(busy&&enemyVisual<0&&(visualSource==b.pos||moving&&visualTarget==b.pos))fx.value else phase,false,Modifier.fillMaxSize())
 
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
@@ -359,7 +360,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
                                 else->RobotAction.IDLE
                             }
-                            RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout().copy(arena=true),if(activeAction==RobotAction.IDLE)phase else fx.value,false,Modifier.fillMaxSize())
+                            RobotPreview(if(activeAction==RobotAction.IDLE)RobotView.RIGHT else direction,activeAction,RobotFace.NEUTRAL,u.kind.loadout().let{it.copy(arena=true,equipment=ArenaAttackStyle.combatEquipment(it.series,it.equipment,attack&&attackStyle==ArenaAttackStyle.KATANA&&enemyVisual<0&&visualSource==u.pos))},if(activeAction==RobotAction.IDLE)phase else fx.value,false,Modifier.fillMaxSize())
 
                         }
                     }}
@@ -457,7 +458,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val dest=chosenEnemy?.pos?:return@Button
                             val i=targetChoice
                             direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                            perform("strike",source,dest,chosenStyle.lunge,style=chosenStyle){
+                            perform("strike",source,dest,chosenStyle.closeCombat,style=chosenStyle){
                                 latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
                             }
                         },enabled=!busy&&damagePreview!=null,modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("Атака")}
@@ -498,11 +499,11 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     title={Text("⌬ NEURAL LINK · Навички")},text={
                     Column(Modifier.fillMaxWidth().border(1.dp,Color(0xFF397F91),RoundedCornerShape(12.dp)).background(Color(0xFF152D3C),RoundedCornerShape(12.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                         Text("БОЙОВИЙ ІНТЕРФЕЙС  /  СИНХРОНІЗАЦІЯ",color=Color(0xFF8DECF5),style=MaterialTheme.typography.labelSmall)
-                        Text(AdventureRules.skillName(b,actor),style=MaterialTheme.typography.titleMedium)
-                        Text(AdventureRules.skillDescription(b,actor))
+                        Text(AdventureRules.skillName(b,actor,p.series),style=MaterialTheme.typography.titleMedium)
+                        Text(AdventureRules.skillDescription(b,actor,p.series))
                         if(actor==-1)Text("NEURAL LINK · модуль ${p.neuralRank}/3 · додаткові ${p.neuralRank*15}% базової шкоди",color=Color(0xFF8DECF5),style=MaterialTheme.typography.bodySmall)
                         Text("Один раз за бій. Витрачає хід юніта та заряд, якщо потрібен.",style=MaterialTheme.typography.bodySmall)
-                        Text(if(actor in b.skillUsed)"Навичку вже використано" else if(support)if(supportReady)"Готово до застосування" else "Немає доступної цілі або заряду" else if(hit==null)"Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
+                        Text(if(actor in b.skillUsed)"Навичку вже використано" else if(support)if(supportReady)"Готово до застосування" else "Немає доступної цілі або заряду" else if(hit==null)if(chosenSkillStyle==ArenaAttackStyle.KATANA)"Обери ворога до 2 клітинок" else "Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
                         if(ally?.kind==SquadKind.MEDIC)Text("Ремонт: відновлює союзника в радіусі двох клітинок.")
                     }
                 },confirmButton={Button(onClick={
@@ -514,7 +515,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val dest=chosenEnemy?.pos?:return@Button
                     val i=targetChoice;skillsPanel=false
                     direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                    perform("strike",source,dest,chosenStyle.lunge,skill=ArenaSkillFx.forActor(ally?.kind),cells=skillFxCells(b,actor,i),style=chosenStyle){
+                    perform("strike",source,dest,chosenSkillStyle.closeCombat,skill=ArenaSkillFx.forActor(ally?.kind),cells=skillFxCells(b,actor,i),style=chosenSkillStyle){
                         latestSound(PixubiSound.TAP);AdventureRules.skillStrike(latestPet,actor,i,selected,now())
                     }
                 },enabled=(hit!=null||supportReady)&&!busy){Text("Застосувати")}},dismissButton={TextButton(onClick={skillsPanel=false}){Text("Закрити")}})

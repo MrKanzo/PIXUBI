@@ -513,7 +513,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                     val farX=if(side&&g==4)1f else if(side)-5f else -16f
                     val nearA=gait?.nearArm?:dash?.nearArm?:pose.nearArm
                     val farA=gait?.farArm?:dash?.farArm?:pose.farArm
-                    val swordReady=(action==RobotAction.ATTACK||loadout.arena&&action==RobotAction.NINJA_DASH)&&(g>=1||loadout.arena)&&e.equipped(RobotSlot.LEFT_HAND)==null
+                    val swordReady=!loadout.arena&&action==RobotAction.ATTACK&&g>=1&&e.equipped(RobotSlot.LEFT_HAND)==null
                     fun DrawScope.rear(){
                         if(g==4&&side)translate(-9f,7f){scale(.78f,.86f,Offset.Zero){scarfTail(form,side,a,phase,action,dash?.trail?:0f)}}
                         else scarfTail(form,side,a,phase,action,dash?.trail?:0f)
