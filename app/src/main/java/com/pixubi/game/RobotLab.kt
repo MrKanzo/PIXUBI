@@ -117,12 +117,7 @@ private fun DrawScope.leg(x:Float,y:Float,angle:Float,side:Boolean,far:Boolean,a
             omegaPlate(accent,listOf(Offset(x-5,y+22),Offset(x+5,y+22),Offset(x+6,y+30),Offset(x,y+34),Offset(x-6,y+30)))
             drawLine(glow,Offset(x,y+23),Offset(x,y+30),2.6f,StrokeCap.Round)
         }
-        if(gear==RobotGear.BOOTS || gear==RobotGear.SPEED_BOOTS) {
-            val left=x-12; val width=if(side) 33f else 24f
-            panel(left,y+31,width,17f,5f,if(far) shade else joint)
-            panel(left+3,y+34,width-6,8f,3f,accent)
-            if(gear==RobotGear.SPEED_BOOTS) drawLine(glow,Offset(left+3,y+44),Offset(left+width-3,y+44),2f)
-        }
+        translate(x,y+35f){drawVariantBoot(gear,side,accent,tier.ordinal)}
     }
 }
 private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,gear:RobotGear?,tier:RobotTier=RobotTier.MK1) {
@@ -145,19 +140,7 @@ private fun DrawScope.arm(x:Float,y:Float,angle:Float,far:Boolean,accent:Color,g
             panel(x-6,y+25,12f,9f,2f,accent)
             drawLine(glow,Offset(x-3,y+29),Offset(x+3,y+29),2.5f,StrokeCap.Round)
         }
-        if(gear==RobotGear.SHIELD_L || gear==RobotGear.SHIELD_R) {
-            panel(x-14,y+19,28f,29f,7f,accent)
-            drawCircle(glow,5f,Offset(x,y+33))
-        }
-        if(gear==RobotGear.TOOL_L || gear==RobotGear.TOOL_R) {
-            panel(x-5,y+45,10f,16f,3f,shade)
-            panel(x-9,y+58,18f,6f,2f,amber)
-        }
-        if(gear==RobotGear.BLASTER_L || gear==RobotGear.BLASTER_R) {
-            panel(x-11,y+27,22f,24f,5f,joint)
-            panel(x-8,y+48,16f,12f,3f,accent)
-            drawRoundRect(glow,Offset(x-5,y+55),Size(10f,3f),CornerRadius(1.5f))
-        }
+        translate(x,y+43f){drawWorldWeapon(gear,accent)}
     }
 }
 private fun DrawScope.face(x:Float,y:Float,side:Boolean,face:RobotFace,blink:Boolean,light:Color=glow) {
@@ -411,19 +394,7 @@ private fun DrawScope.chestGear(g:RobotGear?,side:Boolean,a:Color) {
     translate(100f,90f){drawVariantArmor(g,side,a,1)}
 }
 private fun DrawScope.backGear(g:RobotGear?,side:Boolean,a:Color) {
-    if(g!=RobotGear.BATTERY && g!=RobotGear.BOOSTER)return
-    if(side) {
-        panel(57f,84f,24f,48f,6f,joint)
-        panel(60f,89f,13f,24f,4f,a)
-        drawRoundRect(glow,Offset(63f,93f),Size(7f,15f),CornerRadius(2f))
-        if(g==RobotGear.BOOSTER) panel(57f,126f,17f,13f,4f,amber)
-    } else {
-        for(x in listOf(65f,120f)) {
-            panel(x,80f,15f,48f,5f,joint)
-            panel(x+3,83f,9f,27f,3f,a)
-            if(g==RobotGear.BOOSTER)panel(x,124f,15f,12f,3f,amber)
-        }
-    }
+    if(side)translate(62f,83f){drawVariantPack(g,true,a,1)}else translate(100f,77f){drawVariantPack(g,false,a,1)}
 }
 private val companionShell=Color(0xFFF5F0FA)
 private val companionShade=Color(0xFF9C8FAF)
@@ -632,16 +603,6 @@ private fun DrawScope.companionArm(x:Float,y:Float,angle:Float,far:Boolean,a:Col
         if(d.armor>=3f)drawLine(companionLight,Offset(x,y+27f),Offset(x,y+34f),1.4f)
         panel(x-5f,y+39f,10f,8f,3f,joint)
         for(i in -1..1)drawLine(companionShade,Offset(x+i*3f,y+46f),Offset(x+i*3f,y+49f),2f,StrokeCap.Round)
-        if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R) {
-            panel(x-14f,y+19f,28f,29f,7f,a);companionHeart(x,y+32f,6f,a,true)
-        }
-        if(gear==RobotGear.TOOL_L||gear==RobotGear.TOOL_R) {
-            panel(x-5f,y+45f,10f,16f,3f,companionShade);panel(x-9f,y+58f,18f,6f,2f,amber)
-        }
-        if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R) {
-            panel(x-11f,y+27f,22f,24f,5f,joint);panel(x-8f,y+48f,16f,12f,3f,a)
-            drawLine(companionLight,Offset(x-5f,y+55f),Offset(x+5f,y+55f),3f)
-        }
         translate(x,y+43f){drawWorldWeapon(gear,a)}
     }
 }
@@ -663,11 +624,7 @@ private fun DrawScope.companionLeg(x:Float,y:Float,angle:Float,side:Boolean,far:
         val foot=Path().apply {moveTo(x-8f,y+36f);lineTo(x+8f,y+36f);if(side){quadraticTo(x+toe,y+40f,x+toe,y+46f);quadraticTo(x+toe-3f,y+49f,x-10f,y+47f);lineTo(x-10f,y+43f)}else{quadraticTo(x+11f,y+39f,x+11f,y+45f);quadraticTo(x,y+50f,x-11f,y+45f);quadraticTo(x-11f,y+39f,x-8f,y+36f)};close()}
         companionMetal(foot,far)
         drawLine(a,Offset(x-7f,y+45f),Offset(x+toe-2f,y+45f),2.6f,StrokeCap.Round)
-        if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS) {
-            panel(x-12f,y+35f,if(side)31f else 24f,12f,4f,joint)
-            drawLine(a,Offset(x-8f,y+40f),Offset(x+toe-1f,y+40f),4f,StrokeCap.Round)
-            if(gear==RobotGear.SPEED_BOOTS)drawLine(companionLight,Offset(x-8f,y+45f),Offset(x+toe-1f,y+45f),1.5f)
-        }
+        translate(x,y+36f){drawVariantBoot(gear,side,a,tier.ordinal)}
         }}
     }
 }

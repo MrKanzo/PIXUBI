@@ -57,11 +57,6 @@ internal object WorldGearCatalog {
         RobotGear.REPAIR_L,RobotGear.REPAIR_R,RobotGear.REPAIR_DRONE,RobotGear.TOOL_L,RobotGear.TOOL_R->"Підсилює ремонт на "+repairBonus(RobotEquipment().equip(g))+"%."
         else->ammo(g)?.let{(a,n)->"${a.title}: $n шт. за бойову місію."}?:if(category(g)==WorldCategory.WEAPONS)"Енергетична зброя ближнього бою · не потребує касет." else "Постійний модуль спорядження."
     }
-    fun visual(g:RobotGear)=when(g){
-        RobotGear.POWERBANK_MINI,RobotGear.POWERBANK_MAX->RobotGear.BATTERY
-        RobotGear.REPAIR_DRONE->RobotGear.BOOSTER
-        RobotGear.MAG_BOOTS->RobotGear.BOOTS
-        else->g
-    }
+    fun visual(g:RobotGear)=g
     fun visual(e:RobotEquipment)=RobotEquipment(e.items.mapValues{visual(it.value)})
 }

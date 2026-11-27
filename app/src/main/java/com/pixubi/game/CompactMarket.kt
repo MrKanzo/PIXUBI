@@ -46,6 +46,7 @@ internal object MarketCatalog{
         fun poly(vararg xy:Float){val p=Path().apply{moveTo(xy[0]*w,xy[1]*h);for(i in 2 until xy.size step 2)lineTo(xy[i]*w,xy[i+1]*h);close()};drawPath(p,androidx.compose.ui.graphics.Brush.linearGradient(listOf(metal,c.copy(alpha=.5f),Color(0xFF243B53)),Offset.Zero,Offset(w,h)));drawPath(p,c,style=Stroke(1.6.dp.toPx()))}
         fun line(x:Float,y:Float,x2:Float,y2:Float){drawLine(c,Offset(x*w,y*h),Offset(x2*w,y2*h),2.dp.toPx(),StrokeCap.Round)}
         drawRoundRect(shade,cornerRadius=CornerRadius(w*.18f))
+        if(gear!=null){drawGearModel(gear,Color(0xFF74D9DF));return@Canvas}
         val family=gear?.name?.removeSuffix("_L")?.removeSuffix("_R").orEmpty()
         when{
             supply?.isAmmo==true->{for(i in 0..2){val x=.21f+i*.21f;poly(x,.29f,x+.07f,.16f,x+.14f,.29f,x+.14f,.79f,x,.79f)}}
@@ -129,7 +130,9 @@ internal object MarketCatalog{
         AlertDialog(onDismissRequest={selected=null},title={Text(GearAccess.title(p.series,g))},text={
             Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(6.dp)){
                 Text("Примірка · не змінює спорядження",style=MaterialTheme.typography.labelSmall)
-                RobotPreview(RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,e,p.tier,p.series),0f,false,Modifier.fillMaxWidth().height(160.dp))
+                var side by remember(g){mutableStateOf(false)}
+                Row(verticalAlignment=Alignment.CenterVertically){ItemGlyph(gear=preview);Text(preview.title,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium);TextButton(onClick={side=!side}){Text(if(side)"Спереду" else "Збоку")}}
+                RobotPreview(if(side)RobotView.RIGHT else RobotView.FRONT,RobotAction.IDLE,RobotFace.NEUTRAL,RobotLoadout(p.skin.accent,e,p.tier,p.series),0f,false,Modifier.fillMaxWidth().height(160.dp))
                 Text(RobotBalance.spec(g).delta.summary());Text(WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
                 offers.forEach{o->
                     val item=o.gear;val worn=p.equipment.equipped(item.slot)==item;val owned=item in p.owned;val reason=GearAccess.reason(p,item)

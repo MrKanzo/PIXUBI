@@ -187,13 +187,7 @@ private fun DrawScope.arm(form:GlitchForm,x:Float,angle:Float,elbow:Float,wrist:
             }
             translate(0f,form.fore){rotate(wrist,Offset.Zero){
                 hinge(a,4f,debug);plate(if(g==0)"M -6 0 Q 0 -4 6 0 L 7 9 Q 0 14 -7 9 Z" else "M -6 0 L 6 0 L 8 7 L 3 13 L -5 12 L -8 6 Z",slate)
-                when(gear){
-                    RobotGear.SHIELD_L,RobotGear.SHIELD_R->{plate("M -15 -28 L 15 -28 L 19 -10 L 0 7 L -19 -10 Z");translate(0f,-12f){core(a,g)}}
-                    RobotGear.TOOL_L,RobotGear.TOOL_R->{poly("M -4 7 L 4 7 L 4 25 L -4 25 Z",slate);glowLine(a,-7f,24f,7f,24f,4f)}
-                    RobotGear.BLASTER_L,RobotGear.BLASTER_R->{plate("M -8 -10 L 8 -10 L 8 24 L -8 24 Z");glowLine(a,-5f,22f,5f,22f,3f)}
-                    RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R,RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R,RobotGear.REPAIR_L,RobotGear.REPAIR_R->drawWorldWeapon(gear,a)
-                    else->Unit
-                }
+                scale(1f+g*.045f,1f+g*.045f,Offset.Zero){drawWorldWeapon(gear,a)}
                 if(showPanel)translate(if(side)25f else 21f,-25f){rotate(-angle-elbow-wrist,Offset.Zero){terminal(a,phase)}}
             }}
         }}
@@ -220,7 +214,7 @@ private fun DrawScope.leg(form:GlitchForm,x:Float,t:Float,s:Float,side:Boolean,f
             val toe=if(side)17 else 11
             plate(if(side)"M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z" else "M -8 -4 L 8 -4 L 12 6 L 10 12 L -10 12 L -12 6 Z",if(far)slate else pale)
             glowLine(a,if(side)-6f else -8f,10f,if(side)toe-2f else 8f,10f)
-            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate(if(side)"M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z" else "M -10 -2 L 10 -2 L 14 7 L 12 13 L -12 13 L -14 7 Z",slate)
+            drawVariantBoot(gear,side,a,g)
         }}
     }}
 }
@@ -281,7 +275,7 @@ internal fun GlitchPreview(requested:RobotView,action:RobotAction,face:RobotFace
                 fun DrawScope.robot(){
                     cape(f.grade,side,a,phase)
                     if(f.grade==4)wings(a,side,action,phase)
-                    if(e.equipped(RobotSlot.BACK)!=null)translate(if(side)-22f else 0f,4f){plate("M -15 -8 L 15 -8 L 18 25 L -18 25 Z");glowLine(a,-9f,0f,-9f,19f)}
+                    if(e.equipped(RobotSlot.BACK)!=null)translate(if(side)-31f else 0f,-12f){drawVariantPack(e.equipped(RobotSlot.BACK),side,a,f.grade)}
                     leg(f,if(side)-4f else -14f,if(side)ft else ft*.13f,if(side)fs else fs*.13f,side,side,a,e.equipped(RobotSlot.FEET),debug)
                     if(side)rotate(lean,Offset(0f,f.hips)){arm(f,-3f,fa,bends.farElbow,bends.wrist,true,true,a,e.equipped(view.farHand()),debug,false,phase)}
                     leg(f,if(side)4f else 14f,if(side)nt else nt*.13f,if(side)ns else ns*.13f,side,false,a,e.equipped(RobotSlot.FEET),debug)

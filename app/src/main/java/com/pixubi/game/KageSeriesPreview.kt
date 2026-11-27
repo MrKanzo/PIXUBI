@@ -359,7 +359,7 @@ private fun DrawScope.arm(form:KageForm,x:Float,y:Float,angle:Float,far:Boolean,
                     RobotGear.SHIELD_L,RobotGear.SHIELD_R->{translate(0f,-14f){metal("M -15 -13 L 15 -13 L 17 8 L 0 20 L -17 8 Z",steel,graphite);kageCore(a,2,false)}}
                     RobotGear.TOOL_L,RobotGear.TOOL_R->{shape("M -5 8 L 5 8 L 5 23 L -5 23 Z",steel);shape("M -9 20 L 9 20 L 9 25 L -9 25 Z",a)}
                     RobotGear.BLASTER_L,RobotGear.BLASTER_R->{metal("M -9 -14 L 9 -14 L 9 19 L -9 19 Z",steel,graphite);led(-5f,16f,5f,16f,a)}
-                    RobotGear.BLADE_L,RobotGear.BLADE_R->rotate(-90f,Offset(0f,6f)){translate(0f,7f){sword(a,true)}}
+                    RobotGear.BLADE_L,RobotGear.BLADE_R->rotate(-90f,Offset(0f,6f)){translate(0f,7f){sword(gearLight(gear,a),true)}}
                     RobotGear.CANNON_L,RobotGear.CANNON_R,RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R,RobotGear.REPAIR_L,RobotGear.REPAIR_R->drawWorldWeapon(gear,a)
                     else->if(drawSword)rotate(-90f,Offset(0f,6f)){translate(0f,7f){sword(a,true)}}
                 }
@@ -416,21 +416,12 @@ private fun DrawScope.leg(form:KageForm,x:Float,y:Float,thigh:Float,shin:Float,s
             metal(if(side)"M -8 -4 L 8 -4 L $toe 8 L $toe 13 L -11 13 L -12 8 Z" else "M -8 -4 L 8 -4 L 12 8 L 10 13 L -10 13 L -12 8 Z",if(side&&g==4&&far)carbon else steel,graphite)
             metal("M -7 -5 L 5 -5 L 9 3 L 5 6 L -6 3 Z",if(side&&g==4&&far)steel else silver,graphite)
             led(-7f,10f,toe-2f,10f,if(side&&g==4&&far)a.copy(alpha=.45f) else a,2f)
-            if(boots==RobotGear.BOOTS||boots==RobotGear.SPEED_BOOTS){
-                metal(if(side)"M -12 -2 L 9 -2 L ${toe+3} 8 L ${toe+3} 14 L -14 14 Z" else "M -11 -2 L 11 -2 L 14 8 L 12 14 L -12 14 L -14 8 Z",steel,black)
-                led(-9f,11f,toe.toFloat(),11f,a,if(boots==RobotGear.SPEED_BOOTS)3f else 1.8f)
-            }
+            drawVariantBoot(boots,side,a,g)
             pivotDot(debug)
         }}
     }}
 }
-private fun DrawScope.backPack(a:Color,gear:RobotGear?) {
-    if(gear==RobotGear.BATTERY||gear==RobotGear.BOOSTER){
-        metal("M -18 -7 L 18 -7 L 21 28 L -21 28 Z",steel,graphite)
-        led(-11f,0f,-11f,19f,a);led(11f,0f,11f,19f,a)
-        if(gear==RobotGear.BOOSTER){shape("M -18 26 L -5 26 L -8 33 L -15 33 Z",a);shape("M 5 26 L 18 26 L 15 33 L 8 33 Z",a)}
-    }
-}
+private fun DrawScope.backPack(a:Color,gear:RobotGear?) {drawVariantPack(gear,true,a,1)}
 private fun DrawScope.omegaWing(a:Color,pose:OmegaWingPose,side:Boolean,far:Boolean) {
     // Six independent articulated feather blades, with the longest feathers below.
     val lengths=listOf(116f,105f,94f,83f,72f,62f)
@@ -519,7 +510,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                         if(g==4&&side)translate(-9f,7f){scale(.78f,.86f,Offset.Zero){scarfTail(form,side,a,phase,action,dash?.trail?:0f)}}
                         else scarfTail(form,side,a,phase,action,dash?.trail?:0f)
                         if(g>=1&&!swordReady&&e.equipped(RobotSlot.BACK)==null)translate(if(side)-19f else 22f,1f){rotate(if(side)-15f else 30f,Offset.Zero){sword(a,false)}}
-                        translate(if(side)-19f else 0f,8f){backPack(a,e.equipped(RobotSlot.BACK))}
+                        translate(if(side)-31f else 0f,-12f){drawVariantPack(e.equipped(RobotSlot.BACK),side,a,g)}
                         if(g==4)omegaWings(a,side,action,phase)
                     }
                     if(side){

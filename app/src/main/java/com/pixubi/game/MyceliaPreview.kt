@@ -90,7 +90,7 @@ private fun DrawScope.leg(f:MyceliaForm,a:Color,root:Offset,foot:Offset,front:Bo
     translate(foot.x,foot.y){
         plate(if(f.grade==0)"M -7 -3 Q 6 -6 10 3 Q 10 8 1 9 L -7 8 Q -11 4 -7 -3 Z" else "M -5 -5 L 5 -5 L 9 5 Q 1 10 -8 6 Z",if(far)shade else pearl)
         line(cyan,-4f,5f,5f,5f,1.4f)
-        if(boots==RobotGear.BOOTS||boots==RobotGear.SPEED_BOOTS)plate("M -9 -4 L 8 -4 L 11 6 L -10 8 Z",shade)
+        drawVariantBoot(boots,true,a,f.grade,true)
     }
 }
 private fun DrawScope.wings(f:MyceliaForm,a:Color,phase:Float,action:RobotAction,side:Boolean){
@@ -246,17 +246,14 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
                             scale(hs,hs,Offset.Zero){head(f,a,side,face,phase,action,e.equipped(RobotSlot.HEAD))}
                         }
                     }
-                    if(e.equipped(RobotSlot.BACK)!=null)translate(-f.length*.3f,-f.depth){plate("M -11 -7 L 11 -7 L 14 8 L -14 8 Z",shade);line(cyan,-7f,0f,7f,0f)}
+                    if(e.equipped(RobotSlot.BACK)!=null)translate(-f.length*.35f,-f.depth-7f){drawVariantPack(e.equipped(RobotSlot.BACK),side,a,f.grade,true)}
                     for(slot in listOf(RobotSlot.LEFT_HAND,RobotSlot.RIGHT_HAND)){
                         val gear=e.equipped(slot)?:continue
                         val far=slot==RobotSlot.LEFT_HAND
                         val x=if(side)f.length*.56f+(if(far)-10f else 4f) else f.length*.46f*(if(far)-1f else 1f)
                         translate(x,if(side&&far)4f else 14f){
                             scale(if(side&&far).76f else 1f,if(side&&far).76f else 1f,Offset.Zero){
-                                if(gear in listOf(RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R,RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R,RobotGear.REPAIR_L,RobotGear.REPAIR_R)) rotate(if(side)-75f else 0f,Offset.Zero){drawWorldWeapon(gear,a)}
-                                else if(gear==RobotGear.SHIELD_L||gear==RobotGear.SHIELD_R){plate("M -10 -10 L 10 -10 L 13 3 L 0 14 L -13 3 Z",shade);line(a,-5f,-2f,5f,-2f)}
-                                else if(gear==RobotGear.BLASTER_L||gear==RobotGear.BLASTER_R){plate("M -7 -7 L 9 -7 L 14 1 L 9 9 L -7 9 Z",shade);line(a,8f,0f,15f,0f)}
-                                else {plate("M -7 -6 L 7 -6 L 9 10 L -9 10 Z",shade);line(a,0f,-2f,0f,7f)}
+                                rotate(if(side)-75f else 0f,Offset.Zero){scale(.78f+f.grade*.04f,.78f+f.grade*.04f,Offset.Zero){drawWorldWeapon(gear,a)}}
                             }
                         }
                     }

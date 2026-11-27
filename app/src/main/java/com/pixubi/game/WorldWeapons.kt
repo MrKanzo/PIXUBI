@@ -5,9 +5,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
 internal fun DrawScope.drawWorldWeapon(gear:RobotGear?,a:Color){
+    val a=gearLight(gear,a)
     val dark=Color(0xFF202A38)
     val silver=Color(0xFFD7E1EA)
     when(gear){
+        RobotGear.SHIELD_L,RobotGear.SHIELD_R->{val p=Path().apply{moveTo(-19f,-27f);lineTo(19f,-27f);lineTo(23f,-6f);lineTo(0f,15f);lineTo(-23f,-6f);close()};drawPath(p,dark);drawPath(p,silver,style=Stroke(2f));drawCircle(a,8f,Offset(0f,-9f),style=Stroke(3f));drawLine(a,Offset(-14f,-20f),Offset(14f,-20f),2f)}
+        RobotGear.TOOL_L,RobotGear.TOOL_R->{drawRoundRect(dark,Offset(-6f,0f),Size(12f,31f),CornerRadius(3f));drawRect(silver,Offset(-4f,22f),Size(8f,15f));drawLine(a,Offset(-10f,37f),Offset(10f,37f),5f,StrokeCap.Round);drawCircle(a,3f,Offset(0f,10f))}
+        RobotGear.BLASTER_L,RobotGear.BLASTER_R->{drawRoundRect(dark,Offset(-10f,-10f),Size(20f,32f),CornerRadius(4f));drawRoundRect(silver,Offset(-8f,-7f),Size(16f,23f),CornerRadius(3f),style=Stroke(2f));drawRect(silver,Offset(-7f,17f),Size(14f,9f));drawLine(a,Offset(-5f,6f),Offset(5f,6f),3f);drawLine(a,Offset(-5f,23f),Offset(5f,23f),2f)}
         RobotGear.BLADE_L,RobotGear.BLADE_R->{
             drawRoundRect(dark,Offset(-3f,2f),Size(6f,15f),CornerRadius(2f))
             drawRoundRect(silver,Offset(-10f,13f),Size(20f,5f),CornerRadius(2f))

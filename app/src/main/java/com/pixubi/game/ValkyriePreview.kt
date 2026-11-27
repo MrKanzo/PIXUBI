@@ -253,13 +253,7 @@ private fun DrawScope.arm(form:ValkyrieForm,x:Float,angle:Float,elbow:Float,wris
             }
             translate(0f,form.fore){rotate(wrist,Offset.Zero){
                 hinge(a,4f,debug);plate(if(g==0)"M -6 0 Q 0 -4 6 0 L 7 9 Q 0 14 -7 9 Z" else "M -6 0 L 6 0 L 8 7 L 3 13 L -5 12 L -8 6 Z",slate)
-                when(gear){
-                    RobotGear.SHIELD_L,RobotGear.SHIELD_R->{plate("M -15 -28 L 15 -28 L 19 -10 L 0 7 L -19 -10 Z");translate(0f,-12f){reactor(a,7f,false)}}
-                    RobotGear.TOOL_L,RobotGear.TOOL_R->{poly("M -4 7 L 4 7 L 4 25 L -4 25 Z",slate);glowLine(a,-7f,24f,7f,24f,4f)}
-                    RobotGear.BLASTER_L,RobotGear.BLASTER_R->{plate("M -8 -10 L 8 -10 L 8 24 L -8 24 Z");glowLine(a,-5f,22f,5f,22f,3f)}
-                    RobotGear.BLADE_L,RobotGear.BLADE_R,RobotGear.CANNON_L,RobotGear.CANNON_R,RobotGear.RIFLE_L,RobotGear.RIFLE_R,RobotGear.ARC_L,RobotGear.ARC_R,RobotGear.REPAIR_L,RobotGear.REPAIR_R->drawWorldWeapon(gear,a)
-                    else->Unit
-                }
+                scale(1f+g*.045f,1f+g*.045f,Offset.Zero){drawWorldWeapon(gear,a)}
             }}
         }}
     }}
@@ -285,7 +279,7 @@ private fun DrawScope.leg(form:ValkyrieForm,x:Float,t:Float,s:Float,side:Boolean
             val toe=if(side)17 else 11
             plate(if(side)"M -9 -4 L 7 -4 L $toe 7 L $toe 12 L -11 12 L -12 6 Z" else "M -8 -4 L 8 -4 L 12 6 L 10 12 L -10 12 L -12 6 Z",if(far)slate else pale)
             glowLine(a,if(side)-6f else -8f,10f,if(side)toe-2f else 8f,10f)
-            if(gear==RobotGear.BOOTS||gear==RobotGear.SPEED_BOOTS)plate(if(side)"M -12 -2 L 10 -2 L ${toe+3} 8 L ${toe+3} 13 L -14 13 Z" else "M -10 -2 L 10 -2 L 14 7 L 12 13 L -12 13 L -14 7 Z",slate)
+            drawVariantBoot(gear,side,a,g)
         }}
     }}
 }
@@ -306,7 +300,7 @@ private fun DrawScope.valkBack(f:ValkyrieForm,a:Color,side:Boolean,action:RobotA
             }
         }
     }
-    if(gear!=null)translate(if(side)-20f else 0f,4f){plate("M -14 -6 L 14 -6 L 17 24 L -17 24 Z",gold);glowLine(a,0f,0f,0f,18f)}
+    if(gear!=null)translate(if(side)-31f else 0f,-12f){drawVariantPack(gear,side,a,f.grade)}
 }
 private fun DrawScope.auraShield(a:Color,side:Boolean,phase:Float){
     translate(if(side)43f else 55f,38f){
