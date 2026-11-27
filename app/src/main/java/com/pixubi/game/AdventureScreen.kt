@@ -38,7 +38,7 @@ import android.content.pm.ActivityInfo
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit,onGuide:()->Unit={},returnHome:Boolean=false){
+internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit,onGuide:()->Unit={},returnHome:Boolean=false,speech:RobotSpeech?=null,speechEnabled:Boolean=true,onSpeechToggle:()->Unit={}){
     val a=p.adventure;val b=a.battle
     var retreat by remember{mutableStateOf(false)}
     var tacticsPanel by remember{mutableStateOf(false)}
@@ -148,13 +148,14 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             TextButton(onClick=onGuide,enabled=!busy){Text("?")}
             OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"Меню" else "Відступ")}
         }
+        if(a.contact==null)RobotSpeechBubble(speech,speechEnabled,onSpeechToggle,compact=wide)
         if(!wide&&b==null){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
         Text("⚡ ${p.energy}%  ·  🪙 ${p.coins}  ·  🛠 ${p.repair}")}
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound,returnHome)
             MiningPanel(p,onChange)
-            if(a.contact!=null)EncounterDialog(p,onChange,onSound)
+            if(a.contact!=null)EncounterDialog(p,onChange,onSound,speechEnabled)
             SquadPanel(p,onChange)
             Text("База · шахти · родовища · лабораторії · бункери",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){

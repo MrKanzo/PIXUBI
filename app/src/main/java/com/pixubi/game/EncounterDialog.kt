@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-@Composable internal fun EncounterDialog(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit){
+@Composable internal fun EncounterDialog(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSound)->Unit,speechEnabled:Boolean=true){
     val d=EncounterRules.assess(p)?:return
     val first=d.enemies.first()
     val phase by rememberGamePhase(2200,RenderBudget.SCENERY_FPS)
@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.dp
                 Text("Оцінка загону: "+when{d.ratio>=1.8f->"твоя значна перевага";d.ratio>=1.15f->"ти сильніший";d.ratio>=.85f->"приблизно рівні сили";else->"ворог сильніший"},style=MaterialTheme.typography.labelMedium)
                 HorizontalDivider()
                 Text("«"+d.message+"»",style=MaterialTheme.typography.bodyLarge)
+                if(speechEnabled){
+                    val (enemy,own)=SpeechLibrary.dialogue(p,d)
+                    Text(first.series.title+": "+enemy,color=Color(0xFFFFAB9D),style=MaterialTheme.typography.bodySmall)
+                    Text(p.name+": "+own,color=Color(0xFF8BE8DB),style=MaterialTheme.typography.bodySmall)
+                }
                 when(d.offer){
                     EncounterOffer.JOIN->Button(onClick={onChange(EncounterRules.accept(p,System.currentTimeMillis()));onSound(PixubiSound.HAPPY)},modifier=Modifier.fillMaxWidth()){Text("Прийняти · +1 "+d.recruit?.title.orEmpty())}
                     EncounterOffer.TOLL->Button(onClick={onChange(EncounterRules.accept(p,System.currentTimeMillis()))},enabled=p.coins>=d.price,modifier=Modifier.fillMaxWidth()){Text("Сплатити ${d.price} 🪙 · баланс ${p.coins}")}

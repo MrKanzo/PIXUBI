@@ -73,8 +73,13 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         if(returnTo!=null&&p.adventure.pos==AdventureRules.base&&p.adventure.battle==null&&p.adventure.contact==null){page=returnTo!!;returnTo=null}
     }
     fun requestReturn(){returnTo=page;building=null;page="adventure"}
+    val speechPrefs=remember(context){context.getSharedPreferences("pixubi_speech",android.content.Context.MODE_PRIVATE)}
+    var speechEnabled by remember{mutableStateOf(speechPrefs.getBoolean("enabled",true))}
+    fun toggleSpeech(){speechEnabled=!speechEnabled;speechPrefs.edit().putBoolean("enabled",speechEnabled).apply()}
+    val speechPage=when{p.adventure.contact!=null->"contact";p.adventure.battle!=null->"battle";else->page}
+    val speech=rememberRobotSpeech(p,speechPage,foreground,speechEnabled,careEvent)
     if(page=="adventure"||p.adventure.battle!=null||p.adventure.contact!=null){
-        AdventureScreen(p,onChange={save(it)},onBack={returnTo=null;page="home"},onSound=onSound,onGuide={guideOpen=true},returnHome=returnTo!=null)
+        AdventureScreen(p,onChange={save(it)},onBack={returnTo=null;page="home"},onSound=onSound,onGuide={guideOpen=true},returnHome=returnTo!=null,speech=speech.line,speechEnabled=speechEnabled,onSpeechToggle={toggleSpeech()})
         return
     }
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
@@ -101,6 +106,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     Column(Modifier.fillMaxWidth().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){PixubiGlyph(id,active);Text(label,style=MaterialTheme.typography.labelSmall,maxLines=1)}
                 }}
             }}
+            RobotSpeechBubble(speech.line,speechEnabled,{toggleSpeech()})
             if(page=="shop"||page=="construction"){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                     FilterChip(page=="shop",{page="shop"},label={Text("Предмети")},modifier=Modifier.weight(1f))
