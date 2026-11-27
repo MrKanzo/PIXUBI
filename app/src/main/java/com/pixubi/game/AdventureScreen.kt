@@ -500,6 +500,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                         Text("БОЙОВИЙ ІНТЕРФЕЙС  /  СИНХРОНІЗАЦІЯ",color=Color(0xFF8DECF5),style=MaterialTheme.typography.labelSmall)
                         Text(AdventureRules.skillName(b,actor),style=MaterialTheme.typography.titleMedium)
                         Text(AdventureRules.skillDescription(b,actor))
+                        if(actor==-1)Text("NEURAL LINK · модуль ${p.neuralRank}/3 · додаткові ${p.neuralRank*15}% базової шкоди",color=Color(0xFF8DECF5),style=MaterialTheme.typography.bodySmall)
                         Text("Один раз за бій. Витрачає хід юніта та заряд, якщо потрібен.",style=MaterialTheme.typography.bodySmall)
                         Text(if(actor in b.skillUsed)"Навичку вже використано" else if(support)if(supportReady)"Готово до застосування" else "Немає доступної цілі або заряду" else if(hit==null)"Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
                         if(ally?.kind==SquadKind.MEDIC)Text("Ремонт: відновлює союзника в радіусі двох клітинок.")
@@ -528,7 +529,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
 @Composable private fun SquadPanel(p:WorldPet,onChange:(WorldPet)->Unit){
     var expanded by remember{mutableStateOf(false)}
     var dismiss by remember{mutableStateOf<SquadKind?>(null)}
-    val atBase=SquadRules.atBase(p)
+    val atBase=SquadRules.atBase(p)&&BaseBuilding.BARRACKS in p.buildings
     val roster=p.adventure.squad
     val phase by rememberGamePhase(2800,RenderBudget.SCENERY_FPS)
     Card(Modifier.fillMaxWidth()){
@@ -549,7 +550,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 SquadCombo.entries.filter{combo->combo.kinds.all{SquadResearch.unlocked(p.adventure,it)}}.forEach{combo->
                     Text((if(combo in active)"✓ " else "○ ")+combo.title+" · "+combo.detail,style=MaterialTheme.typography.bodySmall,color=if(combo in active)MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(if(atBase)"До 5 бійців одного класу в клітинці. Втрата бійця зменшує силу загону. Заряди поповнюються перед боєм." else "Найм, ремонт і покращення доступні на стартовій базі.")
+                Text(if(atBase)"До 5 бійців одного класу в клітинці. Втрата бійця зменшує силу загону. Заряди поповнюються перед боєм." else "Повернися на базу та побудуй казарми для найму й покращення.")
                 if(p.adventure.barracks<3)Button(onClick={onChange(SquadRules.expand(p))},enabled=atBase&&p.coins>=SquadRules.barracksPrice(p.adventure),modifier=Modifier.fillMaxWidth()){Text("Розширити казарми · ${SquadRules.barracksPrice(p.adventure)} 🪙")}
                 Text("Рівень 2: четвертий загін. Рівень 3: елітні війська. Нові класи відкриваються перемогами в експедиції.",style=MaterialTheme.typography.bodySmall)
                 val opened=SquadKind.entries.count{SquadResearch.unlocked(p.adventure,it)}
@@ -571,7 +572,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             if(k==SquadKind.RANGER)Text("8 власних зарядів на бій",style=MaterialTheme.typography.labelSmall)
                             val hp=roster[k]
                             val count=SquadRules.stackCount(p.adventure,k)
-                            Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&p.adventure.barracks>=k.requiredBarracks&&(hp!=null||roster.size<SquadRules.slots(p.adventure))&&count<SquadRules.MAX_STACK&&p.coins>=k.price){Text("+1 боєць · ${k.price} 🪙 · $count/5")}
+                            Button(onClick={onChange(SquadRules.recruit(p,k))},enabled=atBase&&BaseRules.buildingFor(k) in p.buildings&&p.adventure.barracks>=k.requiredBarracks&&(hp!=null||roster.size<SquadRules.slots(p.adventure))&&count<SquadRules.MAX_STACK&&p.coins>=k.price){Text("+1 боєць · ${k.price} 🪙 · $count/5")}
                             if(hp!=null){
                                 val rank=SquadRules.rank(p.adventure,k)
                                 if(rank<3)OutlinedButton(onClick={onChange(SquadRules.upgrade(p,k))},enabled=atBase&&rank<p.adventure.barracks&&p.coins>=SquadRules.upgradePrice(p.adventure,k)){Text("Ранг ${rank+1} · ${SquadRules.upgradePrice(p.adventure,k)} 🪙")}

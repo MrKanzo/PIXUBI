@@ -18,7 +18,7 @@ internal data class WorldPet(val series:RobotSeries,val skin:RobotSkin,val name:
     val skills:RobotSkills=RobotSkills(),val wins:Int=0,val expeditions:Int=0,val last:Long=0,
     val mission:WorldMission?=null,val message:String="GENESIS завершено. Системи активні!",
     val supplies:Map<WorldSupply,Int> = mapOf(WorldSupply.PULSE to 12,WorldSupply.ION to 4,WorldSupply.ARC to 2),
-    val adventure:AdventureState=AdventureState()){
+    val adventure:AdventureState=AdventureState(),val buildings:Set<BaseBuilding> = emptySet(),val neuralRank:Int=0){
     fun stock(kind:WorldSupply)=(supplies[kind]?:0).coerceIn(0,99)
     val level get()=RobotProgress(xp).level
     val tier get()=if(level>=30&&wins>=10&&expeditions>=10)RobotTier.OMEGA else RobotProgress(xp).nextTier
@@ -133,7 +133,9 @@ internal object WorldRules{
     fun equip(p:WorldPet,g:RobotGear):WorldPet{
         if(p.adventure.battle!=null)return p
         if(p.mission!=null||g !in p.owned)return p.copy(message="Спорядження недоступне під час завдання або не куплене.")
-        return p.copy(equipment=if(p.equipment.equipped(g.slot)==g)p.equipment.remove(g.slot)else p.equipment.equip(g),message="Спорядження змінено")
+        if(p.equipment.equipped(g.slot)==g)return p.copy(equipment=p.equipment.remove(g.slot),message="Спорядження знято")
+        GearAccess.reason(p,g)?.let{return p.copy(message=it)}
+        return p.copy(equipment=p.equipment.equip(g),message="Спорядження змінено")
     }
     fun buySupply(p:WorldPet,kind:WorldSupply):WorldPet{
         if(p.level<kind.level||p.coins<kind.price||p.stock(kind)+kind.pack>99)return p.copy(message="Не вистачає монет, рівня або місця.")
@@ -169,7 +171,7 @@ internal object WorldStorage{
         val equipment=RobotEquipment(RobotEquipment.decode(p.getString("gear","").orEmpty()).items.filterValues{it in owned})
         val task=WorldTask.entries.firstOrNull{it.name==p.getString("task",null)}
         val mission=task?.let{WorldMission(it,p.getLong("until",0),p.getInt("power",0))}
-        return WorldPet(s,skin,p.getString("name",s.title).orEmpty(),trait,
+        val restored=WorldPet(s,skin,p.getString("name",s.title).orEmpty(),trait,
             xp=p.getInt("xp",0).coerceIn(0,RobotProgress.MAX_XP),coins=p.getInt("coins",180).coerceIn(0,999999),
             energy=p.getInt("energy",100).coerceIn(0,100),integrity=p.getInt("integrity",100).coerceIn(1,100),mood=p.getInt("mood",100).coerceIn(0,100),
             cells=p.getInt("cells",4).coerceIn(0,30),repair=p.getInt("repair",3).coerceIn(0,30),snacks=p.getInt("snacks",4).coerceIn(0,30),
@@ -177,7 +179,9 @@ internal object WorldStorage{
             skills=RobotSkills.decode(p.getString("skills","").orEmpty()),wins=p.getInt("wins",0).coerceAtLeast(0),expeditions=p.getInt("expeditions",0).coerceAtLeast(0),
             last=p.getLong("last",System.currentTimeMillis()),mission=mission,message=p.getString("message","").orEmpty(),
             supplies=WorldSupply.entries.associateWith{kind->p.getInt("supply_"+kind.name,when(kind){WorldSupply.PULSE->12;WorldSupply.ION->4;WorldSupply.ARC->2;else->0}).coerceIn(0,99)},
-            adventure=AdventureCodec.decode(p.getString("adventure","").orEmpty()))
+            adventure=AdventureCodec.decode(p.getString("adventure","").orEmpty()),buildings=BaseBuilding.decode(p.getString("buildings","").orEmpty()),neuralRank=p.getInt("neural_rank",0).coerceIn(0,3))
+        val migrated=if(p.contains("buildings"))restored.buildings else buildSet{if(restored.adventure.squad.isNotEmpty()||restored.adventure.barracks>1)add(BaseBuilding.BARRACKS);if(restored.adventure.squad.keys.any{it.requiredBarracks>1})add(BaseBuilding.FOUNDRY)}
+        return restored.copy(buildings=migrated,equipment=GearAccess.sanitize(restored))
     }
     fun save(c:Context,p:WorldPet){
         val editor=prefs(c).edit().putString("series",p.series.name).putString("skin",p.skin.name).putString("name",p.name).putString("trait",p.trait.name)
@@ -187,7 +191,7 @@ internal object WorldStorage{
             .putInt("wins",p.wins).putInt("expeditions",p.expeditions).putLong("last",p.last).putString("task",p.mission?.task?.name)
             .putLong("until",p.mission?.until?:0).putInt("power",p.mission?.power?:0).putString("message",p.message)
         WorldSupply.entries.forEach{editor.putInt("supply_"+it.name,p.stock(it))}
-        editor.putString("adventure",AdventureCodec.encode(p.adventure))
+        editor.putString("adventure",AdventureCodec.encode(p.adventure)).putString("buildings",p.buildings.joinToString(","){it.name}).putInt("neural_rank",p.neuralRank)
         editor.apply()
     }
 }

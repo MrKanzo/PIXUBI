@@ -23,6 +23,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var guideOpen by remember{mutableStateOf(false)}
     fun updateGuide(next:GuideProgress){guideProgress=next;GuideStore.save(context,next)}
     var tab by remember{mutableStateOf<RobotSlot?>(null)}
+    var building by remember{mutableStateOf<BaseBuilding?>(null)}
     var category by remember{mutableStateOf<WorldCategory?>(null)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     var careAnimation by remember{mutableStateOf<RobotAction?>(null)}
@@ -46,7 +47,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         }
     }
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
-    BackHandler(enabled=page!="home"){page="home"}
+    BackHandler(enabled=page!="home"||building!=null){if(building!=null)building=null else page="home"}
     val p=pet
     val musicScene=when{p?.adventure?.battle!=null->MusicScene.BATTLE;page=="adventure"&&p!=null->MusicScene.EXPEDITION;else->MusicScene.BASE}
     LaunchedEffect(musicScene){onMusicScene(musicScene)}
@@ -87,9 +88,9 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             LinearProgressIndicator(progress={prog.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(prog.remaining==0)"Максимальний рівень · OMEGA: 10 перемог і 10 експедицій" else "${p.xp} XP · До рівня ${prog.remaining} XP",style=MaterialTheme.typography.bodySmall)
             val navigation=listOf(listOf("home" to "База","missions" to "Місії","adventure" to "Експедиція","shop" to "Магазин"),
-                listOf("inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
+                listOf("construction" to "Будівництво","inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
             navigation.forEach{group->Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                group.forEach{(id,label)->FilterChip(page==id,{page=id;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
+                group.forEach{(id,label)->FilterChip(page==id,{page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
             }}
             if(page=="home"){
                 if(!guideProgress.finished&&!guideProgress.dismissed)Card(Modifier.fillMaxWidth()){
@@ -107,6 +108,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                             careAnimation=RobotAction.WAVE;careEvent++;effect(WorldFx.CONTACT);onSound(PixubiSound.TAP)
                         }
                     })
+                BaseDistrict(p,onOpen={building=it},onShop={page="construction";building=null})
                 WorldMeter("Енергія",p.energy);WorldMeter("Міцність",p.integrity);WorldMeter("Настрій",p.mood)
                 Text(p.message,style=MaterialTheme.typography.bodyMedium)
                 val m=p.mission
@@ -132,6 +134,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                         OutlinedButton(onClick={save(WorldRules.mode(p,WorldMode.HIBERNATE,System.currentTimeMillis()))},enabled=m==null){Text("Сплячка")}
                     }
                 }else Button(onClick={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))}){Text("Розбудити")}
+            }else if(page=="construction"){
+                BaseConstructionShop(p,onBuy={save(BaseRules.buy(p,it))},onOpen={building=it})
             }else if(page=="missions"){
                 Text("Центр місій",style=MaterialTheme.typography.titleLarge)
                 Text(p.message)
@@ -219,7 +223,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     val g=group.first().gear
                     Card(Modifier.fillMaxWidth()){
                         Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-                            Text(g.title,style=MaterialTheme.typography.titleMedium)
+                            Text(GearAccess.title(p.series,g),style=MaterialTheme.typography.titleMedium)
                             Text(RobotBalance.spec(g).delta.summary(),style=MaterialTheme.typography.bodySmall)
                             Text(WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
                             group.forEach{o->
@@ -227,8 +231,11 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                                 val owned=item in p.owned
                                 val equipped=p.equipment.equipped(item.slot)==item
                                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                    Text(WorldCatalog.slots(p.series,item.slot),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
-                                    if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,item))},enabled=p.mission==null&&p.adventure.battle==null){Text(if(equipped)"Зняти" else "Одягнути")}
+                                    Column(Modifier.weight(1f)){
+                                        Text(WorldCatalog.slots(p.series,item.slot),style=MaterialTheme.typography.bodySmall)
+                                        GearAccess.reason(p,item)?.let{Text(it,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.error)}
+                                    }
+                                    if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,item))},enabled=p.mission==null&&p.adventure.battle==null&&(equipped||GearAccess.reason(p,item)==null)){Text(if(equipped)"Зняти" else "Одягнути")}
                                     else Button(onClick={save(WorldRules.buy(p,item))},enabled=p.level>=o.level&&p.coins>=o.price){Text("${o.price} 🪙 · рівень ${o.level}")}
                                 }
                             }
@@ -245,6 +252,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 RobotSkill.entries.forEach{k->Text("${k.title} · ${p.skills.level(k)}/10");LinearProgressIndicator(progress={p.skills.fraction(k)},modifier=Modifier.fillMaxWidth())}
             }
         Spacer(Modifier.height(12.dp))
+        building?.takeIf{it in p.buildings}?.let{kind->BaseBuildingDialog(p,kind,onChange={save(it)},onClose={building=null})}
     }
 }
 @Composable private fun WorldMeter(label:String,value:Int){

@@ -194,7 +194,7 @@ internal object AdventureRules{
         if(actor in b.skillUsed||skillSupport(b,actor))return null
         val hit=previewDamage(p,b,actor,index,gear)?:return null
         val bonus=when(b.allies.getOrNull(actor)?.kind){SquadKind.RANGER->hit*3/4;SquadKind.ASSAULT->hit;SquadKind.SIEGE->hit/4;else->hit/2}
-        return hit+maxOf(1,bonus)
+        return hit+maxOf(1,bonus)+if(actor==-1)hit*p.neuralRank.coerceIn(0,3)*15/100 else 0
     }
     fun skillSupportReady(b:ArenaBattle,actor:Int):Boolean{
         if(actor in b.skillUsed||!SquadRules.ready(b,actor))return false
@@ -282,7 +282,8 @@ internal object AdventureRules{
         if(actor==-1){
             if(!canHit(p,b,e,gear))return null
             val base=(p.stats.attack-p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
-            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
+            val dual=if(p.series==RobotSeries.KAGE&&p.level>=GearAccess.DUAL_LEVEL&&weapons(p).size==2)11 else 0
+            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0)+dual,e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
         }
         val ally=b.allies.getOrNull(actor)?:return null
         if(!SquadRules.canHit(b,actor,e))return null
