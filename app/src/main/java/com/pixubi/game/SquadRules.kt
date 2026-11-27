@@ -48,10 +48,12 @@ internal object SquadRules{
         val newHp=((hp.toLong()*next+old-1)/old).toInt().coerceAtLeast(1)
         return p.copy(coins=p.coins-price,adventure=a.copy(squad=a.squad+(k to newHp),squadRanks=a.squadRanks+(k to rank+1)),message="${k.title}: ранг ${rank+1}")
     }
+    fun restorePrice(a:AdventureState,k:SquadKind)=AdventureBalance.repairPrice(maxStackHp(a,k)-(a.squad[k]?:0))
     fun restore(p:WorldPet,k:SquadKind):WorldPet{
         val a=p.adventure;val hp=a.squad[k]?:return p;val max=maxStackHp(a,k)
-        if(!atBase(p)||hp>=max||p.coins<15)return p
-        return p.copy(coins=p.coins-15,adventure=a.copy(squad=a.squad+(k to max)),message="${k.title}: відновлено HP")
+        val price=restorePrice(a,k)
+        if(!atBase(p)||hp>=max||p.coins<price)return p
+        return p.copy(coins=p.coins-price,adventure=a.copy(squad=a.squad+(k to max)),message="${k.title}: відновлено HP")
     }
     fun dismiss(p:WorldPet,k:SquadKind):WorldPet{
         val a=p.adventure
