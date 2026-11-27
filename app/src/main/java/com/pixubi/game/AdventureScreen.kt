@@ -44,6 +44,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var tacticsPanel by remember{mutableStateOf(false)}
     var skillsPanel by remember{mutableStateOf(false)}
     var showGrid by remember{mutableStateOf(false)}
+    var artifactsOpen by remember{mutableStateOf(false)}
     var deployPicked by remember(b?.encounter){mutableStateOf(false)}
     var weapon by remember{mutableStateOf<RobotGear?>(null)}
     var moving by remember{mutableStateOf(false)}
@@ -132,7 +133,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     Column(Modifier.fillMaxSize().safeDrawingPadding().then(if(wide)Modifier else Modifier.verticalScroll(rememberScrollState())).padding(if(wide)3.dp else 8.dp),verticalArrangement=Arrangement.spacedBy(if(wide)2.dp else 6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else "ТАКТИЧНА АРЕНА",style=if(wide)MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
+                Text(if(b==null)"PIXUBI · ЕКСПЕДИЦІЯ" else if(FrontierSites.isBoss(a,GridPoint(b.encounter%AdventureRules.MAP_W,b.encounter/AdventureRules.MAP_W)))"БОС · ВАРТОВИЙ ЯДРА" else if(FrontierSites.isVault(a,GridPoint(b.encounter%AdventureRules.MAP_W,b.encounter/AdventureRules.MAP_W)))"ОХОРОНА БУНКЕРА" else "ТАКТИЧНА АРЕНА",style=if(wide)MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
                 Text(if(b==null)"Сектор ${a.stage} · дослідження" else if(b.deploying)"Розстановка · до початку бою" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
             }
             if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
@@ -144,7 +145,20 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound)
             SquadPanel(p,onChange)
-            Text("База · монети · енергокомірки · ремонт · боєприпаси",style=MaterialTheme.typography.bodySmall)
+            Text("База · ресурси · лабораторії · сховки · бункери",style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Text("Знахідки сектора: ${FrontierSites.found(a)}/${FrontierSites.sites(a.stage).size}",modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick={artifactsOpen=true}){Text("Артефакти ${a.artifacts.size}/${FrontierArtifact.entries.size}")}
+            }
+            if(artifactsOpen)AlertDialog(onDismissRequest={artifactsOpen=false},title={Text("Колекція артефактів")},text={
+                Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
+                    Text("Артефакти діють постійно, навіть після переходу до іншого сектора.")
+                    FrontierArtifact.entries.forEach{artifact->
+                        Text(if(artifact in a.artifacts)artifact.title else "Невідомий артефакт",style=MaterialTheme.typography.titleSmall)
+                        Text(if(artifact in a.artifacts)artifact.description else "Знайди під час експедиції.",style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },confirmButton={TextButton(onClick={artifactsOpen=false}){Text("Закрити")}})
             Text("Переможено ботів: ${AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}}/${AdventureRules.encounters(a).size}")
             Text(p.message)
             if(!AdventureRules.canExplore(p))Text("Повернись на базу: потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
