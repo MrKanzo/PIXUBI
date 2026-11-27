@@ -2,13 +2,19 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val playDistribution = providers.gradleProperty("pixubiPlay").orNull == "true"
 android {
+    sourceSets.getByName("main").apply {
+        java.srcDir(if (playDistribution) "src/play/java" else "src/direct/java")
+        if (playDistribution) manifest.srcFile("src/play/AndroidManifest.xml")
+    }
     namespace = "com.pixubi.game"
     compileSdk = 36
     defaultConfig {
         applicationId = "com.pixubi.game.stable"
         minSdk = 26
         targetSdk = 36
+        buildConfigField("boolean", "PLAY_DISTRIBUTION", playDistribution.toString())
         versionCode = 123
         versionName = "0.95.0"
     }
@@ -28,7 +34,7 @@ android {
             signingConfig = signingConfigs.getByName("production")
         }
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
