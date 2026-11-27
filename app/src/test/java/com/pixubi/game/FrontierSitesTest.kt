@@ -37,6 +37,6 @@ class FrontierSitesTest{
         val q=AdventureRules.move(p,vault,1000L)
         assertEquals(2,q.adventure.battle!!.enemies.size)
         assertEquals(q.adventure.battle!!.encounter,AdventureCodec.decode(AdventureCodec.encode(q.adventure)).battle!!.encounter)
-        assertEquals(10,AdventureRules.encounters(q.adventure).size)
+        assertEquals(11,AdventureRules.encounters(q.adventure).size)
     }
 }

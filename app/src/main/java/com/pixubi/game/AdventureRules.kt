@@ -16,7 +16,7 @@ internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,v
 internal data class AdventureState(val stage:Int=1,val pos:GridPoint=GridPoint(0,2),val cleared:Set<Int> = emptySet(),
     val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap(),val barracks:Int=1,val squadRanks:Map<SquadKind,Int> = emptyMap(),val pastCampaignWins:Int=0,val licensed:Set<SquadKind> = emptySet(),val artifacts:Set<FrontierArtifact> = emptySet())
 internal object AdventureRules{
-    const val MAP_W=16;const val MAP_H=10;const val ARENA_W=9;const val ARENA_H=5
+    const val MAP_W=20;const val MAP_H=14;const val ARENA_W=9;const val ARENA_H=5
     val base=GridPoint(0,2)
     val legacyEncounters=listOf(GridPoint(3,1),GridPoint(5,3),GridPoint(7,0),GridPoint(7,5))
     private val legacyWalls=setOf(GridPoint(2,0),GridPoint(2,1),GridPoint(4,2),GridPoint(4,3),GridPoint(4,4),GridPoint(6,1),GridPoint(6,4),GridPoint(1,5))
@@ -27,19 +27,19 @@ internal object AdventureRules{
     // with open main roads; each sector has a different arrangement of objects.
     internal data class SectorLayout(val encounters:List<GridPoint>,val walls:Set<GridPoint>,val resources:Map<GridPoint,AdventureTile>)
     private val sectors=java.util.concurrent.ConcurrentHashMap<Int,SectorLayout>()
-    fun mainRoad(q:GridPoint):Boolean=(q.x>=8&&(q.y in listOf(0,2,5,6,9)||q.x in listOf(8,12,15)))||
+    fun mainRoad(q:GridPoint):Boolean=if(q.x>=16||q.y>=10) FrontierNetwork.road(q) else (q.x>=8&&(q.y in listOf(0,2,5,6,9)||q.x in listOf(8,12,15)))||
         (q.y>=6&&(q.y in listOf(6,9)||q.x in listOf(0,3,5,7,8,12,15)))
     fun layout(stage:Int):SectorLayout=sectors.computeIfAbsent(stage){n->
         val rng=kotlin.random.Random(n*7907+31)
-        val extension=(0 until MAP_W*MAP_H).map{GridPoint(it%MAP_W,it/MAP_W)}.filter{it.x>=8||it.y>=6}
+        val extension=(0 until 160).map{GridPoint(it%16,it/16)}.filter{it.x>=8||it.y>=6}
         val river=setOf(GridPoint(4,7),GridPoint(4,8))
         val candidates=extension.filter{!mainRoad(it)&&it !in river&&it.neighbors().any(::mainRoad)}.shuffled(rng)
         val newEnemies=candidates.take(6)
         val newResources=candidates.drop(6).take(18)
         val terrain=extension.filter{!mainRoad(it)&&it !in newEnemies&&it !in newResources&&it !in river}.shuffled(rng).take(12)
         val kinds=listOf(AdventureTile.COINS,AdventureTile.ENERGY,AdventureTile.REPAIR,AdventureTile.AMMO)
-        SectorLayout(legacyEncounters+newEnemies,legacyWalls+river+terrain,
-            legacyResources+newResources.mapIndexed{i,q->q to kinds[(i+n)%kinds.size]}.toMap())
+        SectorLayout(legacyEncounters+newEnemies+FrontierNetwork.raids(n),legacyWalls+river+terrain+FrontierNetwork.walls(n),
+            legacyResources+newResources.mapIndexed{i,q->q to kinds[(i+n)%kinds.size]}.toMap()+FrontierNetwork.resources(n))
     }
     fun encounters(a:AdventureState)=layout(a.stage).encounters
     fun id(q:GridPoint)=q.y*MAP_W+q.x
@@ -62,7 +62,7 @@ internal object AdventureRules{
     }
     fun tile(a:AdventureState,q:GridPoint):AdventureTile=when{
         q==base->AdventureTile.BASE
-        q in layout(a.stage).walls->AdventureTile.WALL
+        q in layout(a.stage).walls||FrontierNetwork.locked(a,q)->AdventureTile.WALL
         id(q) in a.cleared->AdventureTile.EMPTY
         q in encounters(a)->AdventureTile.ENEMY
         else->layout(a.stage).resources[q]?:FrontierSites.sites(a.stage)[q]?:AdventureTile.EMPTY
@@ -91,7 +91,7 @@ internal object AdventureRules{
                 return route.asReversed()
             }
             q.neighbors().filter{inMap(it)&&it !in parent&&visible(a,it)&&tile(a,it)!=AdventureTile.WALL&&
-                (it==to||!FrontierSites.hostile(tile(a,it)))}.forEach{parent[it]=q;queue.add(it)}
+                (it==to||!FrontierSites.hostile(tile(a,it))&&FrontierNetwork.destination(a.stage,it)==null)}.forEach{parent[it]=q;queue.add(it)}
         }
         return emptyList()
     }
@@ -117,6 +117,9 @@ internal object AdventureRules{
         val steps=a.steps+1
         var q=p.copy(energy=(p.energy-if(steps%(if(FrontierArtifact.SCANNER in a.artifacts)5 else 4)==0)1 else 0).coerceAtLeast(0),
             adventure=a.copy(pos=to,seen=seen,steps=steps),message="Сектор ${a.stage} · дослідження")
+        FrontierNetwork.destination(a.stage,to)?.let{exit->
+            return q.copy(adventure=q.adventure.copy(pos=exit,seen=reveal(q.adventure,exit)),message="Портал · переміщення в іншу частину сектора")
+        }
         if(t in listOf(AdventureTile.EMPTY,AdventureTile.BASE))return q
         q=q.copy(adventure=q.adventure.copy(cleared=a.cleared+id(to)))
         q=when(t){
@@ -147,9 +150,10 @@ internal object AdventureRules{
             val extra=a.squad.keys.sumOf{SquadRules.stackCount(a,it)}
             val scale=AdventureBalance.enemyScale(a.stage,extra)
             val elite=(boss||vault)&&i==0
-            val hp=(stats.durability*(if(elite) .83f else if(count==2).36f else .55f)*scale).toInt().coerceAtLeast(25)
+            val raid=FrontierNetwork.raids(a.stage).contains(at)
+            val hp=(stats.durability*(if(elite&&raid) 1.25f else if(elite) .83f else if(count==2).36f else .55f)*scale).toInt().coerceAtLeast(25)
             ArenaBot(series,tier,GridPoint(ARENA_W-1,if(count==1)2 else 1+i*2),hp,hp,
-                (stats.attack*(if(elite).82f else .60f)+4+a.stage.coerceAtMost(24)).toInt(),(stats.defense*(if(elite).75f else .55f)).toInt(),stats.speed)
+                (stats.attack*(if(elite&&raid)1.02f else if(elite).82f else .60f)+4+a.stage.coerceAtMost(24)).toInt(),(stats.defense*(if(elite).75f else .55f)).toInt(),stats.speed)
         }
         val max=p.stats.durability.coerceAtLeast(1)
         return ArenaBattle(id(at),GridPoint(0,2),(max*p.integrity/100).coerceAtLeast(1),max,bots,allies=SquadRules.deploy(a.squad,a.squadRanks,SquadRules.slots(a)),deploying=true,log="Розстав своїх юнітів")
@@ -431,7 +435,7 @@ internal object AdventureCodec{
         val battle=if(b==null)"" else listOf(b.encounter.toString(),point(b.pos),b.hp.toString(),b.maxHp.toString(),b.turn.toString(),
             b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")},
             b.allies.joinToString(";"){u->listOf(u.kind.name,u.pos.x,u.pos.y,u.hp,u.charges,u.rank).joinToString(",")},b.acted.sorted().joinToString(","),b.guards.sorted().joinToString(","),if(b.enemyPending)"1" else "0",b.enemyCursor.toString(),if(b.deploying)"1" else "0",b.skillUsed.sorted().joinToString(",")).joinToString("~")
-        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena9wide",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name}).joinToString("|")
+        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"20",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena9wide",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name}).joinToString("|")
     }
     fun decode(s:String):AdventureState{
         decodeChecked(s)?.let{return it}
@@ -446,10 +450,10 @@ internal object AdventureCodec{
     private fun decodeChecked(s:String):AdventureState?=runCatching{
         val v=s.split("|")
         val stage=v[0].toInt().coerceIn(1,100)
-        val old=v.getOrNull(6)!="16"
-        fun migrateId(id:Int):Int?=if(old){
-            if(id !in 0 until 48)null else AdventureRules.id(GridPoint(id%8,id/8))
-        }else id.takeIf{it in 0 until AdventureRules.MAP_W*AdventureRules.MAP_H}
+        val old=v.getOrNull(6) !in listOf("16","20")
+        val savedWidth=when(v.getOrNull(6)){"20"->20;"16"->16;else->8}
+        val savedHeight=when(savedWidth){20->14;16->10;else->6}
+        fun migrateId(id:Int):Int?=if(id !in 0 until savedWidth*savedHeight)null else AdventureRules.id(GridPoint(id%savedWidth,id/savedWidth))
         fun ids(value:String)=value.split(",").mapNotNull{it.toIntOrNull()?.let(::migrateId)}.toSet()
         val cleared=ids(v[2])
         val credited=v.getOrNull(7)=="1"||(old&&AdventureRules.legacyEncounters.all{AdventureRules.id(it) in cleared})

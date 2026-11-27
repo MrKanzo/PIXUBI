@@ -29,9 +29,9 @@ import kotlin.random.Random
 
 // Three-quarter projection. All art and input share the exact same logical coordinates.
 internal object FrontierProjection{
-    const val W=1820f
-    const val H=970f
-    fun center(q:GridPoint)=Offset(78f+q.x*100f+(9-q.y)*17f,80f+q.y*91f)
+    const val W=2290f
+    const val H=1340f
+    fun center(q:GridPoint)=Offset(78f+q.x*100f+(13-q.y)*17f,80f+q.y*91f)
     fun corners(q:GridPoint):List<Offset>{
         val c=center(q)
         return listOf(c+Offset(-41.5f,-45.5f),c+Offset(58.5f,-45.5f),c+Offset(41.5f,45.5f),c+Offset(-58.5f,45.5f))
@@ -39,7 +39,7 @@ internal object FrontierProjection{
     fun at(x:Float,y:Float):GridPoint?{
         val ry=(y-80f)/91f
         val row=ry.roundToInt()
-        val col=((x-78f-(9f-ry)*17f)/100f).roundToInt()
+        val col=((x-78f-(13f-ry)*17f)/100f).roundToInt()
         val q=GridPoint(col,row)
         return q.takeIf{AdventureRules.inMap(it)&&abs(ry-row)<=.5f}
     }
@@ -91,16 +91,16 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             Text(colors.name,style=MaterialTheme.typography.titleLarge)
             Text(if(target!=null)"Робот прямує до цілі" else "Сектор ${a.stage} · відкрий територію",style=MaterialTheme.typography.labelSmall)
             val explored=(0 until AdventureRules.MAP_W*AdventureRules.MAP_H).count{AdventureRules.visible(a,GridPoint(it%AdventureRules.MAP_W,it/AdventureRules.MAP_W))}
-            Text("Відкрито ${explored*100/(AdventureRules.MAP_W*AdventureRules.MAP_H)}% · $explored/160 зон",style=MaterialTheme.typography.labelSmall,color=Color(0xFF9CE2C7))
+            Text("Відкрито ${explored*100/(AdventureRules.MAP_W*AdventureRules.MAP_H)}% · $explored/${AdventureRules.MAP_W*AdventureRules.MAP_H} зон",style=MaterialTheme.typography.labelSmall,color=Color(0xFF9CE2C7))
         }
-        OutlinedButton(onClick={zoom=(zoom+1)%3}){Text(listOf("Огляд","2,5×","3,5×")[zoom])}
+        OutlinedButton(onClick={zoom=(zoom+1)%3}){Text(listOf("Огляд","3,2×","4,5×")[zoom])}
     }
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
         FilterChip(follow,{follow=!follow},label={Text("Стежити за роботом")})
         OutlinedButton(onClick={centerRequest++}){Text("До робота")}
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
-        val mapWidth=maxWidth*listOf(1f,2.5f,3.5f)[zoom]
+        val mapWidth=maxWidth*listOf(1f,3.2f,4.5f)[zoom]
         val mapHeight=mapWidth*(FrontierProjection.H/FrontierProjection.W)
         val route=remember(a,target){target?.let{AdventureRules.mapRoute(a,it)}?:emptyList()}
         val viewportHeight=minOf(mapHeight,maxWidth*1.05f)
@@ -169,7 +169,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         }
     }
     FrontierOverview(a)
-    Text("Темне — невідоме · відкрита місцевість зберігається",style=MaterialTheme.typography.labelSmall)
+    Text("Блакитний / фіолетовий — портали · червоний шлюз — закрито до перемоги над босом · розвідка зберігається",style=MaterialTheme.typography.labelSmall)
     if(target!=null)TextButton(onClick={target=null}){Text("Зупинити рух")}
 }
 private fun DrawScope.shape(c:Color,vararg xy:Float){
@@ -245,9 +245,9 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
         listOf(GridPoint(5,2),GridPoint(6,2),GridPoint(7,2),GridPoint(7,3),GridPoint(7,4),GridPoint(7,5)),
         listOf(GridPoint(1,2),GridPoint(1,1)),listOf(GridPoint(2,2),GridPoint(2,3)),listOf(GridPoint(3,1),GridPoint(4,1),GridPoint(5,1)))
     // Extended road network: east-west links, north-south routes and southern passages.
-    for(y in listOf(0,2,5))roads.add((7 until AdventureRules.MAP_W).map{GridPoint(it,y)})
+    for(y in listOf(0,2,5,10,13))roads.add((7 until AdventureRules.MAP_W).map{GridPoint(it,y)})
     for(y in listOf(6,9))roads.add((0 until AdventureRules.MAP_W).map{GridPoint(it,y)})
-    for(x in listOf(8,12,15))roads.add((0 until AdventureRules.MAP_H).map{GridPoint(x,it)})
+    for(x in listOf(8,12,15,19))roads.add((0 until AdventureRules.MAP_H).map{GridPoint(x,it)})
     for(x in listOf(0,3,5,7))roads.add((5 until AdventureRules.MAP_H).map{GridPoint(x,it)})
     // Rounded corners are real quadratic curves, not just round stroke caps.
     val roadPaths=roads.map{roundedRoad(it.map(FrontierProjection::center))}
@@ -336,9 +336,21 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             AdventureTile.LAB->frontierSite(p,0,phase)
             AdventureTile.CACHE->frontierSite(p,1,phase)
             AdventureTile.VAULT->frontierSite(p,2,phase)
-            AdventureTile.ENEMY->{if(q==AdventureRules.encounters(a).last())portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
+            AdventureTile.ENEMY->{if(FrontierSites.isBoss(a,q))portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
             else->Unit
         }}
+    }
+    for((q,exit) in FrontierNetwork.portals(a.stage))if(AdventureRules.visible(a,q)){
+        val c=FrontierProjection.center(q);val tint=if(FrontierNetwork.portalType(q)==0)Color(0xFF64E8FF)else Color(0xFFD99BFF)
+        translate(c.x,c.y){portal(p.copy(glow=tint),phase);drawCircle(tint,7f,Offset(0f,-23f))}
+    }
+    for(q in FrontierNetwork.gates(a.stage))if(AdventureRules.visible(a,q)){
+        val c=FrontierProjection.center(q);val locked=FrontierNetwork.locked(a,q);val tint=if(locked)Color(0xFFFF776C)else Color(0xFF76F4AD)
+        translate(c.x,c.y){
+            drawRect(p.dark,Offset(-38f,-54f),Size(9f,56f));drawRect(p.dark,Offset(29f,-54f),Size(9f,56f))
+            if(locked){drawRect(tint.copy(alpha=.18f),Offset(-29f,-46f),Size(58f,43f));for(i in 0..4)drawLine(tint,Offset(-29f,-43f+i*9f),Offset(29f,-43f+i*9f),2f)}
+            drawLine(tint,Offset(-38f,-54f),Offset(38f,-54f),4f)
+        }
     }
     // Edge forest / rock faces, never place obstacles on walkable centers.
     for(i in 0..18){

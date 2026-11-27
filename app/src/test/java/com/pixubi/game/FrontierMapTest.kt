@@ -4,11 +4,11 @@ import org.junit.Test
 class FrontierMapTest{
     @Test fun largeSectorsHaveReachableDistinctObjects(){
         val layouts=(1..100).map{AdventureRules.layout(it)}
-        assertEquals(160,AdventureRules.MAP_W*AdventureRules.MAP_H)
+        assertEquals(280,AdventureRules.MAP_W*AdventureRules.MAP_H)
         assertTrue(layouts.toSet().size>90)
         layouts.forEach{l->
-            assertEquals(10,l.encounters.size)
-            assertEquals(25,l.resources.size)
+            assertEquals(11,l.encounters.size)
+            assertEquals(29,l.resources.size)
             assertTrue(l.encounters.none{it in l.walls||it in l.resources})
             assertTrue(l.resources.keys.none{it in l.walls})
             val blocked=l.walls+l.encounters
@@ -25,7 +25,7 @@ class FrontierMapTest{
         // (1,1), (3,1), (5,3), (7,0), (7,5) in the original width-eight map.
         val legacy=AdventureCodec.decode("1|5,3|9,11,29,7,47|0,9,29,47|12|")
         assertEquals(GridPoint(5,3),legacy.pos)
-        assertEquals(setOf(17,19,53,7,87),legacy.cleared)
+        assertEquals(setOf(21,23,65,7,107),legacy.cleared)
         assertTrue(legacy.credited)
         assertTrue(AdventureRules.canAdvance(legacy))
         assertEquals(legacy,AdventureCodec.decode(AdventureCodec.encode(legacy)))

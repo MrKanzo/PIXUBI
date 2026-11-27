@@ -17,14 +17,14 @@ internal object FrontierSites {
         val reachable=mutableSetOf(AdventureRules.base)
         val queue=ArrayDeque<GridPoint>();queue.add(AdventureRules.base)
         while(queue.isNotEmpty()){
-            queue.removeFirst().neighbors().filter{AdventureRules.inMap(it)&&it !in blocked&&reachable.add(it)}.forEach{queue.add(it)}
+            queue.removeFirst().neighbors().filter{it.x in 0 until 16&&it.y in 0 until 10&&it !in blocked&&reachable.add(it)}.forEach{queue.add(it)}
         }
         val candidates=reachable.filter{(it.x>=8||it.y>=6)&&it !in l.resources&&it.x!=4&&it.neighbors().any{q->q in reachable&&AdventureRules.mainRoad(q)}}.sortedWith(compareBy<GridPoint>{it.y}.thenBy{it.x}).shuffled(Random(n*5719+13))
         // Vault must not cut off existing roads or supplies; prefer off-road tiles.
         fun safeVault(q:GridPoint):Boolean{
             val seen=mutableSetOf(AdventureRules.base);val pending=ArrayDeque<GridPoint>();pending.add(AdventureRules.base)
             while(pending.isNotEmpty())pending.removeFirst().neighbors().filter{it!=q&&it in reachable&&seen.add(it)}.forEach{pending.add(it)}
-            return seen.size==reachable.size-1&&l.encounters.all{e->e.neighbors().any{it in seen}}
+            return seen.size==reachable.size-1&&l.encounters.take(10).all{e->e.neighbors().any{it in seen}}
         }
         val vault=candidates.sortedBy{AdventureRules.mainRoad(it)}.firstOrNull(::safeVault)
         val other=candidates.filter{it!=vault}.take(2)
@@ -34,7 +34,7 @@ internal object FrontierSites {
             vault?.let{put(it,AdventureTile.VAULT)}
         }
     }
-    fun isBoss(a:AdventureState,q:GridPoint)=AdventureRules.encounters(a).lastOrNull()==q
+    fun isBoss(a:AdventureState,q:GridPoint)=AdventureRules.encounters(a).getOrNull(9)==q||q in FrontierNetwork.raids(a.stage)
     fun isVault(a:AdventureState,q:GridPoint)=sites(a.stage)[q]==AdventureTile.VAULT
     fun artifact(stage:Int,offset:Int=0)=FrontierArtifact.entries[(stage-1+offset)%FrontierArtifact.entries.size]
     fun found(a:AdventureState)=sites(a.stage).keys.count{AdventureRules.id(it) in a.cleared}
