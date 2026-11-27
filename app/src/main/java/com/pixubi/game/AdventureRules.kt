@@ -68,10 +68,11 @@ internal object AdventureRules{
         else->layout(a.stage).resources[q]?:FrontierSites.sites(a.stage)[q]?:AdventureTile.EMPTY
     }
     // Keep explored cells navigable, but hide live objects outside the scanner radius.
-    fun inSight(a:AdventureState,q:GridPoint)=inMap(q)&&(a.pos.distance(q)<=2||q==base)
+    fun inSight(a:AdventureState,q:GridPoint)=inMap(q)&&(scannerContains(a.pos,q)||q==base)
     fun visible(a:AdventureState,q:GridPoint)=inMap(q)&&(inSight(a,q)||id(q) in a.seen)
     fun knownTile(a:AdventureState,q:GridPoint):AdventureTile?=if(inSight(a,q))tile(a,q)else null
-    private fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{q.distance(GridPoint(it%MAP_W,it/MAP_W))<=2}
+    private fun scannerContains(center:GridPoint,q:GridPoint):Boolean { val dx=center.x-q.x;val dy=center.y-q.y;return dx*dx+dy*dy<=5 }
+    private fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{scannerContains(q,GridPoint(it%MAP_W,it/MAP_W))}
     fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters(a).indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
     fun complete(a:AdventureState)=encounters(a).all{id(it) in a.cleared}
     fun canAdvance(a:AdventureState)=complete(a)||a.credited
@@ -107,7 +108,7 @@ internal object AdventureRules{
         if(!canExplore(p))return p.copy(message="Потрібна зарядка, ремонт або завершення місії.")
         if(!inMap(to)||a.pos.distance(to)!=1||tile(a,to)==AdventureTile.WALL)return p
         val t=tile(a,to)
-        val seen=reveal(a,a.pos)+reveal(a,to)
+        val seen=reveal(a,a.pos)+(if(FrontierSites.hostile(t))emptySet<Int>() else reveal(a,to))
         if(FrontierSites.hostile(t)){
             if(p.energy<AdventureBalance.BATTLE_ENERGY)return p.copy(message="Для входу в бій потрібно 5% енергії.")
             val b=begin(p,to)
@@ -249,7 +250,7 @@ internal object AdventureRules{
         return null
     }
     fun reachable(p:WorldPet,b:ArenaBattle,q:GridPoint)=SquadRules.reachable(p,b,-1,q)
-    fun weapons(p:WorldPet)=p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sortedBy{it.ordinal}
+    fun weapons(p:WorldPet)=p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS&&(p.series!=RobotSeries.KAGE||it==RobotGear.BLADE_L||it==RobotGear.BLADE_R)}.sortedBy{it.ordinal}
     fun range(g:RobotGear?)=when(g){
         RobotGear.BLASTER_L,RobotGear.BLASTER_R->3
         RobotGear.RIFLE_L,RobotGear.RIFLE_R->4
@@ -258,8 +259,15 @@ internal object AdventureRules{
         else->1
     }
     fun attackCost(g:RobotGear?)=if(g==null)null else WorldGearCatalog.ammo(g)?.first
+    fun commanderRange(p:WorldPet,g:RobotGear?)=if(p.series==RobotSeries.KAGE||g==null)ArenaAttackStyle.of(p.series).reach else range(g)
+    fun dashReachable(b:ArenaBattle,from:GridPoint,to:GridPoint,reach:Int):Boolean{
+        if(arenaDistance(from,to)>reach)return false
+        val blocked=(b.enemies.filter{it.hp>0}.map{it.pos}+b.allies.filter{it.hp>0}.map{it.pos}+b.pos).toSet()-from
+        return arenaNeighbors(to).any{inArena(it)&&it !in blocked&&(path(from,it,blocked)?:999)<reach}
+    }
     fun canHit(p:WorldPet,b:ArenaBattle,enemy:ArenaBot,g:RobotGear?):Boolean{
-        if(!SquadRules.ready(b,-1)||enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>range(g))return false
+        if(!SquadRules.ready(b,-1)||enemy.hp<=0||arenaDistance(b.pos,enemy.pos)>commanderRange(p,g))return false
+        if(p.series==RobotSeries.KAGE&&!dashReachable(b,b.pos,enemy.pos,commanderRange(p,g)))return false
         if(g!=null&&g !in weapons(p))return false
         return attackCost(g)?.let{p.stock(it)>0}?:true
     }
@@ -273,7 +281,7 @@ internal object AdventureRules{
         val e=b.enemies.getOrNull(index)?:return null
         if(actor==-1){
             if(!canHit(p,b,e,gear))return null
-            val base=(p.stats.attack-weapons(p).sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
+            val base=(p.stats.attack-p.equipment.items.values.filter{WorldGearCatalog.category(it)==WorldCategory.WEAPONS}.sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
             return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
         }
         val ally=b.allies.getOrNull(actor)?:return null
@@ -350,7 +358,8 @@ internal object AdventureRules{
         val e=b.enemies[i]
         val targets=buildList{add(-1 to b.pos);b.allies.forEachIndexed{j,u->if(u.hp>0)add(j to u.pos)}}
         val (actor,position)=targets.minWithOrNull(compareBy<Pair<Int,GridPoint>>{arenaDistance(e.pos,it.second)}.thenBy{if(it.first>=0&&b.allies[it.first].kind==SquadKind.GUARD)0 else 1}.thenBy{it.first})!!
-        if(arenaDistance(e.pos,position)==1)return EnemyAction(i,e.pos,position,actor)
+        val style=ArenaAttackStyle.of(e.series)
+        if(arenaDistance(e.pos,position)<=style.reach&&(style!=ArenaAttackStyle.KATANA||dashReachable(b,e.pos,position,style.reach)))return EnemyAction(i,e.pos,position,actor)
         val blocked=b.enemies.filterIndexed{j,bot->j!=i&&bot.hp>0}.map{it.pos}.toSet()+targets.map{it.second}
         val reach=(1+e.speed/55).coerceIn(1,3)
         val next=arenaCells
@@ -390,7 +399,7 @@ internal object AdventureRules{
         val xp=if(win)AdventureBalance.battleXp(a.stage,b.enemies.size,boss||vault) else if(retreat)0 else 10
         val coins=if(win)AdventureBalance.battleCoins(a.stage,b.enemies.size,boss||vault) else 0
         val survivors=if(b.allies.isEmpty())a.squad else b.allies.filter{it.hp>0}.associate{it.kind to it.hp}
-        val updated=a.copy(battle=null,cleared=cleared,pos=pos,artifacts=a.artifacts+listOfNotNull(artifact),squad=survivors,squadRanks=a.squadRanks.filterKeys{it in survivors})
+        val updated=a.copy(battle=null,cleared=cleared,pos=pos,seen=reveal(a,pos),artifacts=a.artifacts+listOfNotNull(artifact),squad=survivors,squadRanks=a.squadRanks.filterKeys{it in survivors})
         val earnsCredit=win&&!a.credited&&complete(updated)
         val newTech=SquadKind.entries.filter{!SquadResearch.unlocked(a,it)&&SquadResearch.unlocked(updated,it)}
         val techMessage=if(newTech.isEmpty())"" else " · 🔓 Відкрито: "+newTech.joinToString(", "){it.title}

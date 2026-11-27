@@ -74,6 +74,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var skillVisual by remember{mutableStateOf<ArenaSkillFx?>(null)}
     var skillCells by remember{mutableStateOf<List<GridPoint>>(emptyList())}
     var melee by remember{mutableStateOf(false)}
+    var attackStyle by remember{mutableStateOf(ArenaAttackStyle.IMPACT)}
     var damageLabels by remember{mutableStateOf<List<Pair<GridPoint,Int>>>(emptyList())}
     val response=remember{Animatable(0f)}
     var queued by remember{mutableStateOf<(() -> WorldPet)?>(null)}
@@ -82,10 +83,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val now={System.currentTimeMillis()}
     val phase by rememberGamePhase(duration(1000),enabled=b!=null)
     val busy=queued!=null||moving||attack||b?.enemyPending==true
-    fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,skill:ArenaSkillFx?=null,cells:List<GridPoint> = emptyList(),action:()->WorldPet){
+    fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,skill:ArenaSkillFx?=null,cells:List<GridPoint> = emptyList(),style:ArenaAttackStyle=ArenaAttackStyle.IMPACT,action:()->WorldPet){
         if(queued!=null||moving||attack)return
         targetChoice=-1
-        visualKind=kind;visualSource=source;visualTarget=target;melee=closeCombat;skillVisual=skill;skillCells=cells
+        visualKind=kind;visualSource=source;visualTarget=target;melee=closeCombat;skillVisual=skill;skillCells=cells;attackStyle=style
         attack=kind=="strike";moving=kind=="move"
         queued=action
     }
@@ -99,6 +100,12 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             if(visualKind=="move"){
                 result=action();latestChange(result)
                 fx.animateTo(1f,tween(duration(460),easing=LinearEasing))
+            }else if(visualKind=="strike"&&attackStyle.lunge){
+                fx.animateTo(.52f,tween(duration(420),easing=LinearEasing))
+                result=action()
+                if(result.adventure.battle!=null)latestChange(result)
+                fx.animateTo(1f,tween(duration(380),easing=LinearEasing))
+                if(result.adventure.battle==null)latestChange(result)
             }else{
                 fx.animateTo(1f,tween(duration(skillVisual?.millis?:520),easing=LinearEasing))
                 result=action();latestChange(result)
@@ -125,7 +132,8 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             val plan=AdventureRules.enemyPlan(b)?:return@LaunchedEffect
             delay(duration(180).toLong())
             enemyVisual=plan.index
-            perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,true){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
+            val style=ArenaAttackStyle.of(b.enemies[plan.index].series)
+            perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,style.lunge,style=style){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
         }
     }
     fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
@@ -174,6 +182,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             val actor=actorChoice.takeIf{it in available}?:available.firstOrNull()?:-1
             val source=SquadRules.position(b,actor)
             val ally=b.allies.getOrNull(actor)
+            val chosenStyle=if(ally==null)ArenaAttackStyle.of(p.series,selected) else ArenaAttackStyle.of(ally.kind.series,ally.kind.gear)
             val chosenEnemy=b.enemies.getOrNull(targetChoice)?.takeIf{it.hp>0}
             val damagePreview=AdventureRules.previewDamage(p,b,actor,targetChoice,selected)
             val nextEnemy=AdventureRules.nextEnemy(b)
@@ -212,7 +221,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             Button(onClick={
                                 val i=targetChoice;val dest=chosenEnemy.pos
                                 direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                                perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
+                                perform("strike",source,dest,chosenStyle.lunge,style=chosenStyle){
                                     latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
                                 }
                             },modifier=Modifier.fillMaxWidth()){Text("Підтвердити атаку")}
@@ -226,10 +235,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             Text(if(ally==null)"Командир · рух до ${AdventureRules.movement(p)} клітинок" else "${ally.kind.title} ×${ally.count} · ATK ${ally.attack+SquadTactics.attackBonus(b,ally.kind)} · рух ${ally.move} · дальність ${ally.range}"+if(ally.kind.charges>0)" · заряди ${ally.charges}" else "")
             if(ally==null){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                FilterChip(selected==null,{weapon=null},label={Text("Ближній удар · 1")})
+                FilterChip(selected==null,{weapon=null},label={Text(ArenaAttackStyle.of(p.series).title+" · "+AdventureRules.commanderRange(p,null))})
                 AdventureRules.weapons(p).forEach{g->
                     val ammo=AdventureRules.attackCost(g)
-                    FilterChip(selected==g,{weapon=g},label={Text(g.title+" · "+AdventureRules.range(g)+(ammo?.let{" · ${p.stock(it)} зар."}?:""))})
+                    FilterChip(selected==g,{weapon=g},label={Text(g.title+" · "+AdventureRules.commanderRange(p,g)+(ammo?.let{" · ${p.stock(it)} зар."}?:""))})
                 }
             }
             }
@@ -252,6 +261,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 fun spriteH(q:GridPoint)=fixedEnvelope.height.dp
                 fun spriteX(q:GridPoint)=projection.foot(q).x.dp-spriteW(q)/2
                 fun spriteY(q:GridPoint)=projection.foot(q).y.dp-spriteH(q)*.89f
+                fun lungeOffset(q:GridPoint):Offset{
+                    val target=visualTarget?:return Offset.Zero
+                    if(!attack||!attackStyle.lunge||visualSource!=q)return Offset.Zero
+                    val d=projection.foot(target)-projection.foot(q)
+                    val length=d.getDistance().coerceAtLeast(1f)
+                    val stop=(projection.cell*.26f/length).coerceAtMost(.45f)
+                    return d*((1f-stop)*ArenaAttackStyle.travel(fx.value))
+                }
+                fun attackAction():RobotAction=if(attackStyle==ArenaAttackStyle.KATANA&&(fx.value<.38f||fx.value>.63f))RobotAction.NINJA_DASH else RobotAction.ATTACK
                 fun xOf(q:GridPoint)=projection.center(q).x.dp-cell/2
                 fun yOf(q:GridPoint)=projection.center(q).y.dp
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
@@ -324,19 +342,19 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     }
                     val px by animateDpAsState(spriteX(b.pos),tween(duration(300)),label="battle x")
                     val py by animateDpAsState(spriteY(b.pos),tween(duration(300)),label="battle y")
-                    Box(Modifier.offset(px,py).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f)){
+                    Box(Modifier.offset(px+(if(enemyVisual<0)lungeOffset(b.pos).x.dp else 0.dp),py+(if(enemyVisual<0)lungeOffset(b.pos).y.dp else 0.dp)).size(spriteW(b.pos),spriteH(b.pos)).zIndex(projection.depth(b.pos)+1f)){
                         ArenaGroundShadow(false,actor==-1&&!busy)
-                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)RobotAction.ATTACK else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,p.equipment,p.tier,p.series,arena=true),if(busy&&enemyVisual<0&&(visualSource==b.pos||moving&&visualTarget==b.pos))fx.value else phase,false,Modifier.fillMaxSize())
+                        RobotPreview(direction,if(enemyVisual<0&&attack&&visualSource==b.pos)attackAction() else if(enemyVisual<0&&moving&&visualTarget==b.pos)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(p.skin.accent,ArenaAttackStyle.combatEquipment(p.series,p.equipment),p.tier,p.series,arena=true),if(busy&&enemyVisual<0&&(visualSource==b.pos||moving&&visualTarget==b.pos))fx.value else phase,false,Modifier.fillMaxSize())
 
                     }
                     b.allies.forEachIndexed{i,u->key("ally"+i){
                         val ax by animateDpAsState(spriteX(u.pos),tween(duration(300)),label="ally x")
                         val ay by animateDpAsState(spriteY(u.pos),tween(duration(300)),label="ally y")
-                        if(u.hp>0)Box(Modifier.offset(ax,ay).size(spriteW(u.pos),spriteH(u.pos)).zIndex(projection.depth(u.pos)+1f)){
+                        if(u.hp>0)Box(Modifier.offset(ax+(if(enemyVisual<0)lungeOffset(u.pos).x.dp else 0.dp),ay+(if(enemyVisual<0)lungeOffset(u.pos).y.dp else 0.dp)).size(spriteW(u.pos),spriteH(u.pos)).zIndex(projection.depth(u.pos)+1f)){
                             ArenaGroundShadow(false,actor==i&&!busy)
                             val activeAction=when{
                                 enemyVisual<0&&skillVisual==ArenaSkillFx.DOME&&visualSource==u.pos->RobotAction.CHARGE
-                                enemyVisual<0&&attack&&visualSource==u.pos->RobotAction.ATTACK
+                                enemyVisual<0&&attack&&visualSource==u.pos->attackAction()
                                 enemyVisual<0&&moving&&visualTarget==u.pos->if(u.kind==SquadKind.AERIAL)RobotAction.BIO_FLIGHT else RobotAction.WALK
                                 busy&&visualKind=="repair"&&visualSource==u.pos->RobotAction.CHARGE
                                 else->RobotAction.IDLE
@@ -348,9 +366,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     b.enemies.forEachIndexed{i,e->key(i){
                         val ex by animateDpAsState(spriteX(e.pos),tween(duration(300)),label="bot x")
                         val ey by animateDpAsState(spriteY(e.pos),tween(duration(300)),label="bot y")
-                        if(e.hp>0)Box(Modifier.offset(ex,ey).size(spriteW(e.pos),spriteH(e.pos)).zIndex(projection.depth(e.pos)+1f)){
+                        if(e.hp>0)Box(Modifier.offset(ex+(if(enemyVisual==i)lungeOffset(e.pos).x.dp else 0.dp),ey+(if(enemyVisual==i)lungeOffset(e.pos).y.dp else 0.dp)).size(spriteW(e.pos),spriteH(e.pos)).zIndex(projection.depth(e.pos)+1f)){
                             ArenaGroundShadow(true,targetChoice==i)
-                            RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)RobotAction.ATTACK else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,RobotEquipment(),e.tier,e.series,arena=true),if(enemyVisual==i)fx.value else phase,false,Modifier.fillMaxSize())
+                            RobotPreview(if(enemyVisual==i&&visualTarget!=null&&visualSource!=null&&visualTarget!!.x>visualSource!!.x)RobotView.RIGHT else RobotView.LEFT,if(enemyVisual==i&&attack)attackAction() else if(enemyVisual==i&&moving)RobotAction.WALK else RobotAction.IDLE,RobotFace.ANGRY,RobotLoadout(RobotSkin.RED.accent,ArenaAttackStyle.combatEquipment(e.series,RobotEquipment()),e.tier,e.series,arena=true),if(enemyVisual==i)fx.value else phase,false,Modifier.fillMaxSize())
 
                         }
                     }}
@@ -373,15 +391,15 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val from=plane.foot(src)+raise;val to=plane.foot(dst)+raise
                             val t=fx.value
                             val special=skillVisual
-                            if(special!=null)drawSkillFx(special,plane,src,dst,skillCells,t) else when(visualKind){
+                            if(special!=null&&!(visualKind=="strike"&&attackStyle.lunge))drawSkillFx(special,plane,src,dst,skillCells,t) else when(visualKind){
                                 "strike"->{
                                     val point=from+(to-from)*(t*1.8f).coerceIn(0f,1f)
-                                    if(t<.62f&&melee){
+                                    if(t>=.35f&&t<=.68f&&melee){
                                         val sweep=Offset(to.x-w*.34f,to.y-w*.34f)
-                                        drawArc(Color(0xFFE2FAFF).copy(alpha=1f-t),-135f,190f*t/.62f,false,sweep,Size(w*.68f,w*.68f),style=Stroke(w*.10f,cap=StrokeCap.Round))
-                                    }else if(t<.62f){
-                                        drawLine(Color(0xFF61E9FF).copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
-                                        drawLine(Color(0xFFB5FFFF),from,point,w*.052f,StrokeCap.Round)
+                                        drawArc(attackStyle.tint.copy(alpha=1f-t),-135f,190f*((t-.35f)/.33f).coerceIn(0f,1f),false,sweep,Size(w*.68f,w*.68f),style=Stroke(w*.10f,cap=StrokeCap.Round))
+                                    }else if(t<.62f&&!melee){
+                                        drawLine(attackStyle.tint.copy(alpha=.24f),from,point,w*.20f,StrokeCap.Round)
+                                        drawLine(attackStyle.tint,from,point,w*.052f,StrokeCap.Round)
                                         drawCircle(Color.White,w*.06f,point)
                                     }
                                     if(t>.38f){
@@ -439,7 +457,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                             val dest=chosenEnemy?.pos?:return@Button
                             val i=targetChoice
                             direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                            perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
+                            perform("strike",source,dest,chosenStyle.lunge,style=chosenStyle){
                                 latestSound(PixubiSound.TAP);if(actor==-1)AdventureRules.strike(latestPet,i,selected,now())else AdventureRules.allyStrike(latestPet,actor,i,now())
                             }
                         },enabled=!busy&&damagePreview!=null,modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=3.dp)){Text("Атака")}
@@ -495,7 +513,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     val dest=chosenEnemy?.pos?:return@Button
                     val i=targetChoice;skillsPanel=false
                     direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
-                    perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1,skill=ArenaSkillFx.forActor(ally?.kind),cells=skillFxCells(b,actor,i)){
+                    perform("strike",source,dest,chosenStyle.lunge,skill=ArenaSkillFx.forActor(ally?.kind),cells=skillFxCells(b,actor,i),style=chosenStyle){
                         latestSound(PixubiSound.TAP);AdventureRules.skillStrike(latestPet,actor,i,selected,now())
                     }
                 },enabled=(hit!=null||supportReady)&&!busy){Text("Застосувати")}},dismissButton={TextButton(onClick={skillsPanel=false}){Text("Закрити")}})

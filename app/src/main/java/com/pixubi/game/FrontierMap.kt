@@ -136,7 +136,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                         landscape(a,colors,phase,route)
                     }
                 }
-                val actorSize=mapWidth*(110.4f/FrontierProjection.W)
+                val actorSize=mapWidth*(126.96f/FrontierProjection.W)
                 for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
                     val q=GridPoint(x,y)
                     if(AdventureRules.knownTile(a,q)==AdventureTile.ENEMY){
@@ -169,7 +169,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
         }
     }
     FrontierOverview(a)
-    Text("Темне — невідоме · приглушене — розвідане · яскраве — зона сканера",style=MaterialTheme.typography.labelSmall)
+    Text("Темне — невідоме · відкрита місцевість зберігається",style=MaterialTheme.typography.labelSmall)
     if(target!=null)TextButton(onClick={target=null}){Text("Зупинити рух")}
 }
 private fun DrawScope.shape(c:Color,vararg xy:Float){
@@ -473,16 +473,7 @@ private fun regionPath(a:AdventureState,live:Boolean):Path=Path().apply{
 }
 private fun DrawScope.fogOfWar(a:AdventureState){
     val explored=regionPath(a,false)
-    val center=FrontierProjection.center(a.pos)
-    val base=FrontierProjection.center(AdventureRules.base)
-    val live=Path().apply{
-        addOval(Rect(center.x-248f,center.y-226f,center.x+248f,center.y+226f))
-        addOval(Rect(base.x-76f,base.y-71f,base.x+76f,base.y+71f))
-    }
-    // Previously explored terrain is subdued. Live objects are not rendered here.
-    clipPath(live,ClipOp.Difference){clipPath(explored){
-        drawRect(Color(0xFF111E30).copy(alpha=.47f),size=Size(FrontierProjection.W,FrontierProjection.H))
-    }}
+    // Revealed terrain stays at full brightness; only unknown terrain is covered.
     // Unknown area is FULLY opaque; no object, road, sprite or glow can show through.
     // Its texture is independent of the underlying map.
     clipPath(explored,ClipOp.Difference){

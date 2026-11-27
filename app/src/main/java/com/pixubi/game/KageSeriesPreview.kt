@@ -485,9 +485,9 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
         val wide=if(form.grade==4) { if(dash!=null)420f else if(side)275f else 338f } else if(dash!=null)340f else 230f
         val fit=if(loadout.arena)size.height*.70f/((64f+form.thigh+form.shin+13f+32f+62f*form.head)*form.height) else min(size.width/wide,size.height/325f)
         val dir=if(view==RobotView.LEFT)-1f else 1f
-        val travel=if(side&&dash!=null)(dash.travel-44f)*.9f*dir else 0f
+        val travel=if(!loadout.arena&&side&&dash!=null)(dash.travel-44f)*.9f*dir else 0f
         val ground=size.height*(if(loadout.arena).89f else .90f)
-        val fscale=fit*form.height*(if(!side&&dash!=null)1f+dash.travel/550f else 1f)
+        val fscale=fit*form.height*(if(!loadout.arena&&!side&&dash!=null)1f+dash.travel/550f else 1f)
         val g=form.grade
         drawOval(outline.copy(alpha=.22f),Offset(size.width/2+travel*fit-36f*fit,ground-2f*fit),Size(72f*fit,7f*fit))
         translate(size.width/2+travel*fit,ground){
@@ -512,7 +512,7 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
                     val farX=if(side&&g==4)1f else if(side)-5f else -16f
                     val nearA=gait?.nearArm?:dash?.nearArm?:pose.nearArm
                     val farA=gait?.farArm?:dash?.farArm?:pose.farArm
-                    val swordReady=action==RobotAction.ATTACK&&g>=1&&e.equipped(RobotSlot.LEFT_HAND)==null
+                    val swordReady=(action==RobotAction.ATTACK||loadout.arena&&action==RobotAction.NINJA_DASH)&&(g>=1||loadout.arena)&&e.equipped(RobotSlot.LEFT_HAND)==null
                     fun DrawScope.rear(){
                         if(g==4&&side)translate(-9f,7f){scale(.78f,.86f,Offset.Zero){scarfTail(form,side,a,phase,action,dash?.trail?:0f)}}
                         else scarfTail(form,side,a,phase,action,dash?.trail?:0f)

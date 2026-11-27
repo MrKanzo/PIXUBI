@@ -8,7 +8,7 @@ class CombatPreviewTest{
         val b=q.adventure.battle!!
         assertNull(AdventureRules.previewDamage(q,b,-1,0,null))
         val enemy=b.enemies.first().copy(hp=999,maxHp=999)
-        val ready=b.copy(deploying=false,pos=GridPoint(5,1),enemies=listOf(enemy))
+        val ready=b.copy(deploying=false,pos=GridPoint(7,2),enemies=listOf(enemy))
         val current=q.copy(adventure=q.adventure.copy(battle=ready))
         val preview=AdventureRules.previewDamage(current,ready,-1,0,null)!!
         val result=AdventureRules.strike(current,0,null,1000L)
