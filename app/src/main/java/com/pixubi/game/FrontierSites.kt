@@ -24,7 +24,7 @@ internal object FrontierSites {
         fun safeVault(q:GridPoint):Boolean{
             val seen=mutableSetOf(AdventureRules.base);val pending=ArrayDeque<GridPoint>();pending.add(AdventureRules.base)
             while(pending.isNotEmpty())pending.removeFirst().neighbors().filter{it!=q&&it in reachable&&seen.add(it)}.forEach{pending.add(it)}
-            return seen.size==reachable.size-1
+            return seen.size==reachable.size-1&&l.encounters.all{e->e.neighbors().any{it in seen}}
         }
         val vault=candidates.sortedBy{AdventureRules.mainRoad(it)}.firstOrNull(::safeVault)
         val other=candidates.filter{it!=vault}.take(2)
