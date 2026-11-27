@@ -44,6 +44,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var tacticsPanel by remember{mutableStateOf(false)}
     var skillsPanel by remember{mutableStateOf(false)}
     var showGrid by remember{mutableStateOf(false)}
+    var deployPicked by remember(b?.encounter){mutableStateOf(false)}
     var weapon by remember{mutableStateOf<RobotGear?>(null)}
     var moving by remember{mutableStateOf(false)}
     var attack by remember{mutableStateOf(false)}
@@ -226,37 +227,42 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 val projection=ArenaProjection(maxWidth.value,boardHeight.value)
                 val cell=projection.cell.dp
                 val occupied=buildList{add(b.pos);b.allies.filter{it.hp>0}.forEach{add(it.pos)};b.enemies.filter{it.hp>0}.forEach{add(it.pos)}}
-                fun envelope(q:GridPoint):Pair<Float,Float>{
-                    val foot=projection.foot(q)
-                    var w=projection.cell*1.65f*projection.scale(q)
-                    var h=minOf(projection.cell*2.05f,boardHeight.value*.56f)*projection.scale(q)
-                    for(other in occupied.filter{it!=q}){
-                        val dest=projection.foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
-                        if(dx>=projection.cell*.52f)w=minOf(w,dx*.94f)
-                        else if(dy>=projection.row*.45f)h=minOf(h,dy*.84f)
-                    }
-                    return w to h
-                }
-                fun spriteW(q:GridPoint)=envelope(q).first.dp
-                fun spriteH(q:GridPoint)=envelope(q).second.dp
+                fun spriteW(q:GridPoint)=projection.envelope(q,occupied).width.dp
+                fun spriteH(q:GridPoint)=projection.envelope(q,occupied).height.dp
                 fun spriteX(q:GridPoint)=projection.foot(q).x.dp-spriteW(q)/2
                 fun spriteY(q:GridPoint)=projection.foot(q).y.dp-spriteH(q)*.89f
                 fun xOf(q:GridPoint)=projection.center(q).x.dp-cell/2
                 fun yOf(q:GridPoint)=projection.center(q).y.dp
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
                     Canvas(Modifier.fillMaxSize()){arenaLandscape(ArenaProjection(size.width,size.height),a.stage)}
-                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice){
+                    Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice,deployPicked){
                         detectTapGestures{tap->
-                            val q=ArenaProjection(size.width.toFloat(),size.height.toFloat()).hit(tap)
+                            val plane=ArenaProjection(size.width.toFloat(),size.height.toFloat())
+                            val ground=plane.hit(tap)
+                            // A tap near an actor's feet always selects its cell; body taps
+                            // work in the empty horizon too, without stealing legal ground moves.
+                            val body=if(ground==null)occupied.minByOrNull{q->
+                                val f=plane.foot(q);val h=plane.envelope(q,occupied).height
+                                (tap-Offset(f.x,f.y-h*.42f)).getDistance()
+                            }?.takeIf{q->
+                                val f=plane.foot(q);val e=plane.envelope(q,occupied)
+                                abs(tap.x-f.x)<=e.width*.30f&&tap.y in (f.y-e.height*.89f)..f.y
+                            } else null
+                            val q=ground?:body
                             if(q!=null&&!busy){
                                 if(b.deploying){
-                                    if(AdventureRules.deploymentCell(q))latestChange(AdventureRules.deployUnit(latestPet,actor,q))
+                                    val friendly=if(q==b.pos)-1 else b.allies.indexOfFirst{it.hp>0&&it.pos==q}.takeIf{it>=0}
+                                    if(friendly!=null&&(!deployPicked||friendly==actor)){
+                                        actorChoice=friendly;deployPicked=true
+                                    }else if(AdventureRules.deploymentCell(q)){
+                                        latestChange(AdventureRules.deployUnit(latestPet,actor,q));deployPicked=false
+                                    }
                                     return@detectTapGestures
                                 }
                                 val i=b.enemies.indexOfFirst{it.hp>0&&it.pos==q}
                                 val friend=b.allies.indexOfFirst{it.hp>0&&it.pos==q}
-                                if(q==b.pos&&-1 in available){actorChoice=-1}
-                                else if(friend>=0&&friend in available){actorChoice=friend}
+                                if(q==b.pos&&-1 in available){actorChoice=-1;targetChoice=-1}
+                                else if(friend>=0&&friend in available){actorChoice=friend;targetChoice=-1}
                                 else if(i>=0){
                                     targetChoice=i
                                     latestSound(PixubiSound.TAP)
@@ -390,14 +396,18 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             val actionStrip:@Composable ()->Unit={
                 if(b.deploying){
-                    Text("Обери свого юніта, потім клітинку. Зайняті позиції міняються місцями.",style=MaterialTheme.typography.labelSmall)
+                    Text(if(deployPicked)"Обери позицію · союзники можуть помінятися місцями" else "Торкнись свого юніта або обери його нижче",style=MaterialTheme.typography.labelSmall)
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        FilterChip(actor==-1,{actorChoice=-1},label={Text("Командир")})
-                        b.allies.forEachIndexed{i,u->if(u.hp>0)FilterChip(actor==i,{actorChoice=i},label={Text(u.kind.title)})}
+                        FilterChip(actor==-1,{actorChoice=-1;deployPicked=true},label={Text("Командир")})
+                        b.allies.forEachIndexed{i,u->if(u.hp>0)FilterChip(actor==i,{actorChoice=i;deployPicked=true},label={Text(u.kind.title)})}
                     }
                     Button(onClick={latestChange(AdventureRules.startBattle(latestPet));targetChoice=-1},modifier=Modifier.fillMaxWidth()){Text("Почати бій")}
                 }else{
                     val repairTarget=if(actor==-1)null else SquadRules.repairTarget(b,actor)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        FilterChip(actor==-1,{actorChoice=-1;targetChoice=-1},enabled=!busy&&-1 in available,label={Text("Командир · ${b.hp}")})
+                        b.allies.forEachIndexed{i,u->if(u.hp>0)FilterChip(actor==i,{actorChoice=i;targetChoice=-1},enabled=!busy&&i in available,label={Text(u.kind.title+" · ${u.hp}")})}
+                    }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
                         Button(onClick={
                             val dest=chosenEnemy?.pos?:return@Button
@@ -431,7 +441,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     battlefield(Modifier.fillMaxWidth(),maxWidth*.76f)
                 }
                 actionStrip()
-                if(!b.deploying)controls()
+                // All controls are now directly under the battlefield or inside the tactics sheet.
             }
             if(tacticsPanel&&!b.deploying)AlertDialog(onDismissRequest={tacticsPanel=false},title={Text("Тактика та спорядження")},text={
                 Column(Modifier.heightIn(max=220.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(4.dp)){controls();actions()}
