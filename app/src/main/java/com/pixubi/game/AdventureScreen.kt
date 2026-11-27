@@ -119,8 +119,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             moving=false;attack=false;enemyVisual=-1;visualTarget=null;visualSource=null;visualKind="";skillVisual=null;skillCells=emptyList();damageLabels=emptyList();queued=null
         }
     }
-    LaunchedEffect(b?.enemyPending,queued){
-        if(queued==null&&b?.enemyPending==true){
+    val foreground=LocalPixubiForeground.current
+    LaunchedEffect(b?.enemyPending,queued,foreground){
+        if(foreground&&queued==null&&b?.enemyPending==true){
             val plan=AdventureRules.enemyPlan(b)?:return@LaunchedEffect
             delay(duration(180).toLong())
             enemyVisual=plan.index
