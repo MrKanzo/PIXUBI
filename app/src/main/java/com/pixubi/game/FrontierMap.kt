@@ -77,10 +77,10 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             current=latest
             if(!AdventureRules.canExplore(current))break
             direction=if(q.x<current.adventure.pos.x||q.x==current.adventure.pos.x&&q.y>current.adventure.pos.y)RobotView.LEFT else RobotView.RIGHT
-            val next=AdventureRules.move(current,q,System.currentTimeMillis())
+            val next=EncounterRules.approach(current,q,System.currentTimeMillis())
             if(next==current)break
             change(next);sound(PixubiSound.TAP)
-            if(next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE))break
+            if(next.adventure.contact!=null||next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE))break
             delay(340L)
         }
         target=null

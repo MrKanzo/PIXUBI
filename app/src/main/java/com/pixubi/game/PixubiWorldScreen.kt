@@ -68,7 +68,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         guideOpen=false
         if(p.adventure.battle==null){page=destination;tab=null;category=null}
     },initialLesson=when{p.adventure.battle!=null->GuideLesson.BATTLE;page=="adventure"->GuideLesson.MAP;else->null})
-    if(page=="adventure"||p.adventure.battle!=null){
+    if(page=="adventure"||p.adventure.battle!=null||p.adventure.contact!=null){
         AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound,onGuide={guideOpen=true})
         return
     }

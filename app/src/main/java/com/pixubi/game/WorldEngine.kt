@@ -75,7 +75,7 @@ internal object WorldRules{
             skills=p.skills.copy(points=p.skills.points+(skill to (p.skills.xp(skill)+points).coerceAtMost(RobotSkills.MAX_XP))))
     fun tick(p:WorldPet,now:Long):WorldPet{
         val safeNow=now.coerceAtLeast(p.last)
-        if(p.mode==WorldMode.HIBERNATE||p.adventure.battle!=null)return p
+        if(p.mode==WorldMode.HIBERNATE||p.adventure.battle!=null||p.adventure.contact!=null)return p
         val minutes=((safeNow-p.last)/60000L).coerceIn(0L,10080L).toInt()
         val blocks=minutes/15
         var q=if(p.mode==WorldMode.SLEEP&&minutes>0)p.copy(energy=(p.energy+minutes*2).coerceAtMost(100),last=p.last+minutes*60000L)

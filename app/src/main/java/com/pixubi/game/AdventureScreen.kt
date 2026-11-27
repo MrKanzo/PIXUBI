@@ -136,7 +136,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             perform(if(plan.target!=null)"strike" else "move",plan.from,plan.to,style.closeCombat,style=style){latestSound(PixubiSound.TAP);AdventureRules.enemyTurn(latestPet,now())}
         }
     }
-    fun back(){if(busy)return;if(b!=null)retreat=true else onBack()}
+    fun back(){if(busy)return;if(a.contact!=null)onChange(EncounterRules.leave(p)) else if(b!=null)retreat=true else onBack()}
     BackHandler{back()}
     Column(Modifier.fillMaxSize().safeDrawingPadding().then(if(wide)Modifier else Modifier.verticalScroll(rememberScrollState())).padding(if(wide)3.dp else 8.dp),verticalArrangement=Arrangement.spacedBy(if(wide)2.dp else 6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
@@ -153,6 +153,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound)
+            if(a.contact!=null)EncounterDialog(p,onChange,onSound)
             SquadPanel(p,onChange)
             Text("База · ресурси · лабораторії · сховки · бункери",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
@@ -168,9 +169,9 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                     }
                 }
             },confirmButton={TextButton(onClick={artifactsOpen=false}){Text("Закрити")}})
-            Text("Переможено ботів: ${AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}}/${AdventureRules.encounters(a).size}")
+            Text("Пройдено зустрічей: ${AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}}/${AdventureRules.encounters(a).size}")
             Text(p.message)
-            if(!AdventureRules.canExplore(p))Text("Потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
+            if(a.contact==null&&!AdventureRules.canExplore(p))Text("Потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
             if(AdventureBalance.needsRecovery(p))OutlinedButton(onClick={onChange(AdventureBalance.recover(p))},modifier=Modifier.fillMaxWidth()){
                 Text(if(a.pos==AdventureRules.base)"Аварійний сервіс · безкоштовно" else "Аварійна евакуація на базу")
             }

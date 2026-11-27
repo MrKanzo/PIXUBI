@@ -28,7 +28,7 @@ internal object SquadRules{
     fun count(hp:Int,unitHp:Int)=if(hp<=0)0 else (hp+unitHp-1)/unitHp
     fun stackCount(a:AdventureState,k:SquadKind)=count(a.squad[k]?:0,unitHp(k,rank(a,k)))
     fun maxStackHp(a:AdventureState,k:SquadKind)=stackCount(a,k)*unitHp(k,rank(a,k))
-    fun atBase(p:WorldPet)=p.adventure.pos==AdventureRules.base&&p.adventure.battle==null&&p.mission==null
+    fun atBase(p:WorldPet)=p.adventure.pos==AdventureRules.base&&p.adventure.battle==null&&p.adventure.contact==null&&p.mission==null
     fun barracksPrice(a:AdventureState)=if(a.barracks==1)220 else 420
     fun expand(p:WorldPet):WorldPet{
         val a=p.adventure;val price=barracksPrice(a)
@@ -107,7 +107,7 @@ internal object SquadResearch{
         SquadKind.SIEGE->SquadBlueprint(10,2)
         SquadKind.AERIAL->SquadBlueprint(20,3)
     }
-    fun victories(a:AdventureState)=a.pastCampaignWins+AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}
+    fun victories(a:AdventureState)=a.pastCampaignWins+AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared&&AdventureRules.id(it) !in a.peaceful}
     fun unlocked(a:AdventureState,k:SquadKind):Boolean{
         val req=requirement(k)
         return k in a.licensed||k in a.squad||(a.stage>=req.sector&&victories(a)>=req.wins)

@@ -14,7 +14,7 @@ internal enum class AdventureTile(val title:String,val symbol:String){
 internal data class ArenaBot(val series:RobotSeries,val tier:RobotTier,val pos:GridPoint,val hp:Int,val maxHp:Int,val attack:Int,val defense:Int,val speed:Int)
 internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,val maxHp:Int,val enemies:List<ArenaBot>,val turn:Int=1,val log:String="Твій хід",val allies:List<ArenaAlly> = emptyList(),val acted:Set<Int> = emptySet(),val guards:Set<Int> = emptySet(),val enemyPending:Boolean=false,val enemyCursor:Int=0,val deploying:Boolean=false,val skillUsed:Set<Int> = emptySet())
 internal data class AdventureState(val stage:Int=1,val pos:GridPoint=GridPoint(0,2),val cleared:Set<Int> = emptySet(),
-    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap(),val barracks:Int=1,val squadRanks:Map<SquadKind,Int> = emptyMap(),val pastCampaignWins:Int=0,val licensed:Set<SquadKind> = emptySet(),val artifacts:Set<FrontierArtifact> = emptySet())
+    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap(),val barracks:Int=1,val squadRanks:Map<SquadKind,Int> = emptyMap(),val pastCampaignWins:Int=0,val licensed:Set<SquadKind> = emptySet(),val artifacts:Set<FrontierArtifact> = emptySet(),val contact:GridPoint?=null,val peaceful:Set<Int> = emptySet())
 internal object AdventureRules{
     const val MAP_W=20;const val MAP_H=14;const val ARENA_W=9;const val ARENA_H=5
     val base=GridPoint(0,2)
@@ -72,11 +72,11 @@ internal object AdventureRules{
     fun visible(a:AdventureState,q:GridPoint)=inMap(q)&&(inSight(a,q)||id(q) in a.seen)
     fun knownTile(a:AdventureState,q:GridPoint):AdventureTile?=if(inSight(a,q))tile(a,q)else null
     private fun scannerContains(center:GridPoint,q:GridPoint):Boolean { val dx=center.x-q.x;val dy=center.y-q.y;return dx*dx+dy*dy<=5 }
-    private fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{scannerContains(q,GridPoint(it%MAP_W,it/MAP_W))}
+    internal fun reveal(a:AdventureState,q:GridPoint)=a.seen+(0 until MAP_W*MAP_H).filter{scannerContains(q,GridPoint(it%MAP_W,it/MAP_W))}
     fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters(a).indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
     fun complete(a:AdventureState)=encounters(a).all{id(it) in a.cleared}
     fun canAdvance(a:AdventureState)=complete(a)||a.credited
-    fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=AdventureBalance.MIN_INTEGRITY&&p.energy>0&&p.adventure.battle==null
+    fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=AdventureBalance.MIN_INTEGRITY&&p.energy>0&&p.adventure.battle==null&&p.adventure.contact==null
     // Route through explored, walkable ground. Hostile cells can only be the destination.
     fun mapRoute(a:AdventureState,to:GridPoint):List<GridPoint>{
         if(!inMap(to)||to==a.pos||!visible(a,to)||tile(a,to)==AdventureTile.WALL)return emptyList()
@@ -138,7 +138,7 @@ internal object AdventureRules{
         }
         return WorldRules.gain(q,RobotSkill.EXPLORATION,15,5,0)
     }
-    private fun begin(p:WorldPet,at:GridPoint):ArenaBattle{
+    internal fun begin(p:WorldPet,at:GridPoint):ArenaBattle{
         val a=p.adventure
         val encounter=encounters(a).indexOf(at).coerceAtLeast(0)
         val tier=RobotTier.entries[(p.tier.ordinal-(if(encounter<2)1 else 0)).coerceAtLeast(0)]
@@ -435,7 +435,7 @@ internal object AdventureCodec{
         val battle=if(b==null)"" else listOf(b.encounter.toString(),point(b.pos),b.hp.toString(),b.maxHp.toString(),b.turn.toString(),
             b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")},
             b.allies.joinToString(";"){u->listOf(u.kind.name,u.pos.x,u.pos.y,u.hp,u.charges,u.rank).joinToString(",")},b.acted.sorted().joinToString(","),b.guards.sorted().joinToString(","),if(b.enemyPending)"1" else "0",b.enemyCursor.toString(),if(b.deploying)"1" else "0",b.skillUsed.sorted().joinToString(",")).joinToString("~")
-        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"20",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena9wide",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name}).joinToString("|")
+        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"20",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena9wide",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name},a.contact?.let(::point).orEmpty(),a.peaceful.sorted().joinToString(",")).joinToString("|")
     }
     fun decode(s:String):AdventureState{
         decodeChecked(s)?.let{return it}
@@ -497,6 +497,9 @@ internal object AdventureCodec{
         val past=(v.getOrNull(11)?.toIntOrNull()?:((stage-1)*4)).coerceIn(0,1000)
         val licensed=if(v.size<=12)squad.keys+(b?.allies?.map{it.kind}?:emptyList()) else v[12].split(",").mapNotNull{n->SquadKind.entries.firstOrNull{it.name==n}}.toSet()
         val artifacts=v.getOrElse(14){""}.split(",").mapNotNull{n->FrontierArtifact.entries.firstOrNull{it.name==n}}.toSet()
-        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad,barracks,ranks.filterKeys{it in squad},past,licensed,artifacts)
+        val peaceful=ids(v.getOrElse(16){""}).intersect(cleared)
+        val state=AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad,barracks,ranks.filterKeys{it in squad},past,licensed,artifacts,peaceful=peaceful)
+        val contact=if(b!=null)null else runCatching{parse(v.getOrElse(15){""})}.getOrNull()?.takeIf{AdventureRules.inMap(it)&&pos.distance(it)==1&&FrontierSites.hostile(AdventureRules.tile(state,it))}
+        state.copy(contact=contact)
     }.getOrNull()
 }
