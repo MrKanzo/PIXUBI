@@ -88,6 +88,7 @@ internal object MarketCatalog{
         FilterChip(compatible,{compatible=!compatible},label={Text("Сумісні")})
         FilterChip(available,{available=!available},label={Text("Доступні")})
     }
+    if(inventory&&(kind==MarketKind.ALL||kind==MarketKind.SUPPLY))MaterialStock(p)
     if(p.message.isNotBlank())Text(p.message,style=MaterialTheme.typography.labelSmall,maxLines=2,overflow=TextOverflow.Ellipsis)
     groups.forEach{group->
         val g=group.first().gear

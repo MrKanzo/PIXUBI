@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
             BaseBuilding.BARRACKS->{block(.13f,.31f,.74f,.49f);block(.39f,.53f,.22f,.27f);for(i in 0..2)drawRect(c,Offset(w*(.24f+i*.22f),h*.40f),Size(w*.10f,h*.06f))}
             BaseBuilding.FOUNDRY->{block(.12f,.40f,.76f,.40f);block(.19f,.15f,.13f,.30f);block(.63f,.22f,.14f,.20f);drawCircle(c,w*.13f,Offset(w*.50f,h*.58f),style=Stroke(3f))}
             BaseBuilding.NEURAL->{block(.18f,.14f,.64f,.48f);block(.42f,.62f,.16f,.19f);drawLine(c,Offset(w*.28f,h*.32f),Offset(w*.72f,h*.32f),3f);drawLine(c,Offset(w*.28f,h*.43f),Offset(w*.58f,h*.43f),3f)}
+            BaseBuilding.WORKSHOP->{block(.12f,.28f,.76f,.52f);block(.30f,.12f,.40f,.22f);drawCircle(c,w*.15f,Offset(w*.50f,h*.53f),style=Stroke(3f));drawLine(c,Offset(w*.50f,h*.38f),Offset(w*.50f,h*.68f),3f)}
             BaseBuilding.SERVICE->{block(.16f,.28f,.68f,.52f);drawLine(c,Offset(w*.50f,h*.39f),Offset(w*.50f,h*.68f),6f);drawLine(c,Offset(w*.35f,h*.535f),Offset(w*.65f,h*.535f),6f)}
         }
     }
@@ -105,6 +106,7 @@ import androidx.compose.ui.unit.dp
                     if(reason!=null)Text(reason)
                     if(p.neuralRank<3)Button(onClick={onChange(BaseRules.buyNeural(p))},enabled=reason==null){Text("Купити модуль ${p.neuralRank+1} · ${BaseRules.neuralPrice(p)} 🪙")}
                 }
+                BaseBuilding.WORKSHOP->CraftWorkshop(p,onChange)
                 BaseBuilding.SERVICE->listOf("Енергокомірки","Ремонтні набори","Синхромодулі").forEachIndexed{i,title->
                     val stock=when(i){0->p.cells;1->p.repair;else->p.snacks}
                     Text("$title · $stock/30")

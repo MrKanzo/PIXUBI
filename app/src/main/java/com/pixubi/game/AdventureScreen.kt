@@ -153,9 +153,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
         if(b==null){
             Text("Торкнися дороги, контейнера або ворога. Робот прокладе маршрут через відкриту місцевість.",style=MaterialTheme.typography.bodySmall)
             FrontierMap(p,onChange,onSound)
+            MiningPanel(p,onChange)
             if(a.contact!=null)EncounterDialog(p,onChange,onSound)
             SquadPanel(p,onChange)
-            Text("База · ресурси · лабораторії · сховки · бункери",style=MaterialTheme.typography.bodySmall)
+            Text("База · шахти · родовища · лабораторії · бункери",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 Text("Знахідки сектора: ${FrontierSites.found(a)}/${FrontierSites.sites(a.stage).size}",modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick={artifactsOpen=true}){Text("Артефакти ${a.artifacts.size}/${FrontierArtifact.entries.size}")}

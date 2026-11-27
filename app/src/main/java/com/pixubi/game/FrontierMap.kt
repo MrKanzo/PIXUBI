@@ -80,7 +80,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             val next=EncounterRules.approach(current,q,System.currentTimeMillis())
             if(next==current)break
             change(next);sound(PixubiSound.TAP)
-            if(next.adventure.contact!=null||next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE))break
+            if(next.adventure.contact!=null||next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE)||MiningRules.node(next.adventure,q)!=null)break
             delay(340L)
         }
         target=null
@@ -339,6 +339,9 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             AdventureTile.ENEMY->{if(FrontierSites.isBoss(a,q))portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
             else->Unit
         }}
+    }
+    for((q,node) in MiningRules.sites(a.stage))if(AdventureRules.visible(a,q)&&AdventureRules.id(q) !in a.cleared){
+        val c=FrontierProjection.center(q);translate(c.x,c.y){drawMiningSite(node,phase)}
     }
     for((q,exit) in FrontierNetwork.portals(a.stage))if(AdventureRules.visible(a,q)){
         val c=FrontierProjection.center(q);val tint=if(FrontierNetwork.portalType(q)==0)Color(0xFF64E8FF)else Color(0xFFD99BFF)

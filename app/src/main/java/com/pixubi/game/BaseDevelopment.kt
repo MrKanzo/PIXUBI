@@ -34,7 +34,8 @@ internal enum class BaseBuilding(val title:String,val code:String,val price:Int,
     BARRACKS("Казарми","UNIT HUB",120,1,"Створення звичайних загонів, ремонт та ранги."),
     FOUNDRY("Завод прототипів","OMEGA FORGE",420,6,"Важкі та повітряні юніти після відкриття технологій."),
     NEURAL("Голографічний термінал","NEURAL LINK",180,2,"Купівля рівнів бойового модуля командира."),
-    SERVICE("Сервісна станція","REPAIR LAB",150,1,"Купівля зарядних, ремонтних і синхромодулів.");
+    SERVICE("Сервісна станція","REPAIR LAB",150,1,"Купівля зарядних, ремонтних і синхромодулів."),
+    WORKSHOP("Майстерня","FABRICATOR",160,2,"Крафт спорядження й бойових юнітів із видобутих матеріалів.");
     companion object{
         fun decode(raw:String)=raw.split(",").mapNotNull{id->entries.firstOrNull{it.name==id}}.toSet()
     }
