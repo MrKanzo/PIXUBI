@@ -38,7 +38,7 @@ import android.content.pm.ActivityInfo
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit){
+internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Unit,onSound:(PixubiSound)->Unit,onGuide:()->Unit={}){
     val a=p.adventure;val b=a.battle
     var retreat by remember{mutableStateOf(false)}
     var tacticsPanel by remember{mutableStateOf(false)}
@@ -136,6 +136,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 Text(if(b==null)"Сектор ${a.stage} · дослідження" else if(b.deploying)"Розстановка · до початку бою" else "Раунд ${b.turn} · "+(if(enemyVisual>=0||b.enemyPending)"Хід ворога" else if(busy)"Твоя дія" else "Твій хід"))
             }
             if(b!=null)TextButton(onClick={landscapeMode=!landscapeMode;settings.edit().putBoolean("wide_arena",landscapeMode).apply()},enabled=!busy){Text(if(landscapeMode)"Вертикально" else "Широкий екран")}
+            TextButton(onClick=onGuide,enabled=!busy){Text("?")}
             OutlinedButton(onClick={back()},enabled=!busy){Text(if(b==null)"База" else "Відступ")}
         }
         if(!wide&&b==null){Text("${p.name} · ${p.series.title} · ${p.tier.title}")
