@@ -326,7 +326,7 @@ internal fun ValkyriePreview(requested:RobotView,action:RobotAction,face:RobotFa
     val motion=RobotMotion.pose(action,phase);val bends=KageJointMotion.of(action,phase)
     val gait=if(KageGait.isLocomotion(action))KageGait.pose(KageForm(f.height,f.head,f.shoulder,1f,f.thigh,f.shin,f.upper,f.fore,0f,f.grade),action,phase)else null
     Canvas(modifier){
-        val fit=min(size.width/(if(f.grade>=3)350f else 245f),size.height/(if(f.grade>=3)350f else 320f))*f.height
+        val fit=if(loadout.arena)size.height*.70f/(f.hips+f.thigh+f.shin+12f+33f+61f*f.head) else min(size.width/(if(f.grade>=3)350f else 245f),size.height/(if(f.grade>=3)350f else 320f))*f.height
         val ground=size.height*.89f
         val hover=if(action==RobotAction.HOVER&&f.grade>=3)ValkyrieCatalog.hover(phase) else 0f
         drawOval(edge.copy(alpha=.30f),Offset(size.width/2-28f*fit,ground-2f),Size(56f*fit,5f*fit))

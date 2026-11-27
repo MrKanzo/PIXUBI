@@ -483,10 +483,10 @@ internal fun KageSeriesPreview(requestedView:RobotView,action:RobotAction,face:R
     val a=loadout.accent;val e=loadout.equipment
     Canvas(modifier){
         val wide=if(form.grade==4) { if(dash!=null)420f else if(side)275f else 338f } else if(dash!=null)340f else 230f
-        val fit=min(size.width/wide,size.height/325f)
+        val fit=if(loadout.arena)size.height*.70f/((64f+form.thigh+form.shin+13f+32f+62f*form.head)*form.height) else min(size.width/wide,size.height/325f)
         val dir=if(view==RobotView.LEFT)-1f else 1f
         val travel=if(side&&dash!=null)(dash.travel-44f)*.9f*dir else 0f
-        val ground=size.height*.90f
+        val ground=size.height*(if(loadout.arena).89f else .90f)
         val fscale=fit*form.height*(if(!side&&dash!=null)1f+dash.travel/550f else 1f)
         val g=form.grade
         drawOval(outline.copy(alpha=.22f),Offset(size.width/2+travel*fit-36f*fit,ground-2f*fit),Size(72f*fit,7f*fit))

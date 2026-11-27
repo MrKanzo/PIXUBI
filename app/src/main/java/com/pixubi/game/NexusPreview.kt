@@ -252,7 +252,7 @@ internal fun NexusPreview(requested:RobotView,action:RobotAction,face:RobotFace,
     val motion=RobotMotion.pose(action,phase);val bends=KageJointMotion.of(action,phase)
     val gait=if(KageGait.isLocomotion(action))KageGait.pose(KageForm(f.height,f.head,f.shoulder,1f,f.thigh,f.shin,f.upper,f.fore,0f,f.grade),action,phase)else null
     Canvas(modifier){
-        val fit=min(size.width/(if(f.grade>=2)370f else 245f),size.height/(if(f.grade==4)390f else if(f.grade>=2)350f else 320f))*f.height
+        val fit=if(loadout.arena)size.height*.70f/(f.hips+f.thigh+f.shin+12f+38f+65f*f.head) else min(size.width/(if(f.grade>=2)370f else 245f),size.height/(if(f.grade==4)390f else if(f.grade>=2)350f else 320f))*f.height
         val ground=size.height*.89f
         val sep=if(action==RobotAction.REASSEMBLE&&f.grade>=3)NexusCatalog.separation(phase) else 0f
         val hover=if(f.grade>=3&&!KageGait.isLocomotion(action)&&action!=RobotAction.SLEEP)(if(f.grade==4)12f else 7f)+3f*sin(phase*6.28f) else 0f

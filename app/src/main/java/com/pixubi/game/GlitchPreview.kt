@@ -263,7 +263,7 @@ internal fun GlitchPreview(requested:RobotView,action:RobotAction,face:RobotFace
     val gait=if(KageGait.isLocomotion(action))KageGait.pose(KageForm(f.height,f.head,f.shoulder,1f,f.thigh,f.shin,f.upper,f.fore,0f,f.grade),action,phase)else null
     val warp=if(action==RobotAction.TELEPORT)GlitchCatalog.teleport(phase)else 0f
     Canvas(modifier){
-        val fit=min(size.width/(if(f.grade==4)350f else 260f),size.height/320f)*f.height
+        val fit=if(loadout.arena)size.height*.70f/(f.hips+f.thigh+f.shin+12f+32f+64f*f.head) else min(size.width/(if(f.grade==4)350f else 260f),size.height/320f)*f.height
         val ground=size.height*.89f
         val shift=if(action==RobotAction.TELEPORT)(if(phase<.5f)-25f else 25f)*warp*fit else 0f
         drawOval(edge.copy(alpha=.35f),Offset(size.width/2+shift-27f*fit,ground-2f),Size(54f*fit,5f*fit))

@@ -11,7 +11,7 @@ import kotlin.math.*
 
 /** Original landscape: continuous terrain, rather than an artificial floating board. */
 internal fun DrawScope.arenaLandscape(plane:ArenaProjection,stage:Int){
-    val horizon=plane.project(2.25f,-.5f).y.coerceIn(size.height*.08f,size.height*.45f)
+    val horizon=plane.project(3f,-.5f).y.coerceIn(size.height*.08f,size.height*.45f)
     val rng=Random(stage*113+41)
     val biome=(stage-1)%4
     val base=when(biome){0->Color(0xFF536C43);1->Color(0xFF596B72);2->Color(0xFF846F4C);else->Color(0xFF435B61)}

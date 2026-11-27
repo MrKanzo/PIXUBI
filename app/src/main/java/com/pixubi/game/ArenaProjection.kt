@@ -9,15 +9,15 @@ import kotlin.math.min
  * The plane narrows toward the horizon; models stay upright in screen space.
  */
 internal class ArenaProjection(val width:Float,val height:Float){
-    val cell=width/5.85f
-    val row=min(cell*.86f,height/3.9f)
-    val groundBottom=height-row*.55f
-    private fun depth(y:Float)=((y+.5f)/3f).coerceIn(0f,1f)
+    val cell=width/8.2f
+    val row=min(cell*.86f,height*.57f/5f)
+    val groundBottom=height-row*.88f-height*.015f
+    private fun depth(y:Float)=((y+.5f)/5f).coerceIn(0f,1f)
     fun perspective(y:Float)=.87f+.13f*depth(y)
     fun depth(q:GridPoint)=q.y+if(q.x%2==1).5f else 0f
     fun project(x:Float,y:Float):Offset{
         val d=perspective(y)
-        return Offset(width*.5f+(x-2.25f)*cell*d,groundBottom-(2.5f-y)*row)
+        return Offset(width*.5f+(x-3f)*cell*d,groundBottom-(4f-y)*row)
     }
     fun center(q:GridPoint)=project(q.x*.75f,depth(q))
     fun vertices(q:GridPoint):List<Offset>{
@@ -26,23 +26,10 @@ internal class ArenaProjection(val width:Float,val height:Float){
             project(x+.5f,y),project(x+.25f,y+.5f),project(x-.25f,y+.5f))
     }
     fun foot(q:GridPoint)=project(q.x*.75f,depth(q)+.12f)
-    fun scale(q:GridPoint)=.94f+.12f*(depth(q)/2f).coerceIn(0f,1f)
-    // Fit upright sprites within disjoint screen-space envelopes at rest.
-    // Use vertical separation for a shared lane and horizontal separation for nearby lanes.
-    fun envelope(q:GridPoint,occupied:List<GridPoint>):Size{
-        val foot=foot(q)
-        var w=min(cell*1.95f,2f*min(foot.x,width-foot.x)-2f)*scale(q).coerceAtMost(1f)
-        var h=min(cell*2.25f,min(height*.62f,foot.y/.89f))*scale(q).coerceAtMost(1f)
-        for(other in occupied.distinct().filter{it!=q}){
-            val dest=foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
-            if(dx>=cell*.60f){
-                // Wide separation in neighboring lanes: don't shrink for far-away opponents.
-                if(dy<row*1.15f||dx>=cell*1.65f)w=min(w,dx*.94f)
-                else h=min(h,dy*.86f)
-            }else if(dy>.01f)h=min(h,dy*.82f)
-        }
-        return Size(w.coerceAtLeast(1f),h.coerceAtLeast(1f))
-    }
+    fun scale(q:GridPoint)=1f
+    // Arena-specific fixed screen-space size, independent of neighbors, depth and class.
+    val actorHeight=min(width*.166f,height*.28f)
+    fun envelope(q:GridPoint,occupied:List<GridPoint>):Size=Size(actorHeight*1.9f,actorHeight/.70f)
     fun hit(p:Offset):GridPoint?=AdventureRules.arenaCells.firstOrNull{q->
         val v=vertices(q)
         var positive=false;var negative=false

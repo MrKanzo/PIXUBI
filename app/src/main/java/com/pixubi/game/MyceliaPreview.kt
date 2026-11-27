@@ -204,8 +204,8 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
     val bloom=if(action==RobotAction.MYCO_BLOOM)sin(phase*PI.toFloat()).coerceAtLeast(0f)else 0f
     val heal=action==RobotAction.BIO_REGENERATE
     Canvas(modifier){
-        val fit=min(size.width/(if(side)390f else 310f),size.height/(if(f.grade==4)310f else 245f))*f.scale
-        val floor=size.height*.88f
+        val fit=if(loadout.arena)size.height*.70f/(f.leg+f.depth*.65f+42f+f.grade*5f) else min(size.width/(if(side)390f else 310f),size.height/(if(f.grade==4)310f else 245f))*f.scale
+        val floor=size.height*(if(loadout.arena).89f else .88f)
         val lift=when{flight->36f+5f*sin(phase*6.28f);action==RobotAction.JUMP->32f*sin(phase*PI.toFloat()).coerceAtLeast(0f);else->0f}
         val squat=if(action==RobotAction.SLEEP)f.leg*.46f else 0f
         val bob=sin(phase*6.28f*(if(move)2f else 1f))*1.6f

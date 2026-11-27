@@ -32,7 +32,7 @@ internal enum class RobotFace(val title: String) {
     NEUTRAL("Спокій"), HAPPY("Радість"), SAD("Сум"), ANGRY("Злість"), SURPRISE("Здивування"), SLEEP("Сон")
 }
 internal enum class RobotSlot(val title:String) { HEAD("Голова"), CHEST("Корпус"), LEFT_HAND("Ліва рука"), RIGHT_HAND("Права рука"), BACK("Спина"), FEET("Ноги") }
-internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment(), val tier:RobotTier=RobotTier.MK1, val series:RobotSeries=RobotSeries.CLASSIC)
+internal data class RobotLoadout(val accent: Color = Color(0xFF268ED2), val equipment: RobotEquipment = RobotEquipment(), val tier:RobotTier=RobotTier.MK1, val series:RobotSeries=RobotSeries.CLASSIC,val arena:Boolean=false)
 internal data class RobotPose(val nearLeg:Float, val farLeg:Float, val nearArm:Float, val farArm:Float, val lift:Float)
 internal object RobotMotion {
     fun pose(action:RobotAction, phase:Float):RobotPose {
@@ -1052,8 +1052,8 @@ private fun RobotPreviewVisual(view:RobotView, action:RobotAction, face:RobotFac
         val dash=if(ninja && action==RobotAction.NINJA_DASH)KageDashMotion.pose(phase) else null
         val growth=when { companion->CompanionCatalog.of(loadout.tier).scale; ninja->KageCatalog.of(loadout.tier).scale; else->1f }*(if(dash!=null && view==RobotView.FRONT)1f+dash.travel/440f else 1f)
         val ground=if(ninja)KageRig.ground(loadout.tier) else 180f
-        val s=min(size.width/(if(dash!=null)390f else if(ninja)250f else if(omega)236f else 200f),size.height/(if(ninja)ground+70f else if(omega)270f else if(companion)235f else 215f))
-        val dx=(size.width-200*s)/2; val dy=(size.height-(if(ninja)ground+15f else 215f)*s)/2+(if(ninja)10*s else if(omega)18*s else if(companion)5*s else 0f)
+        val s=if(loadout.arena)size.height*.70f/(166f*growth) else min(size.width/(if(dash!=null)390f else if(ninja)250f else if(omega)236f else 200f),size.height/(if(ninja)ground+70f else if(omega)270f else if(companion)235f else 215f))
+        val dx=(size.width-200*s)/2; val dy=if(loadout.arena)size.height*.89f-ground*s else (size.height-(if(ninja)ground+15f else 215f)*s)/2+(if(ninja)10*s else if(omega)18*s else if(companion)5*s else 0f)
         translate(dx,dy) {
             scale(s,s,Offset.Zero) {
                 val travel=if(dash==null||view==RobotView.FRONT)0f else (dash.travel-44f)*(if(view==RobotView.LEFT)-1f else 1f)

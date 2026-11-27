@@ -347,8 +347,8 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
     Canvas(modifier){
         val frameWidth=if(side)if(f.grade==4)510f else 470f else if(f.grade==4)360f else 340f
         val frameHeight=if(f.grade==4){if(flight)405f else 350f}else 285f
-        val fit=min(size.width/frameWidth,size.height/frameHeight)*f.scale
-        val floor=size.height*.87f
+        val fit=if(loadout.arena)size.height*.70f/(f.leg+f.depth*1.1f+38f+f.grade*4f) else min(size.width/frameWidth,size.height/frameHeight)*f.scale
+        val floor=size.height*(if(loadout.arena).89f else .87f)
         val lift=when{flight->38f+9f*sin(phase*6.28f);action==RobotAction.JUMP->sin(phase*PI.toFloat()).coerceAtLeast(0f)*35f;else->0f}
         val squat=if(action==RobotAction.SLEEP)f.leg*.42f else 0f
         val bob=if(move)2.5f*sin(phase*12.56f)else sin(phase*6.28f)*2.1f
