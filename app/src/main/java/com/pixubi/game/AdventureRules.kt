@@ -9,12 +9,12 @@ internal data class GridPoint(val x:Int,val y:Int){
 }
 internal enum class AdventureTile(val title:String,val symbol:String){
     EMPTY("Стежка",""), WALL("Перешкода","▧"), BASE("База","⌂"), COINS("Кредитний контейнер","🪙"),
-    ENERGY("Енергокомірки","⚡"), REPAIR("Ремонтні модулі","🛠"), AMMO("Боєприпаси","▣"), ENEMY("Ворожий бот","!")
+    ENERGY("Енергокомірки","⚡"), REPAIR("Ремонтні модулі","🛠"), AMMO("Боєприпаси","▣"), ENEMY("Ворожий бот","!"), LAB("Забута лабораторія","⌬"), CACHE("Секретний сховок","◇"), VAULT("Підземний бункер","⚠")
 }
 internal data class ArenaBot(val series:RobotSeries,val tier:RobotTier,val pos:GridPoint,val hp:Int,val maxHp:Int,val attack:Int,val defense:Int,val speed:Int)
 internal data class ArenaBattle(val encounter:Int,val pos:GridPoint,val hp:Int,val maxHp:Int,val enemies:List<ArenaBot>,val turn:Int=1,val log:String="Твій хід",val allies:List<ArenaAlly> = emptyList(),val acted:Set<Int> = emptySet(),val guards:Set<Int> = emptySet(),val enemyPending:Boolean=false,val enemyCursor:Int=0,val deploying:Boolean=false,val skillUsed:Set<Int> = emptySet())
 internal data class AdventureState(val stage:Int=1,val pos:GridPoint=GridPoint(0,2),val cleared:Set<Int> = emptySet(),
-    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap(),val barracks:Int=1,val squadRanks:Map<SquadKind,Int> = emptyMap(),val pastCampaignWins:Int=0,val licensed:Set<SquadKind> = emptySet())
+    val seen:Set<Int> = emptySet(),val steps:Int=0,val battle:ArenaBattle?=null,val credited:Boolean=false,val squad:Map<SquadKind,Int> = emptyMap(),val barracks:Int=1,val squadRanks:Map<SquadKind,Int> = emptyMap(),val pastCampaignWins:Int=0,val licensed:Set<SquadKind> = emptySet(),val artifacts:Set<FrontierArtifact> = emptySet())
 internal object AdventureRules{
     const val MAP_W=16;const val MAP_H=10;const val ARENA_W=7;const val ARENA_H=3
     val base=GridPoint(0,2)
@@ -65,7 +65,7 @@ internal object AdventureRules{
         q in layout(a.stage).walls->AdventureTile.WALL
         id(q) in a.cleared->AdventureTile.EMPTY
         q in encounters(a)->AdventureTile.ENEMY
-        else->layout(a.stage).resources[q]?:AdventureTile.EMPTY
+        else->layout(a.stage).resources[q]?:FrontierSites.sites(a.stage)[q]?:AdventureTile.EMPTY
     }
     // Keep explored cells navigable, but hide live objects outside the scanner radius.
     fun inSight(a:AdventureState,q:GridPoint)=inMap(q)&&(a.pos.distance(q)<=2||q==base)
@@ -90,14 +90,14 @@ internal object AdventureRules{
                 return route.asReversed()
             }
             q.neighbors().filter{inMap(it)&&it !in parent&&visible(a,it)&&tile(a,it)!=AdventureTile.WALL&&
-                (it==to||tile(a,it)!=AdventureTile.ENEMY)}.forEach{parent[it]=q;queue.add(it)}
+                (it==to||!FrontierSites.hostile(tile(a,it)))}.forEach{parent[it]=q;queue.add(it)}
         }
         return emptyList()
     }
     fun advanceMap(p:WorldPet):WorldPet{
         val a=p.adventure
         if(a.battle!=null||!canAdvance(a)||a.stage>=100||!canExplore(p))return p
-        val next=AdventureState(stage=a.stage+1,squad=a.squad,barracks=a.barracks,squadRanks=a.squadRanks,pastCampaignWins=SquadResearch.victories(a),licensed=a.licensed+a.squad.keys+SquadKind.entries.filter{SquadResearch.unlocked(a,it)})
+        val next=AdventureState(stage=a.stage+1,squad=a.squad,barracks=a.barracks,squadRanks=a.squadRanks,pastCampaignWins=SquadResearch.victories(a),artifacts=a.artifacts,licensed=a.licensed+a.squad.keys+SquadKind.entries.filter{SquadResearch.unlocked(a,it)})
         val newly=SquadKind.entries.filter{!SquadResearch.unlocked(a,it)&&SquadResearch.unlocked(next,it)}
         val notice=if(newly.isEmpty())"" else " · 🔓 Відкрито: "+newly.joinToString(", "){it.title}
         return p.copy(adventure=next.copy(licensed=next.licensed+newly),message="Відкрито сектор ${a.stage+1}"+notice)
@@ -108,22 +108,28 @@ internal object AdventureRules{
         if(!inMap(to)||a.pos.distance(to)!=1||tile(a,to)==AdventureTile.WALL)return p
         val t=tile(a,to)
         val seen=reveal(a,a.pos)+reveal(a,to)
-        if(t==AdventureTile.ENEMY){
+        if(FrontierSites.hostile(t)){
             if(p.energy<5)return p.copy(message="Для входу в бій потрібно 5% енергії.")
             val b=begin(p,to)
-            return p.copy(energy=p.energy-5,adventure=a.copy(seen=seen,battle=b),message="Зустріч із ворожими ботами",last=now)
+            return p.copy(energy=p.energy-5,adventure=a.copy(seen=seen,battle=b),message=if(t==AdventureTile.VAULT)"Бункер: захисна система активована" else if(FrontierSites.isBoss(a,to))"Секторний бос: Вартовий ядра" else "Зустріч із ворожими ботами",last=now)
         }
         val steps=a.steps+1
-        var q=p.copy(energy=(p.energy-if(steps%4==0)1 else 0).coerceAtLeast(0),
+        var q=p.copy(energy=(p.energy-if(steps%(if(FrontierArtifact.SCANNER in a.artifacts)5 else 4)==0)1 else 0).coerceAtLeast(0),
             adventure=a.copy(pos=to,seen=seen,steps=steps),message="Сектор ${a.stage} · дослідження")
         if(t in listOf(AdventureTile.EMPTY,AdventureTile.BASE))return q
         q=q.copy(adventure=q.adventure.copy(cleared=a.cleared+id(to)))
         q=when(t){
-            AdventureTile.COINS->q.copy(coins=(q.coins+25+a.stage*3).coerceAtMost(999999),message="Знайдено ${25+a.stage*3} монет")
+            AdventureTile.COINS->q.copy(coins=(q.coins+25+a.stage*3+(if(FrontierArtifact.CHIP in a.artifacts)10 else 0)).coerceAtMost(999999),message="Знайдено ${25+a.stage*3+(if(FrontierArtifact.CHIP in a.artifacts)10 else 0)} монет")
             AdventureTile.ENERGY->q.copy(cells=(q.cells+2).coerceAtMost(30),message="Знайдено 2 енергокомірки")
             AdventureTile.REPAIR->q.copy(repair=(q.repair+2).coerceAtMost(30),message="Знайдено 2 ремонтні набори")
             AdventureTile.AMMO->q.copy(supplies=q.supplies+(WorldSupply.PULSE to (q.stock(WorldSupply.PULSE)+6).coerceAtMost(99))+
                 (WorldSupply.ION to (q.stock(WorldSupply.ION)+2).coerceAtMost(99))+(WorldSupply.ARC to (q.stock(WorldSupply.ARC)+2).coerceAtMost(99)),message="Знайдено боєприпаси")
+            AdventureTile.LAB->{
+                val artifact=FrontierSites.artifact(a.stage)
+                q.copy(adventure=q.adventure.copy(artifacts=a.artifacts+artifact),cells=(q.cells+2).coerceAtMost(30),
+                    message="Лабораторія: ${artifact.title} · 2 енергокомірки")
+            }
+            AdventureTile.CACHE->q.copy(coins=(q.coins+90+a.stage*5).coerceAtMost(999999),repair=(q.repair+2).coerceAtMost(30),message="Секретний сховок: монети та ремонтні набори")
             else->q
         }
         return WorldRules.gain(q,RobotSkill.EXPLORATION,15,5,0)
@@ -132,15 +138,17 @@ internal object AdventureRules{
         val a=p.adventure
         val encounter=encounters(a).indexOf(at).coerceAtLeast(0)
         val tier=RobotTier.entries[(p.tier.ordinal-(if(encounter<2)1 else 0)).coerceAtLeast(0)]
-        val count=if(encounter>=2)2 else 1
+        val boss=FrontierSites.isBoss(a,at);val vault=FrontierSites.isVault(a,at)
+        val count=if(boss||vault||encounter>=2)2 else 1
         val bots=(0 until count).map{i->
             val series=RobotSeries.entries[(enemySeries(a,at).ordinal+i)%RobotSeries.entries.size]
             val stats=RobotBalance.base(tier)+WorldRules.innate(series)
             val extra=a.squad.keys.sumOf{SquadRules.stackCount(a,it)}
             val scale=(1f+(a.stage-1).coerceAtMost(12)*.045f)*(1f+extra*.18f)
-            val hp=(stats.durability*(if(count==2).36f else .55f)*scale).toInt().coerceAtLeast(25)
+            val elite=(boss||vault)&&i==0
+            val hp=(stats.durability*(if(elite) .83f else if(count==2).36f else .55f)*scale).toInt().coerceAtLeast(25)
             ArenaBot(series,tier,GridPoint(ARENA_W-1,if(count==1)1 else i*2),hp,hp,
-                (stats.attack*.60f+4+a.stage.coerceAtMost(12)).toInt(),(stats.defense*.55f).toInt(),stats.speed)
+                (stats.attack*(if(elite).82f else .60f)+4+a.stage.coerceAtMost(12)).toInt(),(stats.defense*(if(elite).75f else .55f)).toInt(),stats.speed)
         }
         val max=p.stats.durability.coerceAtLeast(1)
         return ArenaBattle(id(at),GridPoint(0,1),(max*p.integrity/100).coerceAtLeast(1),max,bots,allies=SquadRules.deploy(a.squad,a.squadRanks,SquadRules.slots(a)),deploying=true,log="Розстав своїх юнітів")
@@ -266,7 +274,7 @@ internal object AdventureRules{
         if(actor==-1){
             if(!canHit(p,b,e,gear))return null
             val base=(p.stats.attack-weapons(p).sumOf{RobotBalance.spec(it).delta.attack}).coerceAtLeast(1)
-            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)
+            return damage(base+(gear?.let{RobotBalance.spec(it).delta.attack}?:0),e.defense)+(if(FrontierArtifact.CORE in p.adventure.artifacts)2 else 0)
         }
         val ally=b.allies.getOrNull(actor)?:return null
         if(!SquadRules.canHit(b,actor,e))return null
@@ -376,16 +384,19 @@ internal object AdventureRules{
         val integrity=ceil(b.hp*100.0/b.maxHp).toInt().coerceIn(1,100)
         val cleared=if(win)a.cleared+b.encounter else a.cleared
         val pos=if(win)GridPoint(b.encounter%MAP_W,b.encounter/MAP_W) else if(retreat)a.pos else base
-        val xp=if(win)70+b.enemies.size*30+a.stage*5 else if(retreat)0 else 10
-        val coins=if(win)25+b.enemies.size*15+a.stage*4 else 0
+        val site=GridPoint(b.encounter%MAP_W,b.encounter/MAP_W)
+        val boss=FrontierSites.isBoss(a,site);val vault=FrontierSites.isVault(a,site)
+        val artifact=if(win&&(boss||vault))FrontierSites.artifact(a.stage,if(boss)2 else 1)else null
+        val xp=if(win)70+b.enemies.size*30+a.stage*5+(if(boss||vault)80 else 0) else if(retreat)0 else 10
+        val coins=if(win)25+b.enemies.size*15+a.stage*4+(if(boss||vault)100 else 0) else 0
         val survivors=if(b.allies.isEmpty())a.squad else b.allies.filter{it.hp>0}.associate{it.kind to it.hp}
-        val updated=a.copy(battle=null,cleared=cleared,pos=pos,squad=survivors,squadRanks=a.squadRanks.filterKeys{it in survivors})
+        val updated=a.copy(battle=null,cleared=cleared,pos=pos,artifacts=a.artifacts+listOfNotNull(artifact),squad=survivors,squadRanks=a.squadRanks.filterKeys{it in survivors})
         val earnsCredit=win&&!a.credited&&complete(updated)
         val newTech=SquadKind.entries.filter{!SquadResearch.unlocked(a,it)&&SquadResearch.unlocked(updated,it)}
         val techMessage=if(newTech.isEmpty())"" else " · 🔓 Відкрито: "+newTech.joinToString(", "){it.title}
         val q=p.copy(adventure=updated.copy(credited=a.credited||earnsCredit,licensed=updated.licensed+newTech),integrity=integrity,wins=p.wins+if(win)1 else 0,
             expeditions=p.expeditions+if(earnsCredit)1 else 0,last=now,
-            message=if(win)"Перемога! +$xp XP · +$coins монет"+techMessage else if(retreat)"Відступ. Ворог залишився на карті." else "Поразка. Повернення на базу — потрібен ремонт.")
+            message=if(win)"Перемога! +$xp XP · +$coins монет"+(artifact?.let{" · Артефакт: "+it.title}?:"")+techMessage else if(retreat)"Відступ. Ворог залишився на карті." else "Поразка. Повернення на базу — потрібен ремонт.")
         return WorldRules.gain(q,RobotSkill.COMBAT,xp,if(win)30 else 0,coins)
     }
 }
@@ -397,7 +408,7 @@ internal object AdventureCodec{
         val battle=if(b==null)"" else listOf(b.encounter.toString(),point(b.pos),b.hp.toString(),b.maxHp.toString(),b.turn.toString(),
             b.enemies.joinToString(";"){e->listOf(e.series.name,e.tier.name,e.pos.x,e.pos.y,e.hp,e.maxHp,e.attack,e.defense,e.speed).joinToString(",")},
             b.allies.joinToString(";"){u->listOf(u.kind.name,u.pos.x,u.pos.y,u.hp,u.charges,u.rank).joinToString(",")},b.acted.sorted().joinToString(","),b.guards.sorted().joinToString(","),if(b.enemyPending)"1" else "0",b.enemyCursor.toString(),if(b.deploying)"1" else "0",b.skillUsed.sorted().joinToString(",")).joinToString("~")
-        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena7compact").joinToString("|")
+        return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena7compact",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name}).joinToString("|")
     }
     fun decode(s:String):AdventureState=runCatching{
         val v=s.split("|")
@@ -434,7 +445,7 @@ internal object AdventureCodec{
             val bots=z[5].split(";").map{line->val e=line.split(",");val pt=battlePoint(GridPoint(e[2].toInt(),e[3].toInt()),e[4].toInt()>0);val m=e[5].toInt()
                 require(AdventureRules.inArena(pt)&&m>0);ArenaBot(RobotSeries.valueOf(e[0]),RobotTier.valueOf(e[1]),pt,e[4].toInt().coerceIn(0,m),m,e[6].toInt(),e[7].toInt(),e[8].toInt())}
             require(bots.isNotEmpty()&&bots.any{it.hp>0}&&bots.size<=2)
-            val encounter=migrateId(z[0].toInt())?:error("Invalid encounter");require(AdventureRules.layout(stage).encounters.any{AdventureRules.id(it)==encounter})
+            val encounter=migrateId(z[0].toInt())?:error("Invalid encounter");require(AdventureRules.layout(stage).encounters.any{AdventureRules.id(it)==encounter}||FrontierSites.sites(stage).any{(q,t)->t==AdventureTile.VAULT&&AdventureRules.id(q)==encounter})
             val allies=z.getOrElse(6){""}.split(";").filter{it.isNotBlank()}.map{line->
                 val u=line.split(",");val kind=SquadKind.valueOf(u[0]);val point=battlePoint(GridPoint(u[1].toInt(),u[2].toInt()),u[3].toInt()>0)
                 require(AdventureRules.inArena(point));val rank=(u.getOrNull(5)?.toIntOrNull()?:1).coerceIn(1,barracks)
@@ -448,6 +459,7 @@ internal object AdventureCodec{
         // wins per previous sector (the original map had four encounters).
         val past=(v.getOrNull(11)?.toIntOrNull()?:((stage-1)*4)).coerceIn(0,1000)
         val licensed=if(v.size<=12)squad.keys+(b?.allies?.map{it.kind}?:emptyList()) else v[12].split(",").mapNotNull{n->SquadKind.entries.firstOrNull{it.name==n}}.toSet()
-        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad,barracks,ranks.filterKeys{it in squad},past,licensed)
+        val artifacts=v.getOrElse(14){""}.split(",").mapNotNull{n->FrontierArtifact.entries.firstOrNull{it.name==n}}.toSet()
+        AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad,barracks,ranks.filterKeys{it in squad},past,licensed,artifacts)
     }.getOrElse{AdventureState()}
 }
