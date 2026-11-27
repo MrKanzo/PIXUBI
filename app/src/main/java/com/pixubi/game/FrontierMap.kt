@@ -79,7 +79,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
             val next=AdventureRules.move(current,q,System.currentTimeMillis())
             if(next==current)break
             change(next);sound(PixubiSound.TAP)
-            if(next.adventure.battle!=null||next.adventure.pos!=q)break
+            if(next.adventure.battle!=null||next.adventure.pos!=q||AdventureRules.tile(current.adventure,q) in listOf(AdventureTile.LAB,AdventureTile.CACHE))break
             delay(340L)
         }
         target=null
@@ -316,6 +316,9 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
             AdventureTile.ENERGY->crate(p,Color(0xFF63DFF8),1)
             AdventureTile.REPAIR->crate(p,Color(0xFF7BF2A5),2)
             AdventureTile.AMMO->crate(p,Color(0xFFF7A65B),3)
+            AdventureTile.LAB->frontierSite(p,0,phase)
+            AdventureTile.CACHE->frontierSite(p,1,phase)
+            AdventureTile.VAULT->frontierSite(p,2,phase)
             AdventureTile.ENEMY->{if(q==AdventureRules.encounters(a).last())portal(p,phase)else{oval(Color(0xFF4C3036).copy(alpha=.65f),0f,4f,28f,13f);drawOval(Color(0xFFE36C77),Offset(-27f,-9f),Size(54f,24f),style=Stroke(2f))}}
             else->Unit
         }}
@@ -504,6 +507,35 @@ private fun DrawScope.techTower(p:FrontierPalette,phase:Float,seed:Int){
         Column(Modifier.weight(1f)){
             Text("Радар сектору",style=MaterialTheme.typography.titleSmall)
             Text("Світла точка — робот, блакитна — база. Радар не розкриває невідомі об'єкти.",style=MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+private fun DrawScope.frontierSite(p:FrontierPalette,kind:Int,phase:Float){
+    val col=when(kind){0->Color(0xFF8DEAFF);1->Color(0xFFFFD47A);else->Color(0xFFF38A9C)}
+    oval(Color(0xFF111B26).copy(alpha=.8f),0f,9f,36f,14f)
+    when(kind){
+        0->{
+            drawRect(Color(0xFF344657),Offset(-31f,-32f),Size(62f,43f))
+            shape(Color(0xFF627786),-37f,-32f,0f,-51f,37f,-32f,0f,-16f)
+            drawRect(Color(0xFF182934),Offset(-12f,-21f),Size(24f,32f))
+            drawRect(col,Offset(-25f,-23f),Size(8f,9f))
+            drawRect(col,Offset(17f,-23f),Size(8f,9f))
+            drawLine(col,Offset(0f,-51f),Offset(0f,-67f),3f)
+            drawCircle(col.copy(alpha=.55f+.35f*sin(phase*6.283f)),5f,Offset(0f,-67f))
+        }
+        1->{
+            crate(p,col,0)
+            val c=Offset(0f,-35f+sin(phase*6.283f)*3f)
+            shape(col,c.x,c.y-10f,c.x+8f,c.y,c.x,c.y+10f,c.x-8f,c.y)
+        }
+        else->{
+            shape(Color(0xFF42515C),-39f,6f,-28f,-31f,28f,-31f,39f,6f)
+            drawRect(Color(0xFF111E2B),Offset(-21f,-22f),Size(42f,32f))
+            drawRect(Color(0xFF58646D),Offset(-18f,-19f),Size(36f,5f))
+            for(i in 0..4)drawRect(Color(0xFF34414B),Offset(-18f,-12f+i*4f),Size(36f,2f))
+            drawLine(col,Offset(-26f,-26f),Offset(26f,-26f),3f)
+            drawCircle(col.copy(alpha=.6f+.3f*sin(phase*6.283f)),4f,Offset(0f,-39f))
         }
     }
 }
