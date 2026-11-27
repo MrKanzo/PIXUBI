@@ -410,7 +410,17 @@ internal object AdventureCodec{
             b.allies.joinToString(";"){u->listOf(u.kind.name,u.pos.x,u.pos.y,u.hp,u.charges,u.rank).joinToString(",")},b.acted.sorted().joinToString(","),b.guards.sorted().joinToString(","),if(b.enemyPending)"1" else "0",b.enemyCursor.toString(),if(b.deploying)"1" else "0",b.skillUsed.sorted().joinToString(",")).joinToString("~")
         return listOf(a.stage.toString(),point(a.pos),a.cleared.sorted().joinToString(","),a.seen.sorted().joinToString(","),a.steps.toString(),battle,"16",if(a.credited)"1" else "0",a.squad.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,h)->"${k.name},$h"},a.barracks.toString(),a.squadRanks.entries.sortedBy{it.key.ordinal}.joinToString(";"){(k,rank)->"${k.name},$rank"},a.pastCampaignWins.toString(),a.licensed.sortedBy{it.ordinal}.joinToString(","){it.name},"arena7compact",a.artifacts.sortedBy{it.ordinal}.joinToString(","){it.name}).joinToString("|")
     }
-    fun decode(s:String):AdventureState=runCatching{
+    fun decode(s:String):AdventureState{
+        decodeChecked(s)?.let{return it}
+        // A corrupt arena payload must not erase the explored map or collection.
+        val fields=s.split("|").toMutableList()
+        if(fields.size>5&&fields[5].isNotBlank()){
+            fields[5]=""
+            decodeChecked(fields.joinToString("|"))?.let{return it}
+        }
+        return AdventureState()
+    }
+    private fun decodeChecked(s:String):AdventureState?=runCatching{
         val v=s.split("|")
         val stage=v[0].toInt().coerceIn(1,100)
         val old=v.getOrNull(6)!="16"
@@ -461,5 +471,5 @@ internal object AdventureCodec{
         val licensed=if(v.size<=12)squad.keys+(b?.allies?.map{it.kind}?:emptyList()) else v[12].split(",").mapNotNull{n->SquadKind.entries.firstOrNull{it.name==n}}.toSet()
         val artifacts=v.getOrElse(14){""}.split(",").mapNotNull{n->FrontierArtifact.entries.firstOrNull{it.name==n}}.toSet()
         AdventureState(stage,pos,cleared,ids(v[3]),v[4].toInt().coerceAtLeast(0),b,credited,squad,barracks,ranks.filterKeys{it in squad},past,licensed,artifacts)
-    }.getOrElse{AdventureState()}
+    }.getOrNull()
 }
