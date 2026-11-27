@@ -20,15 +20,13 @@ internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:World
     modifier:Modifier=Modifier,roam:Boolean=false,onTap:(()->Unit)?=null){
     val series=p.series
     val accent=p.skin.accent
-    val clock=rememberInfiniteTransition(label="ambient")
-    val ambient by clock.animateFloat(0f,1f,infiniteRepeatable(tween(12000,easing=LinearEasing)),label="atmosphere")
-    // A stable clock avoids restarting the background whenever the robot changes action.
-    var phase by remember{mutableFloatStateOf(0f)}
+    val foreground=LocalPixubiForeground.current
+    val ambient by rememberGamePhase(12000,RenderBudget.SCENERY_FPS,p.mode!=WorldMode.HIBERNATE)
     val roomX=remember(series){Animatable(.5f)}
     var patrolAction by remember(series){mutableStateOf(RobotAction.IDLE)}
     var patrolView by remember(series){mutableStateOf(RobotView.FRONT)}
     val walkingMission=KageGait.isLocomotion(action)
-    val canRoam=roam&&p.mode==WorldMode.AWAKE&&
+    val canRoam=foreground&&roam&&p.mode==WorldMode.AWAKE&&
         (walkingMission||(action==RobotAction.IDLE&&p.energy>=15&&p.integrity>=20))
     LaunchedEffect(series,canRoam,action){
         if(!canRoam)return@LaunchedEffect
@@ -49,14 +47,7 @@ internal fun WorldShowcase(p:WorldPet,action:RobotAction,face:RobotFace,fx:World
     }
     val displayedAction=if(canRoam)patrolAction else if(roam&&walkingMission)RobotAction.IDLE else action
     val period=WorldMotion.period(series,displayedAction)
-    LaunchedEffect(series,displayedAction){
-        phase=0f
-        var previous=0L
-        while(true)withFrameNanos{frame->
-            if(previous!=0L)phase=(phase+(frame-previous).coerceAtMost(50_000_000L)/1_000_000f/period)%1f
-            previous=frame
-        }
-    }
+    val phase by rememberGamePhase(period,if(displayedAction==RobotAction.SLEEP)RenderBudget.SCENERY_FPS else RenderBudget.ACTOR_FPS,p.mode!=WorldMode.HIBERNATE)
     val flash=remember{Animatable(1f)}
     LaunchedEffect(event,fx){if(fx!=WorldFx.NONE){flash.snapTo(0f);flash.animateTo(1f,tween(if(fx==WorldFx.EVOLVE)2300 else 1400,easing=LinearEasing))}else flash.snapTo(1f)}
     val view=if(canRoam)patrolView else if(KageGait.isLocomotion(displayedAction)||displayedAction==RobotAction.ATTACK)RobotView.RIGHT else RobotView.FRONT
