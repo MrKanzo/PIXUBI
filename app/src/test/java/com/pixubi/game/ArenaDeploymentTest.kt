@@ -24,7 +24,7 @@ class ArenaDeploymentTest{
     }
     @Test fun skillConsumesOneActionAndIsPersisted(){
         val p=AdventureRules.startBattle(pet());val b=p.adventure.battle!!
-        val ready=b.copy(pos=GridPoint(5,1),enemies=b.enemies.map{it.copy(hp=999,maxHp=999)})
+        val ready=b.copy(pos=GridPoint(7,2),enemies=b.enemies.map{it.copy(hp=999,maxHp=999)})
         val q=p.copy(adventure=p.adventure.copy(battle=ready))
         val hit=AdventureRules.skillDamage(q,ready,-1,0,null)!!
         val normal=AdventureRules.previewDamage(q,ready,-1,0,null)!!
