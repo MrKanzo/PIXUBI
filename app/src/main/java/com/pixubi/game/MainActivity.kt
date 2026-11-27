@@ -56,11 +56,12 @@ class MainActivity : ComponentActivity() {
             fun closeSettings(){auditionSeries=null;showSettings=false}
             BackHandler(enabled=showSettings){closeSettings()}
             val lifecycle=LocalLifecycleOwner.current
+            var foreground by remember(lifecycle){mutableStateOf(lifecycle.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))}
             DisposableEffect(lifecycle){
                 val observer=LifecycleEventObserver{_,event->
                     when(event){
-                        Lifecycle.Event.ON_RESUME->{PixubiNeedsNotifier.markVisible(true);PixubiNeedsNotifier.clear(context);audio.setForeground(true)}
-                        Lifecycle.Event.ON_PAUSE,Lifecycle.Event.ON_STOP->{PixubiNeedsNotifier.markVisit(context);PixubiNeedsNotifier.markVisible(false);audio.setForeground(false)}
+                        Lifecycle.Event.ON_RESUME->{foreground=true;PixubiNeedsNotifier.markVisible(true);PixubiNeedsNotifier.clear(context);audio.setForeground(true)}
+                        Lifecycle.Event.ON_PAUSE,Lifecycle.Event.ON_STOP->{foreground=false;PixubiNeedsNotifier.markVisit(context);PixubiNeedsNotifier.markVisible(false);audio.setForeground(false)}
                         else->Unit
                     }
                 }
@@ -78,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 updater.check{result->checkingUpdates=false;updateDialog=result}
             }
             LaunchedEffect(Unit){updater.checkDaily{release->updateDialog=PixubiUpdateResult.NewRelease(release)}}
+            CompositionLocalProvider(LocalPixubiForeground provides foreground){
             MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF98E6CD),secondary=Color(0xFFFFD58A),
                 background=Color(0xFF101A2E),surface=Color(0xFF19253C),onBackground=Color.White,onSurface=Color.White)){
                 Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
@@ -151,6 +153,7 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 }
+            }
             }
         }
     }
