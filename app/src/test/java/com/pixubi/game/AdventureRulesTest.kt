@@ -52,7 +52,7 @@ class AdventureRulesTest{
         val start=AdventureRules.move(pet().copy(adventure=AdventureState(pos=GridPoint(3,2))),GridPoint(3,1),1000)
         val b=start.adventure.battle!!
         val old=b.copy(pos=GridPoint(1,0),enemies=b.enemies.map{it.copy(pos=GridPoint(6,2))},turn=3)
-        val oldSave=AdventureCodec.encode(start.adventure.copy(battle=old)).substringBeforeLast("|")
+        val oldSave=AdventureCodec.encode(start.adventure.copy(battle=old)).split("|").take(13).joinToString("|")
         val restored=AdventureCodec.decode(oldSave).battle!!
         assertEquals(old.hp,restored.hp)
         assertEquals(old.turn,restored.turn)
