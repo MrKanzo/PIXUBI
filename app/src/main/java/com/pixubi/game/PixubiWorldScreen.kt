@@ -215,17 +215,23 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 }
                 val offers=WorldRules.shop.filter{(tab==null||it.gear.slot==tab)&&(category==null||WorldGearCatalog.category(it.gear)==category)&&(page=="shop"||it.gear in p.owned)}
                 if(offers.isEmpty())Text("Поки порожньо.")
-                offers.forEach{o->
-                    val g=o.gear
-                    val owned=g in p.owned
-                    val equipped=p.equipment.equipped(g.slot)==g
+                WorldGearCatalog.groupOffers(offers).forEach{group->
+                    val g=group.first().gear
                     Card(Modifier.fillMaxWidth()){
                         Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                             Text(g.title,style=MaterialTheme.typography.titleMedium)
                             Text(RobotBalance.spec(g).delta.summary(),style=MaterialTheme.typography.bodySmall)
-                            Text(WorldCatalog.slots(p.series,g.slot)+" · "+WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
-                            if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,g))},enabled=p.mission==null){Text(if(equipped)"Зняти" else "Одягнути")}
-                            else Button(onClick={save(WorldRules.buy(p,g))},enabled=p.level>=o.level&&p.coins>=o.price){Text("${o.price} 🪙 · рівень ${o.level}")}
+                            Text(WorldGearCatalog.description(g),style=MaterialTheme.typography.bodySmall)
+                            group.forEach{o->
+                                val item=o.gear
+                                val owned=item in p.owned
+                                val equipped=p.equipment.equipped(item.slot)==item
+                                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                    Text(WorldCatalog.slots(p.series,item.slot),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                                    if(owned)OutlinedButton(onClick={save(WorldRules.equip(p,item))},enabled=p.mission==null&&p.adventure.battle==null){Text(if(equipped)"Зняти" else "Одягнути")}
+                                    else Button(onClick={save(WorldRules.buy(p,item))},enabled=p.level>=o.level&&p.coins>=o.price){Text("${o.price} 🪙 · рівень ${o.level}")}
+                                }
+                            }
                         }
                     }
                 }

@@ -15,6 +15,9 @@ internal enum class WorldSupply(val title:String,val category:WorldCategory,val 
     val isAmmo get()=category==WorldCategory.AMMO
 }
 internal object WorldGearCatalog {
+    // Group the shop presentation only. Existing per-hand ownership and saved enum IDs remain intact.
+    fun groupOffers(offers:List<WorldOffer>):List<List<WorldOffer>> =
+        offers.groupBy{it.gear.name.removeSuffix("_L").removeSuffix("_R")}.values.toList()
     fun ammo(g:RobotGear):Pair<WorldSupply,Int>?=when(g){
         RobotGear.BLASTER_L,RobotGear.BLASTER_R->WorldSupply.PULSE to 2
         RobotGear.RIFLE_L,RobotGear.RIFLE_R->WorldSupply.PULSE to 4

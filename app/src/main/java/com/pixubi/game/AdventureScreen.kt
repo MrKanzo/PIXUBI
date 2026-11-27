@@ -476,8 +476,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                 val hit=AdventureRules.skillDamage(p,b,actor,targetChoice,selected)
                 val support=AdventureRules.skillSupport(b,actor)
                 val supportReady=AdventureRules.skillSupportReady(b,actor)
-                AlertDialog(onDismissRequest={skillsPanel=false},title={Text("Навички юніта")},text={
-                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+                AlertDialog(onDismissRequest={skillsPanel=false},containerColor=Color(0xFF102332),titleContentColor=Color(0xFF8DECF5),
+                    title={Text("⌬ NEURAL LINK · Навички")},text={
+                    Column(Modifier.fillMaxWidth().border(1.dp,Color(0xFF397F91),RoundedCornerShape(12.dp)).background(Color(0xFF152D3C),RoundedCornerShape(12.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                        Text("БОЙОВИЙ ІНТЕРФЕЙС  /  СИНХРОНІЗАЦІЯ",color=Color(0xFF8DECF5),style=MaterialTheme.typography.labelSmall)
                         Text(AdventureRules.skillName(b,actor),style=MaterialTheme.typography.titleMedium)
                         Text(AdventureRules.skillDescription(b,actor))
                         Text("Один раз за бій. Витрачає хід юніта та заряд, якщо потрібен.",style=MaterialTheme.typography.bodySmall)

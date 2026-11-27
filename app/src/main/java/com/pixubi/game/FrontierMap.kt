@@ -136,7 +136,7 @@ internal fun FrontierMap(p:WorldPet,onChange:(WorldPet)->Unit,onSound:(PixubiSou
                         landscape(a,colors,phase,route)
                     }
                 }
-                val actorSize=mapWidth*(96f/FrontierProjection.W)
+                val actorSize=mapWidth*(110.4f/FrontierProjection.W)
                 for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
                     val q=GridPoint(x,y)
                     if(AdventureRules.knownTile(a,q)==AdventureTile.ENEMY){
@@ -253,9 +253,9 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
     val roadPaths=roads.map{roundedRoad(it.map(FrontierProjection::center))}
     // Layer all roads together: junctions don't have dark seams.
     for(path in roadPaths)drawPath(path,p.dark.copy(alpha=.75f),style=Stroke(36f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFF354552),style=Stroke(29f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFF536573),style=Stroke(23f,cap=StrokeCap.Round,join=StrokeJoin.Round))
-    for(path in roadPaths)drawPath(path,Color(0xFF233746),style=Stroke(13f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,p.light.copy(alpha=.74f),style=Stroke(27f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,p.grass,style=Stroke(20f,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    for(path in roadPaths)drawPath(path,p.dark.copy(alpha=.6f),style=Stroke(9f,cap=StrokeCap.Round,join=StrokeJoin.Round))
     for(path in roadPaths){
         val measure=PathMeasure().apply{setPath(path,false)}
         for(j in 0..6){val f=(phase+j/7f)%1f;val at=measure.getPosition(f*measure.length);oval(p.glow.copy(alpha=.24f),at.x,at.y,9f,5f);drawCircle(p.glow,2.7f,at)}
@@ -291,8 +291,22 @@ private fun DrawScope.landscape(a:AdventureState,p:FrontierPalette,phase:Float,r
                     tree(p,phase,x+y)
                 }else if(x==6||x==1)rockRidge(p,x+y)else ruins(p)
             }
-        }else if(!wall&&!AdventureRules.mainRoad(q)&&q!=AdventureRules.base&&x!=4&&(x+y)%3==0){
-            translate(c.x+34f,c.y-28f){scale(.46f,.46f,Offset.Zero){tree(p,phase,x+y)}}
+        }else if(!wall&&!AdventureRules.mainRoad(q)&&q!=AdventureRules.base&&x!=4){
+            val seed=x*37+y*19+a.stage*13
+            if(seed%5==0){
+                // Terraced biotechnological hills, away from the walkable node.
+                val hx=c.x+25f;val hy=c.y-25f
+                oval(p.dark.copy(alpha=.65f),hx,hy+5f,34f,18f)
+                oval(p.grass,hx,hy-2f,30f,16f)
+                oval(p.light.copy(alpha=.70f),hx-3f,hy-8f,22f,11f)
+                oval(p.glow.copy(alpha=.23f),hx-3f,hy-10f,12f,5f)
+            }else if(seed%3==0){
+                translate(c.x+30f,c.y-25f){
+                    scale(.55f,.55f,Offset.Zero){tree(p,phase,seed)}
+                    translate(-23f,4f){scale(.40f,.40f,Offset.Zero){tree(p,phase,seed+1)}}
+                    translate(20f,8f){scale(.43f,.43f,Offset.Zero){tree(p,phase,seed+2)}}
+                }
+            }
         }
     }
     // Small data pylons beside roads, never over resources or hidden objects.
@@ -436,26 +450,35 @@ private fun DrawScope.portal(p:FrontierPalette,phase:Float){
 private fun roundedRoad(points:List<Offset>):Path=Path().apply{
     if(points.isEmpty())return@apply
     moveTo(points.first().x,points.first().y)
-    for(i in 1 until points.lastIndex){
-        val a=points[i-1];val b=points[i];val c=points[i+1]
-        val enter=b+(a-b)*.27f;val exit=b+(c-b)*.27f
-        lineTo(enter.x,enter.y)
-        quadraticBezierTo(b.x,b.y,exit.x,exit.y)
+    // Curves between the original navigation nodes; every crossing stays connected.
+    for(i in 1..points.lastIndex){
+        val a=points[i-1];val b=points[i]
+        val delta=b-a
+        val length=delta.getDistance().coerceAtLeast(1f)
+        val normal=Offset(-delta.y,delta.x)/length
+        val bend=if((a.x.toInt()+a.y.toInt()+b.x.toInt()+b.y.toInt())%3==0) 23f else -19f
+        val control=(a+b)*.5f+normal*bend
+        quadraticBezierTo(control.x,control.y,b.x,b.y)
     }
-    lineTo(points.last().x,points.last().y)
 }
 private fun regionPath(a:AdventureState,live:Boolean):Path=Path().apply{
     for(y in 0 until AdventureRules.MAP_H)for(x in 0 until AdventureRules.MAP_W){
         val q=GridPoint(x,y)
         if(if(live)AdventureRules.inSight(a,q)else AdventureRules.visible(a,q)){
-            val v=FrontierProjection.corners(q)
-            moveTo(v[0].x,v[0].y);v.drop(1).forEach{lineTo(it.x,it.y)};close()
+            val c=FrontierProjection.center(q)
+            // Overlapping rounded islands keep the revealed corridor continuous.
+            addOval(Rect(c.x-76f,c.y-71f,c.x+76f,c.y+71f))
         }
     }
 }
 private fun DrawScope.fogOfWar(a:AdventureState){
     val explored=regionPath(a,false)
-    val live=regionPath(a,true)
+    val center=FrontierProjection.center(a.pos)
+    val base=FrontierProjection.center(AdventureRules.base)
+    val live=Path().apply{
+        addOval(Rect(center.x-248f,center.y-226f,center.x+248f,center.y+226f))
+        addOval(Rect(base.x-76f,base.y-71f,base.x+76f,base.y+71f))
+    }
     // Previously explored terrain is subdued. Live objects are not rendered here.
     clipPath(live,ClipOp.Difference){clipPath(explored){
         drawRect(Color(0xFF111E30).copy(alpha=.47f),size=Size(FrontierProjection.W,FrontierProjection.H))

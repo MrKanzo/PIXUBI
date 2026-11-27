@@ -8,6 +8,14 @@ class ExpandedShopTest{
         assertEquals(RobotGear.entries.size,WorldRules.shop.size)
         RobotGear.entries.forEach{g->assertTrue(WorldRules.shop.first{it.gear==g}.price>0);assertTrue(WorldGearCatalog.category(g).title.isNotBlank())}
     }
+    @Test fun shopGroupsHandVariantsWithoutDroppingOwnershipIds(){
+        val groups=WorldGearCatalog.groupOffers(WorldRules.shop)
+        assertEquals(WorldRules.shop.size,groups.flatten().size)
+        assertEquals(WorldRules.shop.toSet(),groups.flatten().toSet())
+        val shield=groups.single{it.any{offer->offer.gear==RobotGear.SHIELD_L}}
+        assertEquals(setOf(RobotGear.SHIELD_L,RobotGear.SHIELD_R),shield.map{it.gear}.toSet())
+        assertEquals(1,groups.count{it.first().gear.title=="Щит"})
+    }
     @Test fun ammunitionIsChargedOnceAtMissionStart(){
         val p=pet().copy(equipment=RobotEquipment().equip(RobotGear.RIFLE_L).equip(RobotGear.BLASTER_R))
         val q=WorldRules.start(p,WorldTask.TRAIN,1000L)
