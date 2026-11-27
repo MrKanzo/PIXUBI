@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,8 +17,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-@Composable private fun BuildingIcon(kind:BaseBuilding,built:Boolean){
-    Canvas(Modifier.size(62.dp)){
+@Composable private fun BuildingIcon(kind:BaseBuilding,built:Boolean,iconSize:Dp=38.dp){
+    Canvas(Modifier.size(iconSize)){
         val w=size.width;val h=size.height
         val c=when(kind){BaseBuilding.BARRACKS->Color(0xFF69E4D1);BaseBuilding.FOUNDRY->Color(0xFFF5AD69);BaseBuilding.NEURAL->Color(0xFFAB9CFF);BaseBuilding.SERVICE->Color(0xFF8EE7A4);BaseBuilding.WORKSHOP->Color(0xFF67C9FF)}
         fun poly(col:Color,vararg xy:Float){
@@ -47,7 +49,6 @@ import androidx.compose.ui.unit.dp
     Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B3043))){
         Column(Modifier.padding(9.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
             Text(if(at)"⌂ Робот на базі" else "◇ Робот в експедиції · сектор ${p.adventure.stage}",style=MaterialTheme.typography.titleSmall,color=Color(0xFF89E8DE))
-            Text("Будівництво доступне дистанційно за рівнем. Найм, крафт і сервіс — на базі.",style=MaterialTheme.typography.labelSmall)
             if(p.mode!=WorldMode.AWAKE)TextButton(onClick=onWake){Text("Розбудити робота")}
             else if(!at){
                 val can=AdventureRules.canExplore(p)
@@ -59,42 +60,39 @@ import androidx.compose.ui.unit.dp
         }
     }
 }
-@Composable internal fun BaseDistrict(p:WorldPet,onOpen:(BaseBuilding)->Unit,onShop:()->Unit){
-    Text("МІСТО PIXUBI · ${p.buildings.size}/${BaseBuilding.entries.size}",style=MaterialTheme.typography.titleMedium)
-    BaseBuilding.entries.sortedBy{it.level}.chunked(2).forEach{row->
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            row.forEach{b->Card(onClick={if(b in p.buildings)onOpen(b)else onShop()},modifier=Modifier.weight(1f)){
-                Column(Modifier.padding(8.dp).fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally){
-                    BuildingIcon(b,b in p.buildings);Text(b.title,style=MaterialTheme.typography.labelLarge)
-                    Text(if(b in p.buildings)"Відкрити" else if(!BaseRules.unlocked(p,b))"🔒 Рівень ${b.level}" else "${b.price} 🪙 · Доступно",style=MaterialTheme.typography.labelSmall)
-                }
-            }}
-        }
+@Composable internal fun BaseDistrict(p:WorldPet,onOpen:(BaseBuilding)->Unit){
+    val built=p.buildings.sortedBy{it.level}
+    if(built.isEmpty())return
+    Text("Місто · ${built.size}/${BaseBuilding.entries.size}",style=MaterialTheme.typography.titleSmall)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+        built.forEach{b->Card(onClick={onOpen(b)},modifier=Modifier.width(76.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B293C))){
+            Column(Modifier.fillMaxWidth().padding(4.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                BuildingIcon(b,true,34.dp)
+                Text(when(b){BaseBuilding.BARRACKS->"Казарми";BaseBuilding.FOUNDRY->"Завод";BaseBuilding.NEURAL->"Навички";BaseBuilding.SERVICE->"Сервіс";BaseBuilding.WORKSHOP->"Крафт"},style=MaterialTheme.typography.labelSmall,maxLines=1)
+            }
+        }}
     }
-    OutlinedButton(onClick=onShop,modifier=Modifier.fillMaxWidth()){Text("Магазин будівель")}
 }
 @Composable internal fun BaseConstructionShop(p:WorldPet,onBuy:(BaseBuilding)->Unit,onOpen:(BaseBuilding)->Unit){
-    Text("Будівництво · ${p.coins} 🪙",style=MaterialTheme.typography.titleLarge)
-    val unlocked=BaseBuilding.entries.count{BaseRules.unlocked(p,it)}
-    Text("Рівень ${p.level} · відкрито $unlocked/${BaseBuilding.entries.size} · збудовано ${p.buildings.size}",style=MaterialTheme.typography.labelMedium)
-    LinearProgressIndicator(progress={unlocked.toFloat()/BaseBuilding.entries.size},modifier=Modifier.fillMaxWidth())
-    BaseBuilding.entries.sortedBy{it.level}.forEach{b->Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B293C))){
-        Row(Modifier.padding(8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            BuildingIcon(b,b in p.buildings)
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){
-                Text(b.title,style=MaterialTheme.typography.titleSmall)
-                val unlocked=BaseRules.unlocked(p,b)
-                Text(b.code+" · "+if(b in p.buildings)"Збудовано" else if(unlocked)"Доступно · рів. ${b.level}" else "🔒 Рівень ${b.level}",color=if(unlocked)Color(0xFF8AD9E6) else MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelSmall)
-                Text(b.description,style=MaterialTheme.typography.bodySmall)
-                if(b in p.buildings)OutlinedButton(onClick={onOpen(b)}){Text("Відкрити")}
-                else{
-                    val reason=BaseRules.buyReason(p,b)
-                    if(reason!=null&&unlocked)Text(reason,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.error)
-                    Button(onClick={onBuy(b)},enabled=reason==null,contentPadding=PaddingValues(horizontal=12.dp,vertical=4.dp)){Text(if(unlocked)"Побудувати · ${b.price} 🪙" else "🔒 ${b.price} 🪙",style=MaterialTheme.typography.labelMedium)}
+    Row(verticalAlignment=Alignment.CenterVertically){
+        Text("Будівлі",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+        Text("${p.buildings.size}/${BaseBuilding.entries.size} · ${p.coins} 🪙",style=MaterialTheme.typography.labelLarge)
+    }
+    BaseBuilding.entries.sortedBy{it.level}.forEach{b->
+        val built=b in p.buildings
+        val reason=BaseRules.buyReason(p,b)
+        Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF1B293C))){
+            Row(Modifier.padding(horizontal=8.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
+                BuildingIcon(b,built)
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(1.dp)){
+                    Text(b.title,style=MaterialTheme.typography.titleSmall)
+                    Text(if(built)"Збудовано" else reason?:"Рів. ${b.level} · Доступно",style=MaterialTheme.typography.labelSmall,color=if(built||reason==null)Color(0xFF8AD9E6) else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if(built)TextButton(onClick={onOpen(b)}){Text("Відкрити",style=MaterialTheme.typography.labelMedium)}
+                else Button(onClick={onBuy(b)},enabled=reason==null,contentPadding=PaddingValues(horizontal=9.dp,vertical=4.dp)){Text("${b.price} 🪙",style=MaterialTheme.typography.labelMedium)}
             }
         }
-    }}
+    }
 }
 @Composable internal fun BaseBuildingDialog(p:WorldPet,kind:BaseBuilding,onChange:(WorldPet)->Unit,onClose:()->Unit){
     var counts by remember(kind){mutableStateOf<Map<SquadKind,Int>>(emptyMap())}

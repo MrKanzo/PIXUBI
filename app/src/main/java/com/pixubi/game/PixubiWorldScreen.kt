@@ -48,7 +48,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         }
     }
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
-    BackHandler(enabled=page!="home"||building!=null){if(building!=null)building=null else page="home"}
+    BackHandler(enabled=page!="home"||building!=null){if(building!=null)building=null else if(page=="construction")page="shop" else page="home"}
     val p=pet
     val musicScene=when{p?.adventure?.battle!=null->MusicScene.BATTLE;page=="adventure"&&p!=null->MusicScene.EXPEDITION;else->MusicScene.BASE}
     LaunchedEffect(musicScene){onMusicScene(musicScene)}
@@ -80,7 +80,9 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
     val period=WorldMotion.period(p.series,RobotAction.IDLE)
     val phase by rememberGamePhase(period,RenderBudget.SCENERY_FPS,enabled=page=="archive")
-    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(14.dp),
+    val screenScroll=rememberScrollState()
+    LaunchedEffect(page){screenScroll.scrollTo(0)}
+    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(screenScroll).padding(14.dp),
         verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
@@ -93,12 +95,18 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             LinearProgressIndicator(progress={prog.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(prog.remaining==0)"Максимальний рівень · OMEGA: 10 перемог і 10 експедицій" else "${p.xp} XP · До рівня ${prog.remaining} XP",style=MaterialTheme.typography.bodySmall)
             val navigation=listOf(listOf("home" to "База","missions" to "Місії","adventure" to "Експедиція","shop" to "Магазин"),
-                listOf("construction" to "Будови","inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
+                listOf("inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
             navigation.forEach{group->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                group.forEach{(id,label)->Card(onClick={page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},modifier=Modifier.weight(1f),colors=CardDefaults.cardColors(containerColor=if(page==id)androidx.compose.ui.graphics.Color(0xFF244959) else androidx.compose.ui.graphics.Color(0xFF1B293C))){
-                    Column(Modifier.fillMaxWidth().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){PixubiGlyph(id,page==id);Text(label,style=MaterialTheme.typography.labelSmall,maxLines=1)}
+                group.forEach{(id,label)->val active=page==id||(id=="shop"&&page=="construction");Card(onClick={page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},modifier=Modifier.weight(1f),colors=CardDefaults.cardColors(containerColor=if(active)androidx.compose.ui.graphics.Color(0xFF244959) else androidx.compose.ui.graphics.Color(0xFF1B293C))){
+                    Column(Modifier.fillMaxWidth().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){PixubiGlyph(id,active);Text(label,style=MaterialTheme.typography.labelSmall,maxLines=1)}
                 }}
             }}
+            if(page=="shop"||page=="construction"){
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    FilterChip(page=="shop",{page="shop"},label={Text("Предмети")},modifier=Modifier.weight(1f))
+                    FilterChip(page=="construction",{page="construction"},label={Text("Будівлі")},modifier=Modifier.weight(1f))
+                }
+            }
             if(page=="home"){
                 if(!guideProgress.finished&&!guideProgress.dismissed)Card(Modifier.fillMaxWidth()){
                     Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -116,7 +124,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                         }
                     })
                 BaseLocationPanel(p,onReturn={requestReturn()},onWake={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))})
-                BaseDistrict(p,onOpen={building=it},onShop={page="construction";building=null})
+                BaseDistrict(p,onOpen={building=it})
                 WorldMeter("Енергія",p.energy);WorldMeter("Міцність",p.integrity);WorldMeter("Настрій",p.mood)
                 Text(p.message,style=MaterialTheme.typography.bodyMedium)
                 val m=p.mission
@@ -143,7 +151,6 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                     }
                 }else Button(onClick={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))}){Text("Розбудити")}
             }else if(page=="construction"){
-                BaseLocationPanel(p,onReturn={requestReturn()},onWake={save(WorldRules.mode(p,WorldMode.AWAKE,System.currentTimeMillis()))})
                 BaseConstructionShop(p,onBuy={save(BaseRules.buy(p,it))},onOpen={building=it})
             }else if(page=="missions"){
                 Text("Центр місій",style=MaterialTheme.typography.titleLarge)
