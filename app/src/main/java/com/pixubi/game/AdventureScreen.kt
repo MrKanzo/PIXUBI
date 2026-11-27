@@ -448,21 +448,29 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             },confirmButton={TextButton(onClick={tacticsPanel=false}){Text("До бою")}})
             if(skillsPanel&&!b.deploying){
                 val hit=AdventureRules.skillDamage(p,b,actor,targetChoice,selected)
+                val support=AdventureRules.skillSupport(b,actor)
+                val supportReady=AdventureRules.skillSupportReady(b,actor)
                 AlertDialog(onDismissRequest={skillsPanel=false},title={Text("Навички юніта")},text={
                     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
                         Text(AdventureRules.skillName(b,actor),style=MaterialTheme.typography.titleMedium)
-                        Text("Посилена атака: +50% шкоди, один раз за бій для кожного юніта. Витрачає звичайний заряд і хід.")
-                        Text(if(actor in b.skillUsed)"Навичку вже використано" else if(hit==null)"Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
+                        Text(AdventureRules.skillDescription(b,actor))
+                        Text("Один раз за бій. Витрачає хід юніта та заряд, якщо потрібен.",style=MaterialTheme.typography.bodySmall)
+                        Text(if(actor in b.skillUsed)"Навичку вже використано" else if(support)if(supportReady)"Готово до застосування" else "Немає доступної цілі або заряду" else if(hit==null)"Обери ворога в радіусі атаки" else "Прогноз: −$hit HP")
                         if(ally?.kind==SquadKind.MEDIC)Text("Ремонт: відновлює союзника в радіусі двох клітинок.")
                     }
                 },confirmButton={Button(onClick={
+                    if(support){
+                        skillsPanel=false
+                        perform(if(ally?.kind==SquadKind.GUARD)"guard" else "repair",source,source){latestSound(PixubiSound.HAPPY);AdventureRules.useSupportSkill(latestPet,actor,now())}
+                        return@Button
+                    }
                     val dest=chosenEnemy?.pos?:return@Button
                     val i=targetChoice;skillsPanel=false
                     direction=if(dest.x<source.x)RobotView.LEFT else RobotView.RIGHT
                     perform("strike",source,dest,if(ally!=null)ally.range==1 else selected==null||AdventureRules.range(selected)==1){
                         latestSound(PixubiSound.TAP);AdventureRules.skillStrike(latestPet,actor,i,selected,now())
                     }
-                },enabled=hit!=null&&!busy){Text("Застосувати")}},dismissButton={TextButton(onClick={skillsPanel=false}){Text("Закрити")}})
+                },enabled=(hit!=null||supportReady)&&!busy){Text("Застосувати")}},dismissButton={TextButton(onClick={skillsPanel=false}){Text("Закрити")}})
             }
 
         }
