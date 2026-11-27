@@ -165,24 +165,65 @@ internal object AdventureRules{
     fun skillName(b:ArenaBattle,actor:Int)=when(b.allies.getOrNull(actor)?.kind){
         SquadKind.RANGER->"Точний постріл"
         SquadKind.ASSAULT->"Посилений удар"
-        SquadKind.GUARD->"Силовий удар"
-        SquadKind.MEDIC->"Імпульс дрона"
+        SquadKind.GUARD->"Захисний купол"
+        SquadKind.MEDIC->"Масовий ремонт"
         SquadKind.SIEGE->"Перевантаження"
         SquadKind.AERIAL->"Енергоімпульс"
         else->"Бойовий імпульс"
     }
+    fun skillSupport(b:ArenaBattle,actor:Int)=b.allies.getOrNull(actor)?.kind in listOf(SquadKind.GUARD,SquadKind.MEDIC)
+    fun skillDescription(b:ArenaBattle,actor:Int)=when(b.allies.getOrNull(actor)?.kind){
+        SquadKind.RANGER->"Точний постріл: +75% шкоди."
+        SquadKind.ASSAULT->"Посилений удар: подвійна шкода в ближньому бою."
+        SquadKind.GUARD->"Захисний купол: усі живі союзники отримують щит до наступного влучання."
+        SquadKind.MEDIC->"Масовий ремонт: відновлює 25% максимального HP пораненим союзникам у радіусі 2. Витрачає заряд."
+        SquadKind.SIEGE->"Перевантаження: +25% шкоди цілі та половина цього удару сусіднім ворогам."
+        SquadKind.AERIAL->"Енергоімпульс: +50% шкоди та чверть удару іншим ворогам у радіусі 2 від цілі."
+        else->"Бойовий імпульс: +50% шкоди."
+    }
     fun skillDamage(p:WorldPet,b:ArenaBattle,actor:Int,index:Int,gear:RobotGear?):Int?{
-        if(actor in b.skillUsed)return null
+        if(actor in b.skillUsed||skillSupport(b,actor))return null
         val hit=previewDamage(p,b,actor,index,gear)?:return null
-        return hit+maxOf(1,hit/2)
+        val bonus=when(b.allies.getOrNull(actor)?.kind){SquadKind.RANGER->hit*3/4;SquadKind.ASSAULT->hit;SquadKind.SIEGE->hit/4;else->hit/2}
+        return hit+maxOf(1,bonus)
+    }
+    fun skillSupportReady(b:ArenaBattle,actor:Int):Boolean{
+        if(actor in b.skillUsed||!SquadRules.ready(b,actor))return false
+        return when(b.allies.getOrNull(actor)?.kind){
+            SquadKind.GUARD->true
+            SquadKind.MEDIC->{
+                val u=b.allies[actor]
+                u.charges>0&&((b.hp<b.maxHp&&arenaDistance(u.pos,b.pos)<=2)||b.allies.any{it.hp in 1 until it.maxHp&&arenaDistance(u.pos,it.pos)<=2})
+            }
+            else->false
+        }
+    }
+    fun useSupportSkill(p:WorldPet,actor:Int,now:Long):WorldPet{
+        val b=p.adventure.battle?:return p
+        if(!skillSupportReady(b,actor))return p
+        val u=b.allies[actor]
+        val used=b.copy(skillUsed=b.skillUsed+actor)
+        val next=if(u.kind==SquadKind.GUARD){
+            used.copy(guards=used.guards+(-1)+used.allies.indices.filter{used.allies[it].hp>0})
+        }else{
+            used.copy(hp=if(arenaDistance(u.pos,b.pos)<=2)(b.hp+maxOf(1,b.maxHp/4)).coerceAtMost(b.maxHp)else b.hp,
+                allies=b.allies.mapIndexed{i,a->a.copy(hp=if(a.hp>0&&arenaDistance(u.pos,a.pos)<=2)(a.hp+maxOf(1,a.maxHp/4)).coerceAtMost(a.maxHp)else a.hp,charges=if(i==actor)a.charges-1 else a.charges)})
+        }
+        return afterAction(p,next,actor,u.kind==SquadKind.GUARD,skillName(b,actor),now)
     }
     fun skillStrike(p:WorldPet,actor:Int,index:Int,gear:RobotGear?,now:Long):WorldPet{
         val b=p.adventure.battle?:return p
         val hit=skillDamage(p,b,actor,index,gear)?:return p
         val cost=if(actor==-1)attackCost(gear)else null
         val q=if(cost==null)p else p.copy(supplies=p.supplies+(cost to p.stock(cost)-1))
+        val kind=b.allies.getOrNull(actor)?.kind
+        val target=b.enemies[index].pos
         val next=b.copy(skillUsed=b.skillUsed+actor,
-            enemies=b.enemies.mapIndexed{i,e->if(i==index)e.copy(hp=(e.hp-hit).coerceAtLeast(0))else e},
+            enemies=b.enemies.mapIndexed{i,e->
+                val d=arenaDistance(e.pos,target)
+                val amount=when{e.hp<=0->0;i==index->hit;kind==SquadKind.SIEGE&&d<=1->maxOf(1,hit/2);kind==SquadKind.AERIAL&&d<=2->maxOf(1,hit/4);else->0}
+                e.copy(hp=(e.hp-amount).coerceAtLeast(0))
+            },
             allies=b.allies.mapIndexed{i,u->if(i==actor&&u.range>1)u.copy(charges=u.charges-1)else u})
         if(next.enemies.none{it.hp>0})return finish(q,next,true,now)
         return afterAction(q,next,actor,false,skillName(b,actor)+": −$hit HP",now)
