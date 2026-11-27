@@ -59,14 +59,14 @@ internal object SymbiontCatalog {
     }
 }
 private val ink=Color(0xFF080D12)
-private val shell=Color(0xFF242634)
-private val pearl=Color(0xFF727A8E)
-private val shade=Color(0xFF3C4358)
-private val tendon=Color(0xFF643F49)
+private val shell=Color(0xFF252E48)
+private val pearl=Color(0xFFA7B9D2)
+private val shade=Color(0xFF526783)
+private val tendon=Color(0xFFA54D67)
 private val fang=Color(0xFFE1DCC4)
 private fun DrawScope.plate(s:String,c:Color=pearl){
     val p=PathParser().parsePathString(s).toPath();val b=p.getBounds()
-    drawPath(p,Brush.linearGradient(listOf(c,shade,shell),Offset(b.left,b.top),Offset(b.right,b.bottom)))
+    drawPath(p,Brush.linearGradient(listOf(c, c.copy(alpha=.85f).compositeOver(shade),shell),Offset(b.left,b.top),Offset(b.right,b.bottom)))
     drawPath(p,ink,style=Stroke(1.6f,join=StrokeJoin.Round))
 }
 private fun DrawScope.line(a:Color,x:Float,y:Float,u:Float,v:Float,w:Float=2f){
@@ -248,6 +248,10 @@ private fun DrawScope.body(f:SymbiontForm,a:Color,side:Boolean,phase:Float,grow:
     drawCircle(ink,11f,core);drawCircle(a.copy(alpha=.22f),15f,core)
     drawCircle(a,8f,core,style=Stroke(2f));drawCircle(a,4f+sin(phase*6.28f),core)
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(Color.White,12f,core,style=Stroke(1.5f))
+    if(side){
+        val panel=Path().apply{moveTo(-l*.85f,-h*.22f);quadraticBezierTo(-l*.15f,-h*.49f,l*.82f,-h*.62f);lineTo(l*.62f,-h*.34f);quadraticBezierTo(-l*.15f,-h*.14f,-l*.85f,-h*.05f);close()}
+        drawPath(panel,Color(0xFF1C304A));drawPath(panel,a.copy(alpha=.8f),style=Stroke(1.3f));for(i in 0..2){val x=-l*.5f+i*l*.37f;line(a,x,-h*.23f,x+7f,-h*.35f,2f)}
+    }
     drawVariantArmor(gear,side,a,f.grade,true)
 }
 private fun DrawScope.symbiontEye(a:Color,x:Float,y:Float,face:RobotFace){
@@ -280,12 +284,13 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
         if(g<2)for(i in 0..1)translate(-13f+i*9f,-27f){rotate(-16f+sin(phase*6.28f+i)*7f,Offset.Zero){plate("M -7 4 L -22 -34 L 10 -15 L 13 2 Z");line(a,-5f,-15f,4f,-2f)}}
         else for(i in 0 until f.horns)translate(-24f+i*10f,-26f){rotate(-35f+i*12f,Offset.Zero){crystal(a,7f,22f+g*3f)}}
         plate(shape)
-        plate("M 0 -25 L 23 -25 L 37 -13 L 28 0 L 6 7 L -5 -6 Z",ink)
+        plate("M -8 -24 L 22 -29 L 38 -15 L 30 -5 L 4 3 L -10 -7 Z",ink)
+        line(a,-3f,-22f,25f,-23f,2.3f)
         if(blink)line(a,9f,-12f,26f,-12f,2f)
         else{
             symbiontEye(a,17f,-10f,face)
         }
-        val snout=if(g==0)35f else if(g==1)43f else 51f+g
+        val snout=if(g==0)46f else if(g==1)43f else 51f+g
         val rad=jaw*PI.toFloat()/180f
         val hinge=Offset(12f,10f)
         val lowerTip=hinge+Offset((snout-12f)*cos(rad)+2f*sin(rad),(snout-12f)*sin(rad)-2f*cos(rad))
@@ -338,7 +343,7 @@ private fun DrawScope.head(f:SymbiontForm,a:Color,side:Boolean,face:RobotFace,ph
 }
 @Composable
 internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,debug:Boolean,modifier:Modifier){
-    val f=SymbiontCatalog.of(loadout.tier);val a=loadout.accent;val e=loadout.equipment
+    val f=SymbiontCatalog.of(loadout.tier);val a=loadout.accent.copy(alpha=.82f).compositeOver(Color(0xFFFF537C));val e=loadout.equipment
     val move=action==RobotAction.WALK||action==RobotAction.RUN
     val view=if(move&&requested==RobotView.FRONT)RobotView.RIGHT else requested
     val side=view!=RobotView.FRONT
@@ -384,7 +389,7 @@ internal fun SymbiontPreview(requested:RobotView,action:RobotAction,face:RobotFa
                     for(i in if(side)listOf(2,3)else listOf(1,3))paw(i)
                     translate(if(side)f.length*.90f else 0f,-f.depth*.68f-f.shoulderRise*.75f-(if(side)0f else 5f)){
                         rotate(if(side&&action==RobotAction.ATTACK)sin(phase*PI.toFloat())*9f else if(side&&flight)-4f+sin(phase*6.28f)*2f else 0f,Offset.Zero){
-                            val headScale=if(f.grade==0).88f else .83f+f.grade*.025f
+                            val headScale=if(f.grade==0).96f else .88f+f.grade*.025f
                             scale(headScale,headScale,Offset.Zero){head(f,a,side,face,phase,action,e.equipped(RobotSlot.HEAD))}
                         }
                     }

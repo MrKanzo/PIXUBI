@@ -23,12 +23,12 @@ internal object MyceliaCatalog {
     }
 }
 private val ink=Color(0xFF39274E)
-private val shell=Color(0xFF716187)
+private val shell=Color(0xFF7461A9)
 private val pearl=Color(0xFFFFF2FF)
-private val shade=Color(0xFFC7B0E5)
+private val shade=Color(0xFFE2B9F6)
 private fun DrawScope.plate(s:String,c:Color=pearl){
     val p=PathParser().parsePathString(s).toPath();val b=p.getBounds()
-    drawPath(p,Brush.linearGradient(listOf(c,shade,shell),Offset(b.left,b.top),Offset(b.right,b.bottom)))
+    drawPath(p,Brush.linearGradient(listOf(c, c.copy(alpha=.78f).compositeOver(shade),shell),Offset(b.left,b.top),Offset(b.right,b.bottom)))
     drawPath(p,ink,style=Stroke(1.6f,join=StrokeJoin.Round))
 }
 private fun DrawScope.line(a:Color,x:Float,y:Float,u:Float,v:Float,w:Float=2f){
@@ -39,7 +39,7 @@ private fun DrawScope.node(a:Color,p:Offset,r:Float,debug:Boolean=false){
     drawCircle(ink,r+1f,p);drawCircle(shade,r,p);drawCircle(a,r*.37f,p)
     if(debug)drawCircle(Color(0xFFFFCC61),r+3f,p,style=Stroke(1f))
 }
-private val cyan=Color(0xFF83E7F4)
+private val cyan=Color(0xFF62F5F4)
 private fun DrawScope.petal(a:Color,w:Float,h:Float){
     val p=Path().apply{moveTo(0f,0f);cubicTo(-w,-h*.35f,-w*.65f,-h*.82f,0f,-h);cubicTo(w*.65f,-h*.82f,w,-h*.35f,0f,0f);close()}
     drawPath(p,Brush.linearGradient(listOf(pearl,a.copy(alpha=.86f),shade),Offset(0f,-h),Offset(0f,0f)))
@@ -68,7 +68,7 @@ private fun DrawScope.tails(f:MyceliaForm,a:Color,side:Boolean,phase:Float,actio
                 moveTo(0f,-7f);cubicTo(end.x*.3f,-len*.22f,end.x*.62f,end.y-28f,end.x,end.y)
                 cubicTo(end.x*.8f,end.y+14f,end.x*.25f,16f,0f,7f);close()
             }
-            drawPath(p,Brush.linearGradient(listOf(shade,a,pearl),Offset.Zero,end))
+            drawPath(p,Brush.linearGradient(listOf(shade,a,cyan,pearl),Offset.Zero,end))
             drawPath(p,ink,style=Stroke(1.2f))
             val vein=Path().apply{moveTo(0f,0f);quadraticBezierTo(end.x*.5f,end.y-8f,end.x,end.y)}
             drawPath(vein,cyan,style=Stroke(1.3f))
@@ -133,6 +133,10 @@ private fun DrawScope.body(f:MyceliaForm,a:Color,side:Boolean,phase:Float,bloom:
     if(f.grade>=2)translate(if(side)l*.67f else 0f,7f){flower(a,10f+f.grade,phase)}
     else drawCircle(cyan,5f,Offset(if(side)l*.67f else 0f,7f))
     if(gear==RobotGear.ARMOR||gear==RobotGear.REACTOR)drawCircle(cyan,13f,Offset(0f,0f),style=Stroke(1.5f))
+    if(side){
+        val petal=Path().apply{moveTo(-l*.78f,-h*.24f);quadraticBezierTo(-l*.1f,-h*.95f,l*.66f,-h*.43f);quadraticBezierTo(l*.18f,h*.38f,-l*.78f,-h*.24f);close()}
+        drawPath(petal,Brush.linearGradient(listOf(pearl,a,shade),Offset(-l,-h),Offset(l,h)));drawPath(petal,ink,style=Stroke(1.1f));line(cyan,-l*.57f,-h*.24f,l*.45f,-h*.39f,1.6f)
+    }
     drawVariantArmor(gear,side,a,f.grade,true)
 }
 private fun DrawScope.myceliaEye(a:Color,x:Float,y:Float,face:RobotFace){
@@ -172,7 +176,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
     }
     if(side){
         plate(if(g==0)"M -23 -12 Q -22 -33 2 -34 L 25 -18 L 46 -2 L 37 8 L 13 20 L -13 17 Q -25 9 -23 -12 Z" else "M -25 -9 Q -22 -35 4 -34 Q 22 -30 28 -15 L 44 -3 L 38 9 L 17 19 L -9 21 Q -27 8 -25 -9 Z")
-        drawOval(shade,Offset(6f,-18f),Size(22f,17f))
+        drawOval(Color(0xFF8968B3),Offset(4f,-20f),Size(25f,20f));line(cyan,1f,-23f,23f,-25f,1.5f)
         if(blink)line(ink,9f,-10f,25f,-10f,1.8f)else{
             myceliaEye(cyan,17f,-10f,face)
         }
@@ -183,7 +187,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
         for(s in listOf(-1f,1f))scale(s,1f,Offset.Zero){
             if(blink)line(ink,6f,-8f,24f,-8f,1.7f)else{
                 drawOval(shade,Offset(5f,-19f),Size(21f,20f))
-                myceliaEye(a,15.5f,-10f,face)
+                myceliaEye(cyan,15.5f,-10f,face)
             }
             drawOval(a.copy(alpha=.25f),Offset(17f,4f),Size(9f,4f))
         }
@@ -198,7 +202,7 @@ private fun DrawScope.head(f:MyceliaForm,a:Color,side:Boolean,face:RobotFace,pha
 }
 @Composable
 internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFace,loadout:RobotLoadout,phase:Float,debug:Boolean,modifier:Modifier){
-    val f=MyceliaCatalog.of(loadout.tier);val a=loadout.accent;val e=loadout.equipment
+    val f=MyceliaCatalog.of(loadout.tier);val a=loadout.accent.copy(alpha=.72f).compositeOver(Color(0xFFFF82D2));val e=loadout.equipment
     val move=action==RobotAction.WALK||action==RobotAction.RUN
     val view=if(move&&requested==RobotView.FRONT)RobotView.RIGHT else requested
     val side=view!=RobotView.FRONT
@@ -238,7 +242,7 @@ internal fun MyceliaPreview(requested:RobotView,action:RobotAction,face:RobotFac
                     }
                     translate(hx,hy){
                         rotate(if(side)sin(phase*6.28f)*1.8f else 0f,Offset.Zero){
-                            val hs=if(f.grade==0)1.02f else .84f+f.grade*.025f
+                            val hs=if(f.grade==0)1.02f else .91f+f.grade*.025f
                             scale(hs,hs,Offset.Zero){head(f,a,side,face,phase,action,e.equipped(RobotSlot.HEAD))}
                         }
                     }

@@ -76,21 +76,23 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     val period=WorldMotion.period(p.series,RobotAction.IDLE)
     val phase by rememberGamePhase(period,RenderBudget.SCENERY_FPS,enabled=page=="archive")
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(14.dp),
-        verticalArrangement=Arrangement.spacedBy(10.dp)){
+        verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
-            Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
+            Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
             TextButton(onClick={guideOpen=true}){Text("Академія")}
             OutlinedButton(onClick=onSettings){Text("⚙")}
         }
             val prog=RobotProgress(p.xp)
-            Text("${p.name} · ${p.series.title}",style=MaterialTheme.typography.titleLarge)
-            Text("${p.tier.title} · Рівень ${p.level} · 🪙 ${p.coins} · ${p.trait.title}")
+            Text(if(p.name.equals(p.series.title,true))p.name else "${p.name} · ${p.series.title}",style=MaterialTheme.typography.titleMedium)
+            Text("${p.tier.title} · Рів. ${p.level} · 🪙 ${p.coins}"+if(page=="home")" · ${p.trait.title}" else "",style=MaterialTheme.typography.bodyMedium)
             LinearProgressIndicator(progress={prog.fraction},modifier=Modifier.fillMaxWidth())
             Text(if(prog.remaining==0)"Максимальний рівень · OMEGA: 10 перемог і 10 експедицій" else "${p.xp} XP · До рівня ${prog.remaining} XP",style=MaterialTheme.typography.bodySmall)
             val navigation=listOf(listOf("home" to "База","missions" to "Місії","adventure" to "Експедиція","shop" to "Магазин"),
-                listOf("construction" to "Будівництво","inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
-            navigation.forEach{group->Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                group.forEach{(id,label)->FilterChip(page==id,{page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(navSymbol(id)+" "+label)})}
+                listOf("construction" to "Будови","inventory" to "Інвентар","stats" to "Розвиток","archive" to "Архів","profile" to "Профіль"))
+            navigation.forEach{group->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                group.forEach{(id,label)->Card(onClick={page=id;building=null;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},modifier=Modifier.weight(1f),colors=CardDefaults.cardColors(containerColor=if(page==id)androidx.compose.ui.graphics.Color(0xFF244959) else androidx.compose.ui.graphics.Color(0xFF1B293C))){
+                    Column(Modifier.fillMaxWidth().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){PixubiGlyph(id,page==id);Text(label,style=MaterialTheme.typography.labelSmall,maxLines=1)}
+                }}
             }}
             if(page=="home"){
                 if(!guideProgress.finished&&!guideProgress.dismissed)Card(Modifier.fillMaxWidth()){
