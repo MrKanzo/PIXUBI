@@ -80,8 +80,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     val fx=remember{Animatable(0f)}
     fun duration(ms:Int)=(ms/speed).toInt().coerceAtLeast(1)
     val now={System.currentTimeMillis()}
-    val loop=rememberInfiniteTransition(label="adventure")
-    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(duration(1000),easing=LinearEasing)),label="actors")
+    val phase by rememberGamePhase(duration(1000),enabled=b!=null)
     val busy=queued!=null||moving||attack||b?.enemyPending==true
     fun perform(kind:String,source:GridPoint,target:GridPoint,closeCombat:Boolean=false,skill:ArenaSkillFx?=null,cells:List<GridPoint> = emptyList(),action:()->WorldPet){
         if(queued!=null||moving||attack)return
@@ -243,17 +242,18 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             }
             val battlefield: @Composable (Modifier,Dp)->Unit = { modifier,boardHeight ->
             BoxWithConstraints(modifier.height(boardHeight)){
-                val projection=ArenaProjection(maxWidth.value,boardHeight.value)
+                val projection=remember(maxWidth,boardHeight){ArenaProjection(maxWidth.value,boardHeight.value)}
                 val cell=projection.cell.dp
-                val occupied=buildList{add(b.pos);b.allies.filter{it.hp>0}.forEach{add(it.pos)};b.enemies.filter{it.hp>0}.forEach{add(it.pos)}}
-                fun spriteW(q:GridPoint)=projection.envelope(q,occupied).width.dp
-                fun spriteH(q:GridPoint)=projection.envelope(q,occupied).height.dp
+                val occupied=remember(b.pos,b.allies,b.enemies){buildList{add(b.pos);b.allies.filter{it.hp>0}.forEach{add(it.pos)};b.enemies.filter{it.hp>0}.forEach{add(it.pos)}}}
+                val envelopes=remember(projection,occupied){occupied.associateWith{projection.envelope(it,occupied)}}
+                fun spriteW(q:GridPoint)=(envelopes[q]?.width?:projection.envelope(q,occupied).width).dp
+                fun spriteH(q:GridPoint)=(envelopes[q]?.height?:projection.envelope(q,occupied).height).dp
                 fun spriteX(q:GridPoint)=projection.foot(q).x.dp-spriteW(q)/2
                 fun spriteY(q:GridPoint)=projection.foot(q).y.dp-spriteH(q)*.89f
                 fun xOf(q:GridPoint)=projection.center(q).x.dp-cell/2
                 fun yOf(q:GridPoint)=projection.center(q).y.dp
                 Box(Modifier.fillMaxWidth().height(boardHeight).clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(Color(0xFF263A4D),Color(0xFF10202B),Color(0xFF182A36))))){
-                    Canvas(Modifier.fillMaxSize()){arenaLandscape(ArenaProjection(size.width,size.height),a.stage)}
+                    Box(Modifier.fillMaxSize().then(remember(a.stage){Modifier.cachedScene{arenaLandscape(ArenaProjection(size.width,size.height),a.stage)}}))
                     Canvas(Modifier.fillMaxSize().pointerInput(p,b,selected,busy,speed,actor,targetChoice,deployPicked){
                         detectTapGestures{tap->
                             val plane=ArenaProjection(size.width.toFloat(),size.height.toFloat())
@@ -508,8 +508,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
     var dismiss by remember{mutableStateOf<SquadKind?>(null)}
     val atBase=SquadRules.atBase(p)
     val roster=p.adventure.squad
-    val loop=rememberInfiniteTransition(label="squad")
-    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(2800,easing=LinearEasing)),label="squad preview")
+    val phase by rememberGamePhase(2800,RenderBudget.SCENERY_FPS)
     Card(Modifier.fillMaxWidth()){
         Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             Row(verticalAlignment=Alignment.CenterVertically){
