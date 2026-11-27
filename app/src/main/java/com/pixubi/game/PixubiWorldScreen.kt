@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -16,8 +17,8 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,onSound:(PixubiSound)->Unit,onMusicScene:(MusicScene)->Unit={}){
     val context=LocalContext.current
-    var pet by remember(context){mutableStateOf(WorldStorage.load(context)?.let{WorldRules.tick(it,System.currentTimeMillis())})}
-    var page by remember{mutableStateOf("home")}
+    var pet by remember(context){mutableStateOf(WorldStorage.load(context))}
+    var page by rememberSaveable{mutableStateOf("home")}
     var guideProgress by remember(context){mutableStateOf(GuideStore.load(context))}
     var guideOpen by remember{mutableStateOf(false)}
     fun updateGuide(next:GuideProgress){guideProgress=next;GuideStore.save(context,next)}
@@ -34,6 +35,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var profileName by remember{mutableStateOf(WorldProfile.load(context))}
     fun save(p:WorldPet){val before=pet;WorldStorage.save(context,p);pet=p;onSeries(p.series);if(before!=null&&p.tier!=before.tier){effect(WorldFx.EVOLVE);onSound(PixubiSound.HAPPY)}}
     val foreground=LocalPixubiForeground.current
+    LaunchedEffect(Unit){pet?.let{save(WorldRules.tick(it,System.currentTimeMillis()))}}
     LaunchedEffect(foreground,pet?.mission?.until,pet?.mode,pet?.adventure?.battle!=null){
         if(!foreground)return@LaunchedEffect
         while(true){
