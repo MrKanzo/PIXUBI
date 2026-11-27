@@ -18,6 +18,9 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     val context=LocalContext.current
     var pet by remember(context){mutableStateOf(WorldStorage.load(context)?.let{WorldRules.tick(it,System.currentTimeMillis())})}
     var page by remember{mutableStateOf("home")}
+    var guideProgress by remember(context){mutableStateOf(GuideStore.load(context))}
+    var guideOpen by remember{mutableStateOf(false)}
+    fun updateGuide(next:GuideProgress){guideProgress=next;GuideStore.save(context,next)}
     var tab by remember{mutableStateOf<RobotSlot?>(null)}
     var category by remember{mutableStateOf<WorldCategory?>(null)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
@@ -50,6 +53,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
             if(WorldStorage.load(context)==null){
                 WorldRules.adoptGenesis(newborn,System.currentTimeMillis())?.let{
                     save(it)
+                    if(!guideProgress.dismissed&&!guideProgress.finished)guideOpen=true
                     GenesisStorage.save(context,null,world=true)
                     onSound(PixubiSound.HAPPY)
                 }
@@ -57,8 +61,12 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         },world=true,onSound=onSound)
         return
     }
+    if(guideOpen)PixubiGuide(guideProgress,onProgress={updateGuide(it)},onClose={guideOpen=false},onOpen={destination->
+        guideOpen=false
+        if(p.adventure.battle==null){page=destination;tab=null;category=null}
+    })
     if(page=="adventure"||p.adventure.battle!=null){
-        AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound)
+        AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound,onGuide={guideOpen=true})
         return
     }
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
@@ -68,6 +76,7 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Text("PIXUBI · WORLD",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
+            TextButton(onClick={guideOpen=true}){Text("Академія")}
             OutlinedButton(onClick=onSettings){Text("⚙")}
         }
             val prog=RobotProgress(p.xp)
@@ -81,6 +90,13 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 group.forEach{(id,label)->FilterChip(page==id,{page=id;if(id=="archive"){archiveSeries=p.series;archiveTier=p.tier}},label={Text(label)})}
             }}
             if(page=="home"){
+                if(!guideProgress.finished&&!guideProgress.dismissed)Card(Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                        Text("Академія PIXUBI · ${guideProgress.completed.size}/${GuideLesson.entries.size}",style=MaterialTheme.typography.titleMedium)
+                        Text("Наступний урок: ${guideProgress.next?.title.orEmpty()}")
+                        Button(onClick={guideOpen=true}){Text("Продовжити навчання")}
+                    }
+                }
                 Text(HabitatCatalog.of(p.series).title,style=MaterialTheme.typography.titleMedium)
                 val face=when{p.mode!=WorldMode.AWAKE->RobotFace.SLEEP;p.integrity<30||p.mood<25->RobotFace.SAD;action==RobotAction.ATTACK->RobotFace.ANGRY;p.mood>75->RobotFace.HAPPY;else->RobotFace.NEUTRAL}
                 WorldShowcase(p,action,if(fx==WorldFx.CONTACT&&careAnimation!=null)RobotFace.HAPPY else face,fx,fxEvent,
@@ -154,6 +170,8 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 Text(HabitatCatalog.of(archiveSeries).title)
             }else if(page=="profile"){
                 Text("Профіль оператора",style=MaterialTheme.typography.titleLarge)
+                OutlinedButton(onClick={guideOpen=true}){Text("Академія · ${guideProgress.completed.size}/${GuideLesson.entries.size}")}
+                TextButton(onClick={updateGuide(GuideProgress());guideOpen=true}){Text("Повторити навчання з початку")}
                 OutlinedTextField(profileName,{profileName=it.take(24);WorldProfile.save(context,profileName)},label={Text("Ім’я оператора")},singleLine=true,modifier=Modifier.fillMaxWidth())
                 Text("Активний роботик: ${p.name} · ${p.series.title}")
                 Text("Характер: ${p.trait.title} · колір: ${p.skin.title}")
