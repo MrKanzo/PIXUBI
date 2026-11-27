@@ -77,7 +77,7 @@ internal fun PixubiSettingsScreen(
             }
             OutlinedButton(onClick = onBack) { Text("← Назад") }
         }
-        OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
+        if(!BuildConfig.PLAY_DISTRIBUTION)OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
             Text("Robot Lab · Режим розробника")
         }
         OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
@@ -196,6 +196,9 @@ internal fun PixubiSettingsScreen(
                 Text("Поточна версія: $version" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
+                if(BuildConfig.PLAY_DISTRIBUTION){
+                    Text("Оновлення через Google Play.",style=MaterialTheme.typography.bodySmall)
+                }else{
                 OutlinedButton(onClick = onCheckUpdates,
                     enabled = !checkingForUpdates, modifier = Modifier.fillMaxWidth()) {
                     Text(if (checkingForUpdates) "⏳ Перевіряю GitHub…" else "🔄 Перевірити оновлення")
@@ -205,6 +208,7 @@ internal fun PixubiSettingsScreen(
                 else
                     "Це тестова збірка. Оновлення поверх зі збереженням прогресу працюватиме тільки зі стабільним APK, підписаним постійним ключем.",
                     color = Color(0xFFFFDA97), style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17243B))) {
