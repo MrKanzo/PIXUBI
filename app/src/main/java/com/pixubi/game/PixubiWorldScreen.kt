@@ -30,7 +30,16 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
     var archiveTier by remember{mutableStateOf(RobotTier.MK1)}
     var profileName by remember{mutableStateOf(WorldProfile.load(context))}
     fun save(p:WorldPet){val before=pet;WorldStorage.save(context,p);pet=p;onSeries(p.series);if(before!=null&&p.tier!=before.tier){effect(WorldFx.EVOLVE);onSound(PixubiSound.HAPPY)}}
-    LaunchedEffect(Unit){pet?.let{save(it)};while(true){delay(1000L);now=System.currentTimeMillis();pet?.let{val q=WorldRules.tick(it,now);if(q!=it)save(q)}}}
+    val foreground=LocalPixubiForeground.current
+    LaunchedEffect(foreground,pet?.mission?.until,pet?.mode,pet?.adventure?.battle!=null){
+        if(!foreground)return@LaunchedEffect
+        while(true){
+            val time=System.currentTimeMillis()
+            if(pet?.mission!=null)now=time
+            pet?.let{val q=WorldRules.tick(it,time);if(q!=it)save(q)}
+            delay(if(pet?.mission!=null)1000L else 15000L)
+        }
+    }
     LaunchedEffect(careEvent){if(careAnimation!=null){delay(1600);careAnimation=null}}
     BackHandler(enabled=page!="home"){page="home"}
     val p=pet
@@ -52,10 +61,9 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
         AdventureScreen(p,onChange={save(it)},onBack={page="home"},onSound=onSound)
         return
     }
-    val loop=rememberInfiniteTransition(label="world")
     val action=when{p.mode!=WorldMode.AWAKE->RobotAction.SLEEP;p.mission!=null->p.mission.task.action;else->careAnimation?:RobotAction.IDLE}
     val period=WorldMotion.period(p.series,RobotAction.IDLE)
-    val phase by loop.animateFloat(0f,1f,infiniteRepeatable(tween(period,easing=LinearEasing)),label="world motion")
+    val phase by rememberGamePhase(period,RenderBudget.SCENERY_FPS,enabled=page=="archive")
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(14.dp),
         verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
@@ -120,9 +128,9 @@ internal fun PixubiWorldScreen(onSettings:()->Unit,onSeries:(RobotSeries)->Unit,
                 WorldTask.entries.forEach{task->
                     Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                         Text(task.title,style=MaterialTheme.typography.titleMedium)
-                        Text("${task.seconds} с · -${task.energy} ⚡ · до ${task.xp} XP · ${task.coins} монет")
+                        Text("${task.seconds} с · -${AdventureBalance.taskEnergy(p,task)} ⚡ · до ${task.xp} XP · ${task.coins} монет")
                         Button(onClick={save(WorldRules.start(p,task,System.currentTimeMillis()));onSound(PixubiSound.TAP)},
-                            enabled=m==null&&p.mode==WorldMode.AWAKE&&p.energy>=task.energy&&p.integrity>=20,modifier=Modifier.fillMaxWidth()){Text("Розпочати")}
+                            enabled=m==null&&p.mode==WorldMode.AWAKE&&p.energy>=AdventureBalance.taskEnergy(p,task)&&p.integrity>=20,modifier=Modifier.fillMaxWidth()){Text("Розпочати")}
                     }}
                 }
             }else if(page=="archive"){
