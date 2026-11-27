@@ -37,8 +37,8 @@ internal class ArenaProjection(val width:Float,val height:Float){
             val dest=foot(other);val dx=abs(dest.x-foot.x);val dy=abs(dest.y-foot.y)
             if(dx>=cell*.60f){
                 // Wide separation in neighboring lanes: don't shrink for far-away opponents.
-                if(dy<row*1.15f)w=min(w,dx*.94f)
-                else if(dx<cell*1.65f)h=min(h,dy*.86f)
+                if(dy<row*1.15f||dx>=cell*1.65f)w=min(w,dx*.94f)
+                else h=min(h,dy*.86f)
             }else if(dy>.01f)h=min(h,dy*.82f)
         }
         return Size(w.coerceAtLeast(1f),h.coerceAtLeast(1f))
