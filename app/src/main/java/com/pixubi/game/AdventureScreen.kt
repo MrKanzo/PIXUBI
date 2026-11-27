@@ -161,7 +161,10 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
             },confirmButton={TextButton(onClick={artifactsOpen=false}){Text("Закрити")}})
             Text("Переможено ботів: ${AdventureRules.encounters(a).count{AdventureRules.id(it) in a.cleared}}/${AdventureRules.encounters(a).size}")
             Text(p.message)
-            if(!AdventureRules.canExplore(p))Text("Повернись на базу: потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
+            if(!AdventureRules.canExplore(p))Text("Потрібен заряд, ремонт або завершення місії.",color=MaterialTheme.colorScheme.error)
+            if(AdventureBalance.needsRecovery(p))OutlinedButton(onClick={onChange(AdventureBalance.recover(p))},modifier=Modifier.fillMaxWidth()){
+                Text(if(a.pos==AdventureRules.base)"Аварійний сервіс · безкоштовно" else "Аварійна евакуація на базу")
+            }
             if(AdventureRules.canAdvance(a))Button(onClick={onChange(AdventureRules.advanceMap(p))},enabled=AdventureRules.canExplore(p)&&a.stage<100,modifier=Modifier.fillMaxWidth()){Text("Наступний сектор")}
         }else{
             val selected=weapon?.takeIf{it in AdventureRules.weapons(p)}
@@ -552,7 +555,7 @@ internal fun AdventureScreen(p:WorldPet,onChange:(WorldPet)->Unit,onBack:()->Uni
                                 val rank=SquadRules.rank(p.adventure,k)
                                 if(rank<3)OutlinedButton(onClick={onChange(SquadRules.upgrade(p,k))},enabled=atBase&&rank<p.adventure.barracks&&p.coins>=SquadRules.upgradePrice(p.adventure,k)){Text("Ранг ${rank+1} · ${SquadRules.upgradePrice(p.adventure,k)} 🪙")}
                                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                                    TextButton(onClick={onChange(SquadRules.restore(p,k))},enabled=atBase&&hp<SquadRules.maxStackHp(p.adventure,k)&&p.coins>=15){Text("Ремонт 15")}
+                                    TextButton(onClick={onChange(SquadRules.restore(p,k))},enabled=atBase&&hp<SquadRules.maxStackHp(p.adventure,k)&&p.coins>=SquadRules.restorePrice(p.adventure,k)){Text("Ремонт ${SquadRules.restorePrice(p.adventure,k)}")}
                                     TextButton(onClick={dismiss=k},enabled=atBase){Text("Вивести")}
                                 }
                             }
