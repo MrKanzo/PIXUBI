@@ -5,7 +5,7 @@ plugins {
 val playDistribution = providers.gradleProperty("pixubiPlay").orNull == "true"
 android {
     sourceSets.getByName("main").apply {
-        java.srcDir(if (playDistribution) "src/play/java" else "src/direct/java")
+        kotlin.srcDir(if (playDistribution) "src/play/java" else "src/direct/java")
         if (playDistribution) manifest.srcFile("src/play/AndroidManifest.xml")
     }
     namespace = "com.pixubi.game"
@@ -15,8 +15,8 @@ android {
         minSdk = 26
         targetSdk = 36
         buildConfigField("boolean", "PLAY_DISTRIBUTION", playDistribution.toString())
-        versionCode = 124
-        versionName = "0.99.0"
+        versionCode = 125
+        versionName = "0.99.1"
     }
     // Release uses a permanent package ID. Debug is installed alongside it.
     signingConfigs {
