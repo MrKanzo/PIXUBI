@@ -75,7 +75,7 @@ internal object AdventureRules{
     fun enemySeries(a:AdventureState,q:GridPoint)=RobotSeries.entries[(encounters(a).indexOf(q).coerceAtLeast(0)+(a.stage-1)*3)%RobotSeries.entries.size]
     fun complete(a:AdventureState)=encounters(a).all{id(it) in a.cleared}
     fun canAdvance(a:AdventureState)=complete(a)||a.credited
-    fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=20&&p.energy>0&&p.adventure.battle==null
+    fun canExplore(p:WorldPet)=p.mode==WorldMode.AWAKE&&p.mission==null&&p.integrity>=AdventureBalance.MIN_INTEGRITY&&p.energy>0&&p.adventure.battle==null
     // Route through explored, walkable ground. Hostile cells can only be the destination.
     fun mapRoute(a:AdventureState,to:GridPoint):List<GridPoint>{
         if(!inMap(to)||to==a.pos||!visible(a,to)||tile(a,to)==AdventureTile.WALL)return emptyList()
@@ -109,9 +109,9 @@ internal object AdventureRules{
         val t=tile(a,to)
         val seen=reveal(a,a.pos)+reveal(a,to)
         if(FrontierSites.hostile(t)){
-            if(p.energy<5)return p.copy(message="Для входу в бій потрібно 5% енергії.")
+            if(p.energy<AdventureBalance.BATTLE_ENERGY)return p.copy(message="Для входу в бій потрібно 5% енергії.")
             val b=begin(p,to)
-            return p.copy(energy=p.energy-5,adventure=a.copy(seen=seen,battle=b),message=if(t==AdventureTile.VAULT)"Бункер: захисна система активована" else if(FrontierSites.isBoss(a,to))"Секторний бос: Вартовий ядра" else "Зустріч із ворожими ботами",last=now)
+            return p.copy(energy=p.energy-AdventureBalance.BATTLE_ENERGY,adventure=a.copy(seen=seen,battle=b),message=if(t==AdventureTile.VAULT)"Бункер: захисна система активована" else if(FrontierSites.isBoss(a,to))"Секторний бос: Вартовий ядра" else "Зустріч із ворожими ботами",last=now)
         }
         val steps=a.steps+1
         var q=p.copy(energy=(p.energy-if(steps%(if(FrontierArtifact.SCANNER in a.artifacts)5 else 4)==0)1 else 0).coerceAtLeast(0),
@@ -144,11 +144,11 @@ internal object AdventureRules{
             val series=RobotSeries.entries[(enemySeries(a,at).ordinal+i)%RobotSeries.entries.size]
             val stats=RobotBalance.base(tier)+WorldRules.innate(series)
             val extra=a.squad.keys.sumOf{SquadRules.stackCount(a,it)}
-            val scale=(1f+(a.stage-1).coerceAtMost(12)*.045f)*(1f+extra*.18f)
+            val scale=AdventureBalance.enemyScale(a.stage,extra)
             val elite=(boss||vault)&&i==0
             val hp=(stats.durability*(if(elite) .83f else if(count==2).36f else .55f)*scale).toInt().coerceAtLeast(25)
             ArenaBot(series,tier,GridPoint(ARENA_W-1,if(count==1)1 else i*2),hp,hp,
-                (stats.attack*(if(elite).82f else .60f)+4+a.stage.coerceAtMost(12)).toInt(),(stats.defense*(if(elite).75f else .55f)).toInt(),stats.speed)
+                (stats.attack*(if(elite).82f else .60f)+4+a.stage.coerceAtMost(24)).toInt(),(stats.defense*(if(elite).75f else .55f)).toInt(),stats.speed)
         }
         val max=p.stats.durability.coerceAtLeast(1)
         return ArenaBattle(id(at),GridPoint(0,1),(max*p.integrity/100).coerceAtLeast(1),max,bots,allies=SquadRules.deploy(a.squad,a.squadRanks,SquadRules.slots(a)),deploying=true,log="Розстав своїх юнітів")
@@ -340,7 +340,7 @@ internal object AdventureRules{
         return afterAction(p,next,index,false,"Ремонтний дрон: +HP",now)
     }
     private fun afterAction(p:WorldPet,b:ArenaBattle,actor:Int,guard:Boolean,log:String,now:Long):WorldPet{
-        val next=b.copy(acted=b.acted+actor,guards=if(guard)b.guards+actor else b.guards-actor,log=log,enemyPending=true)
+        val next=b.copy(acted=b.acted+actor,guards=if(guard)b.guards+actor else b.guards,log=log,enemyPending=true)
         return p.copy(adventure=p.adventure.copy(battle=next),message=log)
     }
     internal data class EnemyAction(val index:Int,val from:GridPoint,val to:GridPoint,val target:Int?)
@@ -387,8 +387,8 @@ internal object AdventureRules{
         val site=GridPoint(b.encounter%MAP_W,b.encounter/MAP_W)
         val boss=FrontierSites.isBoss(a,site);val vault=FrontierSites.isVault(a,site)
         val artifact=if(win&&(boss||vault))FrontierSites.artifact(a.stage,if(boss)2 else 1)else null
-        val xp=if(win)70+b.enemies.size*30+a.stage*5+(if(boss||vault)80 else 0) else if(retreat)0 else 10
-        val coins=if(win)25+b.enemies.size*15+a.stage*4+(if(boss||vault)100 else 0) else 0
+        val xp=if(win)AdventureBalance.battleXp(a.stage,b.enemies.size,boss||vault) else if(retreat)0 else 10
+        val coins=if(win)AdventureBalance.battleCoins(a.stage,b.enemies.size,boss||vault) else 0
         val survivors=if(b.allies.isEmpty())a.squad else b.allies.filter{it.hp>0}.associate{it.kind to it.hp}
         val updated=a.copy(battle=null,cleared=cleared,pos=pos,artifacts=a.artifacts+listOfNotNull(artifact),squad=survivors,squadRanks=a.squadRanks.filterKeys{it in survivors})
         val earnsCredit=win&&!a.credited&&complete(updated)
