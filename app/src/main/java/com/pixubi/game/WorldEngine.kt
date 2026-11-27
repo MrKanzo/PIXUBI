@@ -95,20 +95,22 @@ internal object WorldRules{
     }
     fun start(source:WorldPet,t:WorldTask,now:Long):WorldPet{
         val p=tick(source,now)
+        if(p.adventure.battle!=null)return p
         if(p.mission!=null||p.mode!=WorldMode.AWAKE)return p.copy(message="Спочатку заверши дію або розбуди персонажа.")
-        if(p.energy<t.energy||p.integrity<20)return p.copy(message="Потрібна зарядка або ремонт.")
+        val cost=AdventureBalance.taskEnergy(p,t)
+        if(p.energy<cost||p.integrity<20)return p.copy(message="Потрібна зарядка або ремонт.")
         val ammo=if(t==WorldTask.TRAIN)WorldGearCatalog.ammoCost(p.equipment) else emptyMap()
         val shortage=ammo.entries.firstOrNull{p.stock(it.key)<it.value}
         if(shortage!=null)return p.copy(message="Недостатньо боєприпасів: ${shortage.key.title}. Поповни запас або зніми зброю.")
         val paidAmmo=p.supplies.toMutableMap()
         ammo.forEach{(type,count)->paidAmmo[type]=p.stock(type)-count}
         val bonus=if(t==WorldTask.TRAIN)p.stats.attack+p.stats.defense/2+p.stats.speed/5 else 0
-        val cost=(t.energy-(p.stats.energy-100).coerceAtLeast(0)/35).coerceAtLeast(3)
         val duration=(t.seconds-(p.stats.speed-50).coerceAtLeast(0)/10).coerceAtLeast(8)
         return p.copy(energy=p.energy-cost,mood=(p.mood+t.mood).coerceIn(0,100),supplies=paidAmmo,
             mission=WorldMission(t,now+duration*1000L,bonus),message="${t.title} розпочато")
     }
     fun care(p:WorldPet,kind:Int):WorldPet{
+        if(p.adventure.battle!=null)return p
         if(p.mode!=WorldMode.AWAKE||p.mission!=null)return p.copy(message="Спочатку заверши дію або розбуди персонажа.")
         return when(kind){
             0->if(p.cells>0&&p.energy<100)gain(p.copy(cells=p.cells-1,energy=(p.energy+45+WorldGearCatalog.energyBonus(p.equipment)).coerceAtMost(100),message="Заряд поповнено"),RobotSkill.ENERGY,10,15,0) else p.copy(message="Немає комірок або заряд повний.")
@@ -118,6 +120,7 @@ internal object WorldRules{
     }
     fun mode(source:WorldPet,mode:WorldMode,now:Long):WorldPet{
         val p=tick(source,now)
+        if(p.adventure.battle!=null)return p
         if(p.mission!=null)return p.copy(message="Спочатку заверши завдання.")
         return p.copy(mode=mode,last=now.coerceAtLeast(p.last),message=when(mode){WorldMode.AWAKE->"Прокинувся";WorldMode.SLEEP->"Відпочиває і відновлює енергію";WorldMode.HIBERNATE->"Сплячка · час потреб зупинено"})
     }
@@ -128,6 +131,7 @@ internal object WorldRules{
         return p.copy(coins=p.coins-o.price,owned=p.owned+g,message="Придбано: ${g.title}")
     }
     fun equip(p:WorldPet,g:RobotGear):WorldPet{
+        if(p.adventure.battle!=null)return p
         if(p.mission!=null||g !in p.owned)return p.copy(message="Спорядження недоступне під час завдання або не куплене.")
         return p.copy(equipment=if(p.equipment.equipped(g.slot)==g)p.equipment.remove(g.slot)else p.equipment.equip(g),message="Спорядження змінено")
     }
@@ -136,6 +140,7 @@ internal object WorldRules{
         return p.copy(coins=p.coins-kind.price,supplies=p.supplies+(kind to p.stock(kind)+kind.pack),message="Придбано: ${kind.title} ×${kind.pack}")
     }
     fun useSupply(p:WorldPet,kind:WorldSupply):WorldPet{
+        if(p.adventure.battle!=null)return p
         if(kind.isAmmo||p.mode!=WorldMode.AWAKE||p.mission!=null||p.stock(kind)==0)return p.copy(message="Модуль зараз недоступний.")
         val value=when(kind.category){WorldCategory.ENERGY->p.energy;WorldCategory.REPAIR->p.integrity;else->p.mood}
         if(value==100)return p.copy(message="Показник уже повний.")
