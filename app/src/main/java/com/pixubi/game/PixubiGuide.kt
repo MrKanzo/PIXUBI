@@ -30,8 +30,8 @@ internal object GuideStore{
     fun save(c:Context,p:GuideProgress){prefs(c).edit().putString("completed",p.completed.joinToString(","){it.name}).putBoolean("dismissed",p.dismissed).apply()}
 }
 @Composable
-internal fun PixubiGuide(progress:GuideProgress,onProgress:(GuideProgress)->Unit,onClose:()->Unit,onOpen:(String)->Unit){
-    var lesson by remember{mutableStateOf(progress.next?:GuideLesson.CARE)}
+internal fun PixubiGuide(progress:GuideProgress,onProgress:(GuideProgress)->Unit,onClose:()->Unit,onOpen:(String)->Unit,initialLesson:GuideLesson?=null){
+    var lesson by remember(initialLesson){mutableStateOf(initialLesson?:progress.next?:GuideLesson.CARE)}
     var feedback by remember(lesson){mutableStateOf("")}
     val current=lesson
     AlertDialog(onDismissRequest=onClose,title={Text("Академія PIXUBI · ${progress.completed.size}/${GuideLesson.entries.size}")},text={
