@@ -5,21 +5,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -52,82 +50,56 @@ internal fun PixubiSettingsScreen(
     checkingForUpdates: Boolean,
     onBack: () -> Unit
 ) {
-    val context=LocalContext.current
-    val version=remember(context){context.packageManager.getPackageInfo(context.packageName,0).versionName ?: "?"}
-    var showAbout by rememberSaveable { mutableStateOf(false) }
-    var showRobotLab by rememberSaveable { mutableStateOf(false) }
-    if(showRobotLab) {
-        RobotLab { showRobotLab=false }
+    val context = LocalContext.current
+    val version = remember(context) {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "?"
+    }
+    var page by rememberSaveable { mutableStateOf("home") }
+    val goBack: () -> Unit = {
+        if (page == "home") onBack() else page = "home"
+    }
+    BackHandler(onBack = goBack)
+    if (page == "lab" && !BuildConfig.PLAY_DISTRIBUTION) {
+        RobotLab { page = "home" }
         return
     }
-    BackHandler(enabled=showAbout){showAbout=false}
-    if(showAbout) {
-        PixubiAboutScreen(version){showAbout=false}
+    if (page == "about") {
+        PixubiAboutScreen(version) { page = "home" }
         return
+    }
+
+    val heading = when (page) {
+        "sound" -> "Звук і музика"
+        "tracks" -> "Саундтреки"
+        "notifications" -> "Сповіщення"
+        "updates" -> "Оновлення"
+        else -> "Налаштування"
     }
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("⚙️ Налаштування", style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold)
-                Text("Керування цифровим світом", color = Color(0xFFB8C8E3))
+                Text(heading, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(if (page == "home") "PIXUBI WORLD · $version" else "Налаштування PIXUBI",
+                    color = Color(0xFFB8C8E3), style = MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick = onBack) { Text("← Назад") }
+            OutlinedButton(onClick = goBack) { Text("← Назад") }
         }
-        if(!BuildConfig.PLAY_DISTRIBUTION)OutlinedButton(onClick={showRobotLab=true},modifier=Modifier.fillMaxWidth()) {
-            Text("Robot Lab · Режим розробника")
-        }
-        OutlinedButton(onClick={showAbout=true},modifier=Modifier.fillMaxWidth()) {
-            Text("📖 Про PIXUBI WORLD · Серії та автори")
-        }
-        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
-            shape = RoundedCornerShape(18.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("🔔 Піксубі на зв'язку", style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
-                SettingsSwitch(
-                    title = "🤖 Сповіщення роботика",
-                    description = "Енергія, стан корпусу, відпочинок та завершені місії",
-                    checked = notificationSettings.enabled,
-                    onChecked = { onNotificationSettingsChange(notificationSettings.copy(enabled = it)) }
-                )
-                if (notificationSettings.enabled) {
-                    HorizontalDivider(color = Color(0xFF41556D))
-                    SettingsSwitch(
-                        title = "🌙 Тихі години 22:00–08:00",
-                        description = "У цей час не турбуватиму тебе",
-                        checked = notificationSettings.quietHours,
-                        onChecked = { onNotificationSettingsChange(notificationSettings.copy(quietHours = it)) }
-                    )
-                    SettingsSwitch("🔋 Низька енергія", "Коли потрібна зарядка",
-                        notificationSettings.food,
-                        { onNotificationSettingsChange(notificationSettings.copy(food = it)) })
-                    SettingsSwitch("🛠 Стан корпусу", "Коли потрібен ремонт",
-                        notificationSettings.water,
-                        { onNotificationSettingsChange(notificationSettings.copy(water = it)) })
-                    SettingsSwitch("💤 Режим відпочинку", "Коли робот довго активний і розряджений",
-                        notificationSettings.sleep,
-                        { onNotificationSettingsChange(notificationSettings.copy(sleep = it)) })
-                    SettingsSwitch("📡 Місії та синхронізація", "Завершені місії та низький настрій",
-                        notificationSettings.play,
-                        { onNotificationSettingsChange(notificationSettings.copy(play = it)) })
-                    OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) {
-                        Text("🔔 Надіслати тестове сповіщення")
-                    }
-                    Text("Перевірка приблизно кожні 30 хвилин, залежно від Android. " +
-                        "Не частіше одного нагадування за 4 години. Сплячка зупиняє нагадування.",
-                        color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
+        key(page) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                when (page) {
+                    "sound" -> {
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SettingsSwitch(
-                    title = "🎵 Фонова мелодія",
+                    title = "Фонова музика",
                     description = "Мелодійний інструментальний саундтрек: база, світ і битви",
                     checked = settings.music,
                     onChecked = { onSettingsChange(settings.copy(music = it)) }
@@ -142,7 +114,7 @@ internal fun PixubiSettingsScreen(
                 )
                 HorizontalDivider(color = Color(0xFF41556D))
                 SettingsSwitch(
-                    title = "🔊 Звукові ефекти",
+                    title = "Звукові ефекти",
                     description = "Сигнали зарядки, ремонту, активації та місій",
                     checked = settings.effects,
                     onChecked = { onSettingsChange(settings.copy(effects = it)) }
@@ -157,15 +129,18 @@ internal fun PixubiSettingsScreen(
                 )
                 OutlinedButton(onClick = onTestSound, enabled = settings.effects,
                     modifier = Modifier.fillMaxWidth()) {
-                    Text("🎮 Перевірити цифровий звук")
+                    Text("Перевірити звук")
                 }
             }
         }
+
+                        Text("Звук автоматично вимикається, коли гра у фоні.",
+                            style = MaterialTheme.typography.bodySmall, color = Color(0xFFBFCFE9))
+                    }
+                    "tracks" -> {
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("🌌 Саундтреки середовищ", style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
                 Text("Саундтрек відповідає серії роботика та режиму гри. " +
                     "Тут можна послухати інші середовища без зміни персонажа.",
                     color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
@@ -178,7 +153,7 @@ internal fun PixubiSettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text(world.title + " · " + HabitatCatalog.of(world).title +
-                                (if (currentSeries == world) "  •  твоя серія" else ""))
+                                (if (currentSeries == world) " · твоя серія" else ""))
                         }
                     )
                 }
@@ -188,11 +163,53 @@ internal fun PixubiSettingsScreen(
                 }
             }
         }
+
+                    }
+                    "notifications" -> {
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
+            shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SettingsSwitch(
+                    title = "Сповіщення роботика",
+                    description = "Енергія, стан корпусу, відпочинок та завершені місії",
+                    checked = notificationSettings.enabled,
+                    onChecked = { onNotificationSettingsChange(notificationSettings.copy(enabled = it)) }
+                )
+                if (notificationSettings.enabled) {
+                    HorizontalDivider(color = Color(0xFF41556D))
+                    SettingsSwitch(
+                        title = "Тихі години 22:00–08:00",
+                        description = "У цей час не турбуватиму тебе",
+                        checked = notificationSettings.quietHours,
+                        onChecked = { onNotificationSettingsChange(notificationSettings.copy(quietHours = it)) }
+                    )
+                    SettingsSwitch("Низька енергія", "Коли потрібна зарядка",
+                        notificationSettings.food,
+                        { onNotificationSettingsChange(notificationSettings.copy(food = it)) })
+                    SettingsSwitch("Стан корпусу", "Коли потрібен ремонт",
+                        notificationSettings.water,
+                        { onNotificationSettingsChange(notificationSettings.copy(water = it)) })
+                    SettingsSwitch("Режим відпочинку", "Коли робот довго активний і розряджений",
+                        notificationSettings.sleep,
+                        { onNotificationSettingsChange(notificationSettings.copy(sleep = it)) })
+                    SettingsSwitch("Місії та синхронізація", "Завершені місії та низький настрій",
+                        notificationSettings.play,
+                        { onNotificationSettingsChange(notificationSettings.copy(play = it)) })
+                    OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) {
+                        Text("Тестове сповіщення")
+                    }
+                    Text("Перевірка приблизно кожні 30 хвилин, залежно від Android. " +
+                        "Не частіше одного нагадування за 4 години. Сплячка зупиняє нагадування.",
+                        color = Color(0xFFBFCFE9), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+                    }
+                    "updates" -> {
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
             shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("🔄 Оновлення PIXUBI WORLD", style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
                 Text("Поточна версія: $version" +
                     (if (isStableInstall) " • стабільний випуск" else " • тестова збірка"),
                     color = Color(0xFFCAD9EE), style = MaterialTheme.typography.bodySmall)
@@ -201,7 +218,7 @@ internal fun PixubiSettingsScreen(
                 }else{
                 OutlinedButton(onClick = onCheckUpdates,
                     enabled = !checkingForUpdates, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (checkingForUpdates) "⏳ Перевіряю GitHub…" else "🔄 Перевірити оновлення")
+                    Text(if (checkingForUpdates) "⏳ Перевіряю GitHub…" else "Перевірити оновлення")
                 }
                 Text(if (isStableInstall)
                     "Перевіряємо підписані GitHub Releases. При новій версії PIXUBI сама запропонує завантаження й відкриє Android-інсталятор. Дані лишаються, якщо підпис збігається."
@@ -211,19 +228,49 @@ internal fun PixubiSettingsScreen(
                 }
             }
         }
-        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17243B))) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("💜 Твій спокій важливий", fontWeight = FontWeight.Bold)
-                Text("Гра автоматично замовкає, коли ти перемикаєшся на інший застосунок. " +
-                    "Оригінальні багатошарові мелодії та ефекти створюються офлайн прямо в телефоні: " +
-                    "без інтернету, реклами та завантажених пісень.",
-                    color = Color(0xFFCCD5E9), style = MaterialTheme.typography.bodySmall)
+
+                    }
+                    else -> {
+                        val musicStatus = if (settings.music) "${(settings.musicVolume * 100).toInt()}%" else "вимк."
+                        val effectsStatus = if (settings.effects) "${(settings.effectsVolume * 100).toInt()}%" else "вимк."
+                        SettingsMenuRow("♫", "Звук і музика", "Музика: $musicStatus · Ефекти: $effectsStatus") { page = "sound" }
+                        SettingsMenuRow("◈", "Саундтреки", "Середовище: ${(previewSeries ?: currentSeries).title}") { page = "tracks" }
+                        SettingsMenuRow("🔔", "Сповіщення",
+                            if (!notificationSettings.enabled) "Вимкнено" else if (notificationSettings.quietHours) "Увімкнено · тихі години 22:00–08:00" else "Увімкнено") { page = "notifications" }
+                        SettingsMenuRow("↻", "Оновлення", if (BuildConfig.PLAY_DISTRIBUTION) "Google Play · $version" else "Версія $version · " + if (isStableInstall) "стабільна" else "тестова") { page = "updates" }
+                        SettingsMenuRow("ⓘ", "Про гру", "Світ · серії · автори") { page = "about" }
+                        if (!BuildConfig.PLAY_DISTRIBUTION) {
+                            Text("РОЗРОБНИК", style = MaterialTheme.typography.labelSmall, color = Color(0xFFB8C8E3),
+                                modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+                            SettingsMenuRow("⚙", "Robot Lab", "Моделі та анімації") { page = "lab" }
+                        }
+                        Text("Зміни зберігаються автоматично.", style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF98E6CD), modifier = Modifier.padding(4.dp))
+                    }
+                }
             }
         }
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text("✅ Зберегти й повернутися")
+    }
+}
+
+@Composable
+private fun SettingsMenuRow(symbol: String, title: String, summary: String, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF24334F)),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(symbol, color = Color(0xFF98E6CD), style = MaterialTheme.typography.titleLarge)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(summary, style = MaterialTheme.typography.bodySmall, color = Color(0xFFBFCFE9))
+            }
+            Text("›", color = Color(0xFF98E6CD), style = MaterialTheme.typography.headlineSmall)
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
